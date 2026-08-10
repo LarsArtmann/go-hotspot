@@ -16,8 +16,22 @@ func makeHistory(files map[string]*git.FileChurn) *git.History {
 
 func TestScoreBasicRanking(t *testing.T) {
 	history := makeHistory(map[string]*git.FileChurn{
-		"big.go":   {Path: "big.go", Commits: 10, Added: 100, Deleted: 50, Weighted: 150, Authors: map[string]struct{}{"A": {}}},
-		"small.go": {Path: "small.go", Commits: 2, Added: 10, Deleted: 5, Weighted: 15, Authors: map[string]struct{}{"B": {}}},
+		"big.go": {
+			Path:     "big.go",
+			Commits:  10,
+			Added:    100,
+			Deleted:  50,
+			Weighted: 150,
+			Authors:  map[string]struct{}{"A": {}},
+		},
+		"small.go": {
+			Path:     "small.go",
+			Commits:  2,
+			Added:    10,
+			Deleted:  5,
+			Weighted: 15,
+			Authors:  map[string]struct{}{"B": {}},
+		},
 	})
 	cx := map[string]complexity.FileComplexity{
 		"big.go":   {Path: "big.go", Cyclomatic: 20, SLOC: 200, Indentation: 100},
@@ -30,6 +44,7 @@ func TestScoreBasicRanking(t *testing.T) {
 	if len(results) != 2 {
 		t.Fatalf("got %d results, want 2", len(results))
 	}
+
 	if results[0].Path != "big.go" {
 		t.Errorf("top result = %s, want big.go", results[0].Path)
 	}
@@ -42,8 +57,22 @@ func TestScoreBasicRanking(t *testing.T) {
 func TestScoreNormalization(t *testing.T) {
 	// Two files: one has all the complexity, other has all the churn.
 	history := makeHistory(map[string]*git.FileChurn{
-		"complex.go": {Path: "complex.go", Commits: 1, Added: 1, Deleted: 0, Weighted: 1, Authors: map[string]struct{}{}},
-		"churny.go":  {Path: "churny.go", Commits: 100, Added: 1000, Deleted: 500, Weighted: 1500, Authors: map[string]struct{}{}},
+		"complex.go": {
+			Path:     "complex.go",
+			Commits:  1,
+			Added:    1,
+			Deleted:  0,
+			Weighted: 1,
+			Authors:  map[string]struct{}{},
+		},
+		"churny.go": {
+			Path:     "churny.go",
+			Commits:  100,
+			Added:    1000,
+			Deleted:  500,
+			Weighted: 1500,
+			Authors:  map[string]struct{}{},
+		},
 	})
 	cx := map[string]complexity.FileComplexity{
 		"complex.go": {Path: "complex.go", Cyclomatic: 100, SLOC: 1000},
@@ -73,6 +102,7 @@ func TestScoreChurnMetricChoice(t *testing.T) {
 	// With commit-count churn: a.go (50 commits) should rank higher.
 	byCommits := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnCommits})
 	Sort(byCommits, SortHotspot, time.Now())
+
 	if byCommits[0].Path != "a.go" {
 		t.Errorf("by commits, top = %s, want a.go", byCommits[0].Path)
 	}
@@ -80,6 +110,7 @@ func TestScoreChurnMetricChoice(t *testing.T) {
 	// With weighted churn: b.go (1500 weighted) should rank higher.
 	byWeighted := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
 	Sort(byWeighted, SortHotspot, time.Now())
+
 	if byWeighted[0].Path != "b.go" {
 		t.Errorf("by weighted, top = %s, want b.go", byWeighted[0].Path)
 	}
@@ -87,6 +118,7 @@ func TestScoreChurnMetricChoice(t *testing.T) {
 
 func TestScoreEmptyHistory(t *testing.T) {
 	history := makeHistory(map[string]*git.FileChurn{})
+
 	results := Score(history, nil, ScoreOptions{})
 	if len(results) != 0 {
 		t.Errorf("empty history should yield 0 results, got %d", len(results))
@@ -95,6 +127,7 @@ func TestScoreEmptyHistory(t *testing.T) {
 
 func TestRiskBand(t *testing.T) {
 	max := 0.5
+
 	cases := map[float64]string{
 		0.50:  "critical", // 100%
 		0.20:  "high",     // 40%
@@ -120,6 +153,7 @@ func TestCouplingPerfectDegree(t *testing.T) {
 	if len(pairs) != 1 {
 		t.Fatalf("got %d pairs, want 1", len(pairs))
 	}
+
 	p := pairs[0]
 	if p.SharedCommits != 10 {
 		t.Errorf("shared = %d, want 10", p.SharedCommits)
@@ -150,7 +184,12 @@ func TestCouplingPartialDegree(t *testing.T) {
 
 func TestCouplingThresholds(t *testing.T) {
 	history := makeHistory(map[string]*git.FileChurn{
-		"a.go": {Path: "a.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"b.go": 3, "c.go": 8}},
+		"a.go": {
+			Path:        "a.go",
+			Commits:     10,
+			Authors:     map[string]struct{}{},
+			CommitsWith: map[string]int{"b.go": 3, "c.go": 8},
+		},
 		"b.go": {Path: "b.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 3}},
 		"c.go": {Path: "c.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 8}},
 	})
@@ -161,6 +200,7 @@ func TestCouplingThresholds(t *testing.T) {
 	if len(pairs) != 1 {
 		t.Fatalf("got %d pairs, want 1 (a-c only)", len(pairs))
 	}
+
 	if pairs[0].FileA != "a.go" || pairs[0].FileB != "c.go" {
 		if pairs[0].FileA != "c.go" || pairs[0].FileB != "a.go" {
 			t.Errorf("pair = %s↔%s, want a.go↔c.go", pairs[0].FileA, pairs[0].FileB)
@@ -185,6 +225,7 @@ func TestCouplingNoSelfPair(t *testing.T) {
 
 func TestOrderedPair(t *testing.T) {
 	a := orderedPair("zebra.go", "apple.go")
+
 	b := orderedPair("apple.go", "zebra.go")
 	if a != b {
 		t.Errorf("orderedPair not canonical: %v != %v", a, b)
@@ -256,6 +297,7 @@ func TestSortChurnAndCommits(t *testing.T) {
 	}
 
 	Sort(results, SortChurn, now)
+
 	if results[0].Path != "c.go" {
 		t.Errorf("churn sort top = %s, want c.go", results[0].Path)
 	}
@@ -267,6 +309,7 @@ func TestSortChurnAndCommits(t *testing.T) {
 		{Path: "c.go", Commits: 10, Churn: 1000},
 	}
 	Sort(results, SortCommits, now)
+
 	if results[0].Path != "b.go" {
 		t.Errorf("commits sort top = %s, want b.go", results[0].Path)
 	}
@@ -274,6 +317,7 @@ func TestSortChurnAndCommits(t *testing.T) {
 
 func TestResultAgeDays(t *testing.T) {
 	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+
 	r := Result{LastTouch: now.AddDate(0, 0, -30)}
 	if got := r.AgeDays(now); got < 29 || got > 31 {
 		t.Errorf("AgeDays = %d, want ~30", got)
@@ -289,6 +333,7 @@ func TestResultAgeDays(t *testing.T) {
 func BenchmarkScore(b *testing.B) {
 	files := make(map[string]*git.FileChurn)
 	cx := make(map[string]complexity.FileComplexity)
+
 	for i := range 1000 {
 		path := fmt.Sprintf("file%d.go", i)
 		files[path] = &git.FileChurn{
@@ -301,8 +346,11 @@ func BenchmarkScore(b *testing.B) {
 		}
 		cx[path] = complexity.FileComplexity{Cyclomatic: i%30 + 1}
 	}
+
 	history := &git.History{Files: files}
+
 	b.ResetTimer()
+
 	for range b.N {
 		Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
 	}

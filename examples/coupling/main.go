@@ -12,6 +12,7 @@ import (
 
 func main() {
 	now := time.Now()
+
 	history, err := git.Collect(context.Background(), git.Options{
 		Since: "1 year ago",
 	}, now)

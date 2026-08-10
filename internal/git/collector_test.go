@@ -52,6 +52,7 @@ func TestParseCommitMarker(t *testing.T) {
 	if author != "Lars Artmann" {
 		t.Errorf("author = %q", author)
 	}
+
 	want := time.Date(2026, 8, 9, 23, 45, 10, 0, time.FixedZone("+0200", 2*3600))
 	if !date.Equal(want) {
 		t.Errorf("date = %v, want %v", date, want)
@@ -97,12 +98,15 @@ func TestApplyNumStatLine(t *testing.T) {
 	if s == nil {
 		t.Fatal("missing stat")
 	}
+
 	if s.Commits != 2 || s.Added != 15 || s.Deleted != 3 {
 		t.Errorf("got commits=%d added=%d del=%d", s.Commits, s.Added, s.Deleted)
 	}
+
 	if s.AuthorCount() != 2 {
 		t.Errorf("authors = %d, want 2", s.AuthorCount())
 	}
+
 	if s.Churn() != 18 {
 		t.Errorf("churn = %d, want 18", s.Churn())
 	}
@@ -125,6 +129,7 @@ func TestParseNumStatCoupling(t *testing.T) {
 	}, "\n")
 
 	h := &History{Files: make(map[string]*FileChurn)}
+
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
 	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
 		t.Fatal(err)
@@ -151,6 +156,7 @@ func TestParseNumStatCoupling(t *testing.T) {
 	if mainGo == nil {
 		t.Fatal("missing main.go")
 	}
+
 	if len(mainGo.CommitsWith) != 0 {
 		t.Errorf("main.go has coupling entries, want none")
 	}
@@ -170,6 +176,7 @@ func TestParseNumStatAuthorTracking(t *testing.T) {
 	}, "\n")
 
 	h := &History{Files: make(map[string]*FileChurn)}
+
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
 	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
 		t.Fatal(err)
@@ -179,12 +186,15 @@ func TestParseNumStatAuthorTracking(t *testing.T) {
 	if f == nil {
 		t.Fatal("missing file.go")
 	}
+
 	if f.AuthorCount() != 2 {
 		t.Errorf("authors = %d, want 2 (Alice, Bob)", f.AuthorCount())
 	}
+
 	if _, ok := f.Authors["Alice"]; !ok {
 		t.Error("missing author Alice")
 	}
+
 	if _, ok := f.Authors["Bob"]; !ok {
 		t.Error("missing author Bob")
 	}
@@ -194,14 +204,17 @@ func TestParseNumStatMaxChangesetGuard(t *testing.T) {
 	// A commit touching 31 files (exceeding the maxCouplingFiles=30 threshold).
 	// Coupling should NOT be recorded.
 	var lines []string
+
 	lines = append(lines, "@@@hash1|2026-01-01T00:00:00+00:00|Alice")
 	for i := range 31 {
 		lines = append(lines, "1\t1\tfile"+string(rune('A'+i))+".go")
 	}
+
 	lines = append(lines, "")
 
 	input := strings.Join(lines, "\n")
 	h := &History{Files: make(map[string]*FileChurn)}
+
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
 	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
 		t.Fatal(err)
@@ -224,6 +237,7 @@ func TestHistoryWindow(t *testing.T) {
 	t1 := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
 	t2 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	t3 := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+
 	h.extendWindow(t1)
 	h.extendWindow(t2) // earlier
 	h.extendWindow(t3) // later
@@ -231,12 +245,14 @@ func TestHistoryWindow(t *testing.T) {
 	if !h.FirstCommit.Equal(t2) {
 		t.Errorf("FirstCommit = %v, want %v", h.FirstCommit, t2)
 	}
+
 	if !h.LastCommit.Equal(t3) {
 		t.Errorf("LastCommit = %v, want %v", h.LastCommit, t3)
 	}
 
 	// Zero time should be ignored.
 	h.extendWindow(time.Time{})
+
 	if !h.FirstCommit.Equal(t2) {
 		t.Errorf("FirstCommit changed after zero-time extend")
 	}
@@ -249,11 +265,15 @@ func BenchmarkParseNumStat(b *testing.B) {
 		for j := range 10 {
 			lines = append(lines, fmt.Sprintf("%d\t%d\tfile%d_%d.go", j+1, j, i, j))
 		}
+
 		lines = append(lines, "")
 	}
+
 	input := strings.Join(lines, "\n")
 	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+
 	b.ResetTimer()
+
 	for range b.N {
 		h := &History{Files: make(map[string]*FileChurn)}
 		if err := parseNumStat(context.Background(), strings.NewReader(input), h, 180, now); err != nil {

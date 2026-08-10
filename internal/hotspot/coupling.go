@@ -39,6 +39,7 @@ func DefaultCouplingOptions() CouplingOptions {
 // where avg is the mean of each file's total commit count.
 func Coupling(history *git.History, opts CouplingOptions) []CouplingPair {
 	seen := make(map[[2]string]bool)
+
 	var pairs []CouplingPair
 
 	for pathA, fcA := range history.Files {
@@ -46,6 +47,7 @@ func Coupling(history *git.History, opts CouplingOptions) []CouplingPair {
 			if pathA == pathB {
 				continue
 			}
+
 			if shared < opts.MinSharedCommits {
 				continue
 			}
@@ -54,6 +56,7 @@ func Coupling(history *git.History, opts CouplingOptions) []CouplingPair {
 			if seen[key] {
 				continue
 			}
+
 			seen[key] = true
 
 			fcB := history.Files[pathB]
@@ -84,12 +87,14 @@ func Coupling(history *git.History, opts CouplingOptions) []CouplingPair {
 		if pairs[i].Degree != pairs[j].Degree {
 			return pairs[i].Degree > pairs[j].Degree
 		}
+
 		return pairs[i].SharedCommits > pairs[j].SharedCommits
 	})
 
 	if opts.MaxPairs > 0 && len(pairs) > opts.MaxPairs {
 		pairs = pairs[:opts.MaxPairs]
 	}
+
 	return pairs
 }
 
@@ -98,5 +103,6 @@ func orderedPair(a, b string) [2]string {
 	if a < b {
 		return [2]string{a, b}
 	}
+
 	return [2]string{b, a}
 }

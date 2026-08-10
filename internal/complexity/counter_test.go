@@ -9,10 +9,12 @@ import (
 
 func writeFile(t *testing.T, name, content string) string {
 	t.Helper()
+
 	path := filepath.Join(t.TempDir(), name)
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
+
 	return path
 }
 
@@ -31,9 +33,11 @@ func main() {
 	if sloc != 6 {
 		t.Errorf("SLOC = %d, want 5", sloc)
 	}
+
 	if indent == 0 {
 		t.Error("indentation should be > 0 for indented code")
 	}
+
 	if maxDepth < 2 {
 		t.Errorf("maxDepth = %d, want >= 2", maxDepth)
 	}
@@ -41,6 +45,7 @@ func main() {
 
 func TestCountLinesBlanksAndComments(t *testing.T) {
 	source := "\n\n   \n// comment\n  /* block */\n  * continuation\n"
+
 	sloc, _, _ := countLines(strings.Split(source, "\n"))
 	if sloc != 0 {
 		t.Errorf("SLOC = %d, want 0 (all blank/comment)", sloc)
@@ -125,6 +130,7 @@ func (f Foo) method() bool {
 	if fc.Cyclomatic != 8 {
 		t.Errorf("Cyclomatic = %d, want 8", fc.Cyclomatic)
 	}
+
 	if len(fc.Functions) != 3 {
 		t.Errorf("Functions = %d, want 3", len(fc.Functions))
 	}
@@ -133,22 +139,27 @@ func (f Foo) method() bool {
 	for _, fn := range fc.Functions {
 		names[fn.Name] = true
 	}
+
 	if !names["simple"] {
 		t.Error("missing function 'simple'")
 	}
+
 	if !names["complex"] {
 		t.Error("missing function 'complex'")
 	}
+
 	if !names["Foo.method"] {
 		t.Error("missing method 'Foo.method'")
 	}
 
 	var complexFn FuncComplexity
+
 	for _, fn := range fc.Functions {
 		if fn.Name == "complex" {
 			complexFn = fn
 		}
 	}
+
 	if complexFn.Cyclomatic != 8 {
 		t.Errorf("complex() cyclomatic = %d, want 8", complexFn.Cyclomatic)
 	}
@@ -190,15 +201,19 @@ func TestAnalyzeNonGo(t *testing.T) {
 	if fc.Language != "Python" {
 		t.Errorf("Language = %q, want Python", fc.Language)
 	}
+
 	if fc.SLOC == 0 {
 		t.Error("SLOC should be > 0")
 	}
+
 	if fc.Indentation == 0 {
 		t.Error("Indentation should be > 0")
 	}
+
 	if len(fc.Functions) != 0 {
 		t.Error("Non-Go should have no function breakdown")
 	}
+
 	if fc.Cyclomatic < 1 {
 		t.Error("Cyclomatic should be >= 1")
 	}
@@ -271,11 +286,14 @@ func beta(s string) bool {
 	return false
 }
 `
+
 	path := filepath.Join(b.TempDir(), "bench.go")
 	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
 		b.Fatal(err)
 	}
+
 	b.ResetTimer()
+
 	for range b.N {
 		Analyze(path)
 	}

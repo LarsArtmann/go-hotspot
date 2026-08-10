@@ -66,20 +66,26 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 	if opts.Since != "" {
 		args = append(args, "--since="+opts.Since)
 	}
+
 	if opts.Until != "" {
 		args = append(args, "--until="+opts.Until)
 	}
+
 	if opts.Branch != "" {
 		args = append(args, opts.Branch)
 	}
 
 	cmd := exec.CommandContext(ctx, "git", args...)
+
 	var stderr bytes.Buffer
+
 	cmd.Stderr = &stderr
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, fmt.Errorf("git log pipe: %w", err)
 	}
+
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("git log start: %w (%s)", err, stderr.String())
 	}
@@ -89,11 +95,14 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 		if waitErr := cmd.Wait(); waitErr != nil {
 			return nil, fmt.Errorf("git log: %w (%s)", waitErr, stderr.String())
 		}
+
 		return nil, err
 	}
+
 	if err := cmd.Wait(); err != nil {
 		return nil, fmt.Errorf("git log: %w (%s)", err, stderr.String())
 	}
+
 	return h, nil
 }
 
@@ -102,9 +111,11 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<16), 1<<20)
 
-	var curDate time.Time
-	var curAuthor string
-	var changedInCommit []string
+	var (
+		curDate         time.Time
+		curAuthor       string
+		changedInCommit []string
+	)
 
 	// maxCouplingFiles excludes mega-commits from coupling analysis.
 	// Large changesets (mass renames, formatting sweeps) create noise.
@@ -113,20 +124,25 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 	flushCoupling := func() {
 		if len(changedInCommit) > maxCouplingFiles {
 			changedInCommit = nil
+
 			return
 		}
+
 		for _, a := range changedInCommit {
 			fa := h.Files[a]
 			if fa == nil {
 				continue
 			}
+
 			for _, b := range changedInCommit {
 				if a == b {
 					continue
 				}
+
 				fa.CommitsWith[b]++
 			}
 		}
+
 		changedInCommit = nil
 	}
 
@@ -136,12 +152,14 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 			return ctx.Err()
 		default:
 		}
+
 		line := sc.Text()
 		switch {
 		case strings.HasPrefix(line, commitPrefix):
 			if changedInCommit != nil {
 				flushCoupling()
 			}
+
 			h.TotalCommits++
 			curAuthor, curDate = parseCommitMarker(line)
 			h.extendWindow(curDate)
@@ -149,6 +167,7 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 			if changedInCommit != nil {
 				flushCoupling()
 			}
+
 			continue
 		default:
 			file := applyNumStatLine(line, h.Files, curAuthor, curDate, halfLife, now)
@@ -157,9 +176,11 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 			}
 		}
 	}
+
 	if changedInCommit != nil {
 		flushCoupling()
 	}
+
 	return sc.Err()
 }
 
@@ -168,9 +189,11 @@ func (h *History) extendWindow(t time.Time) {
 	if t.IsZero() {
 		return
 	}
+
 	if h.FirstCommit.IsZero() || t.Before(h.FirstCommit) {
 		h.FirstCommit = t
 	}
+
 	if t.After(h.LastCommit) {
 		h.LastCommit = t
 	}
@@ -179,43 +202,60 @@ func (h *History) extendWindow(t time.Time) {
 // parseCommitMarker extracts date from a "@@@hash|date|author" line.
 func parseCommitMarker(line string) (author string, date time.Time) {
 	body := strings.TrimPrefix(line, commitPrefix)
+
 	parts := strings.SplitN(body, "|", 3)
 	if len(parts) < 3 {
 		return "", time.Time{}
 	}
+
 	t, err := time.Parse(time.RFC3339, parts[1])
 	if err != nil {
 		return parts[2], time.Time{}
 	}
+
 	return parts[2], t
 }
 
 // applyNumStatLine parses an "added\tdeleted\tpath" line and folds it into stats.
 // Returns the normalized file path (or "" if unparsable).
-func applyNumStatLine(line string, files map[string]*FileChurn, author string, date time.Time, halfLife float64, now time.Time) string {
+func applyNumStatLine(
+	line string,
+	files map[string]*FileChurn,
+	author string,
+	date time.Time,
+	halfLife float64,
+	now time.Time,
+) string {
 	add, del, file, ok := splitNumStat(line)
 	if !ok {
 		return ""
 	}
+
 	file = normalizeRename(file)
+
 	fc := files[file]
 	if fc == nil {
 		fc = &FileChurn{Path: file, Authors: make(map[string]struct{}), CommitsWith: make(map[string]int)}
 		files[file] = fc
 	}
+
 	fc.Commits++
 	fc.Added += add
 	fc.Deleted += del
+
 	fc.Weighted += recencyWeight(float64(add+del), date, halfLife, now)
 	if author != "" {
 		fc.Authors[author] = struct{}{}
 	}
+
 	if (fc.FirstTouch.IsZero() || date.Before(fc.FirstTouch)) && !date.IsZero() {
 		fc.FirstTouch = date
 	}
+
 	if date.After(fc.LastTouch) {
 		fc.LastTouch = date
 	}
+
 	return file
 }
 
@@ -226,10 +266,12 @@ func recencyWeight(raw float64, date time.Time, halfLifeDays float64, now time.T
 	if halfLifeDays <= 0 {
 		return raw
 	}
+
 	ageDays := now.Sub(date).Hours() / 24
 	if ageDays < 0 {
 		ageDays = 0 // clock skew: clamp to full weight
 	}
+
 	return raw * math.Pow(0.5, ageDays/halfLifeDays)
 }
 
@@ -239,11 +281,14 @@ func splitNumStat(line string) (add, del int, file string, ok bool) {
 	if len(parts) != 3 {
 		return 0, 0, "", false
 	}
+
 	a, errA := strconv.Atoi(parts[0])
+
 	d, errD := strconv.Atoi(parts[1])
 	if errA != nil || errD != nil {
 		return 0, 0, "", false
 	}
+
 	return a, d, parts[2], true
 }
 
@@ -260,6 +305,7 @@ func normalizeRename(path string) string {
 			inner := rest[1:rightBrace]
 			if _, after, ok := strings.Cut(inner, "=>"); ok {
 				newPart := strings.TrimSpace(after)
+
 				return path[:leftBrace] + newPart + path[leftBrace+rightBrace+1:]
 			}
 		}
@@ -268,5 +314,6 @@ func normalizeRename(path string) string {
 	if _, after, ok := strings.Cut(path, "=>"); ok {
 		return strings.TrimSpace(after)
 	}
+
 	return path
 }

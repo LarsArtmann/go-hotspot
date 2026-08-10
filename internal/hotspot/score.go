@@ -68,6 +68,7 @@ func (r Result) AgeDays(now time.Time) int {
 	if r.LastTouch.IsZero() {
 		return math.MaxInt32
 	}
+
 	return int(now.Sub(r.LastTouch).Hours() / 24)
 }
 
@@ -135,9 +136,11 @@ func Sort(results []Result, order SortOrder, now time.Time) {
 			if ai.IsZero() && !aj.IsZero() {
 				return false
 			}
+
 			if !ai.IsZero() && aj.IsZero() {
 				return true
 			}
+
 			if !ai.Equal(aj) {
 				return ai.Before(aj) // earlier = older = first
 			}
@@ -146,6 +149,7 @@ func Sort(results []Result, order SortOrder, now time.Time) {
 				return results[i].Hotspot > results[j].Hotspot
 			}
 		}
+
 		return results[i].Path < results[j].Path
 	})
 }
@@ -201,7 +205,9 @@ func sortedAuthors(authors map[string]struct{}) []string {
 	for name := range authors {
 		names = append(names, name)
 	}
+
 	sort.Strings(names)
+
 	return names
 }
 
@@ -235,6 +241,7 @@ func normalizedProduct(cx, sumCx, ch, sumCh float64) float64 {
 	if sumCx <= 0 || sumCh <= 0 {
 		return 0
 	}
+
 	return (cx / sumCx) * (ch / sumCh)
 }
 
@@ -243,6 +250,7 @@ func TopN(results []Result, n int) []Result {
 	if n <= 0 || n >= len(results) {
 		return results
 	}
+
 	return results[:n]
 }
 
@@ -251,6 +259,7 @@ func RiskBand(score float64, maxScore float64) string {
 	if maxScore <= 0 {
 		return "unknown"
 	}
+
 	pct := score / maxScore
 	switch {
 	case pct >= 0.66:
@@ -269,14 +278,17 @@ func MaxHotspot(results []Result) float64 {
 	if len(results) == 0 {
 		return 0
 	}
+
 	max := math.Inf(-1)
 	for _, r := range results {
 		if r.Hotspot > max {
 			max = r.Hotspot
 		}
 	}
+
 	if max < 0 {
 		return 0
 	}
+
 	return max
 }

@@ -41,10 +41,11 @@ const tabWidth = 4
 func Analyze(path string) FileComplexity {
 	fc := FileComplexity{Path: path, Language: detectLanguage(path)}
 
-	data, err := os.ReadFile(path) //nolint:gosec // path comes from git history, not user input
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return fc
 	}
+
 	lines := strings.Split(string(data), "\n")
 	fc.SLOC, fc.Indentation, fc.MaxDepth = countLines(lines)
 
@@ -55,6 +56,7 @@ func Analyze(path string) FileComplexity {
 		// A reasonable heuristic: indentation / 4 + 1 (minimum complexity).
 		fc.Cyclomatic = fc.Indentation/tabWidth + 1
 	}
+
 	return fc
 }
 
@@ -65,23 +67,28 @@ func countLines(lines []string) (sloc, totalIndent, maxDepth int) {
 		if trimmed == "" {
 			continue
 		}
+
 		if isCommentLine(trimmed) {
 			continue
 		}
+
 		sloc++
 		indent := leadingIndent(raw)
 		totalIndent += indent
+
 		depth := indent / tabWidth
 		if depth > maxDepth {
 			maxDepth = depth
 		}
 	}
+
 	return sloc, totalIndent, maxDepth
 }
 
 // leadingIndent returns the space-equivalent count of leading whitespace.
 func leadingIndent(line string) int {
 	n := 0
+
 	for _, ch := range line {
 		switch ch {
 		case '\t':
@@ -92,6 +99,7 @@ func leadingIndent(line string) int {
 			return n
 		}
 	}
+
 	return n
 }
 
@@ -107,17 +115,22 @@ func isCommentLine(t string) bool {
 // analyzeGo parses Go source and returns cyclomatic complexity + function breakdown.
 func analyzeGo(path string, src []byte) (int, []FuncComplexity) {
 	fset := token.NewFileSet()
+
 	f, err := parser.ParseFile(fset, path, src, parser.ParseComments)
 	if err != nil {
 		return 1, nil
 	}
+
 	var funcs []FuncComplexity
+
 	total := 1
+
 	ast.Inspect(f, func(n ast.Node) bool {
 		fn, ok := n.(*ast.FuncDecl)
 		if !ok {
 			return true
 		}
+
 		cyc := cyclomaticOfFunc(fn)
 		total += cyc - 1 // function starts at 1, so subtract the base
 		funcs = append(funcs, FuncComplexity{
@@ -126,11 +139,14 @@ func analyzeGo(path string, src []byte) (int, []FuncComplexity) {
 			StartLine:  fset.Position(fn.Body.Pos()).Line,
 			LineCount:  fset.Position(fn.Body.End()).Line - fset.Position(fn.Body.Pos()).Line,
 		})
+
 		return true
 	})
+
 	if total < 1 {
 		total = 1
 	}
+
 	return total, funcs
 }
 
@@ -140,7 +156,9 @@ func cyclomaticOfFunc(fn *ast.FuncDecl) int {
 	if fn.Body == nil {
 		return 1
 	}
+
 	cyc := 1
+
 	ast.Inspect(fn.Body, func(n ast.Node) bool {
 		switch n := n.(type) {
 		case *ast.IfStmt, *ast.ForStmt, *ast.RangeStmt, *ast.SwitchStmt,
@@ -158,8 +176,10 @@ func cyclomaticOfFunc(fn *ast.FuncDecl) int {
 				cyc++
 			}
 		}
+
 		return true
 	})
+
 	return cyc
 }
 
@@ -168,8 +188,10 @@ func funcName(fn *ast.FuncDecl) string {
 	if fn.Recv != nil && len(fn.Recv.List) > 0 {
 		// Method: ReceiverType.MethodName
 		recv := typeString(fn.Recv.List[0].Type)
+
 		return recv + "." + fn.Name.Name
 	}
+
 	return fn.Name.Name
 }
 

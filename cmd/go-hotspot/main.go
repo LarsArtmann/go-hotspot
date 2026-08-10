@@ -35,6 +35,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "go-hotspot:", err)
 			os.Exit(2)
 		}
+
 		fmt.Fprintln(os.Stderr, "go-hotspot:", err)
 		os.Exit(1)
 	}
@@ -71,6 +72,7 @@ func run(args []string, out io.Writer, now time.Time) error {
 
 	if *showVersion {
 		_, err := fmt.Fprintf(out, "go-hotspot version %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
+
 		return err
 	}
 
@@ -97,8 +99,10 @@ func run(args []string, out io.Writer, now time.Time) error {
 	for path := range history.Files {
 		if !filter.keep(path) {
 			delete(history.Files, path)
+
 			continue
 		}
+
 		complexities[path] = complexity.Analyze(path)
 	}
 
@@ -128,22 +132,27 @@ func run(args []string, out io.Writer, now time.Time) error {
 			if *minCommits > 0 && r.Commits < *minCommits {
 				continue
 			}
+
 			if *author != "" && !hasAuthor(r.AuthorNames, *author) {
 				continue
 			}
+
 			filtered = append(filtered, r)
 		}
+
 		results = filtered
 	}
 
 	// 6. Render report.
 	w := out
+
 	if *output != "" {
 		f, err := os.Create(*output)
 		if err != nil {
 			return fmt.Errorf("creating output file: %w", err)
 		}
 		defer func() { _ = f.Close() }()
+
 		w = f
 	}
 
@@ -181,15 +190,19 @@ func (f fileFilter) keep(path string) bool {
 	if strings.Contains("/"+path+"/", "/vendor/") {
 		return false
 	}
+
 	if !f.includeGenerated && (isGenerated(path) || isGeneratedContent(path)) {
 		return false
 	}
+
 	if !f.includeTests && strings.HasSuffix(path, "_test.go") {
 		return false
 	}
+
 	if len(f.prefixes) > 0 && !hasAnyPrefix(path, f.prefixes) {
 		return false
 	}
+
 	return hasAnySuffix(path, f.exts)
 }
 
@@ -201,26 +214,30 @@ func isGenerated(path string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 // isGeneratedContent checks whether a file starts with a "Code generated ... DO NOT EDIT" header.
 func isGeneratedContent(path string) bool {
-	f, err := os.Open(path) //nolint:gosec // path comes from git history
+	f, err := os.Open(path)
 	if err != nil {
 		return false
 	}
 	defer func() { _ = f.Close() }()
+
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		line := strings.TrimSpace(sc.Text())
 		if strings.HasPrefix(line, "// Code generated") && strings.Contains(line, "DO NOT EDIT") {
 			return true
 		}
+
 		if strings.HasPrefix(line, "package ") {
 			return false
 		}
 	}
+
 	return false
 }
 
@@ -231,6 +248,7 @@ func hasAuthor(names []string, author string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -240,6 +258,7 @@ func hasAnyPrefix(path string, prefixes []string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -247,11 +266,13 @@ func hasAnySuffix(path string, suffixes []string) bool {
 	if len(suffixes) == 0 {
 		return true
 	}
+
 	for _, s := range suffixes {
 		if s != "" && strings.HasSuffix(path, s) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -281,12 +302,15 @@ func splitCSV(s string) []string {
 	if strings.TrimSpace(s) == "" {
 		return nil
 	}
+
 	parts := strings.Split(s, ",")
+
 	res := make([]string, 0, len(parts))
 	for _, p := range parts {
 		if p = strings.TrimSpace(p); p != "" {
 			res = append(res, p)
 		}
 	}
+
 	return res
 }

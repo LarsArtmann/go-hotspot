@@ -42,6 +42,7 @@ type fixtureCommit struct {
 // helper.go=1 commit/{Carol}, total=5, main.go<->util.go coupling=2 shared.
 func setupFixtureRepo(t *testing.T) {
 	t.Helper()
+
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -94,18 +95,22 @@ func setupFixtureRepo(t *testing.T) {
 			if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
 				t.Fatalf("mkdir for %s: %v", path, err)
 			}
+
 			if err := os.WriteFile(full, []byte(content), 0o600); err != nil {
 				t.Fatalf("write %s: %v", path, err)
 			}
+
 			runGitEnv(t, c, "add", path)
 		}
+
 		runGitEnv(t, c, "commit", "-m", "change")
 	}
 }
 
 func runGit(t *testing.T, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", args...) //nolint:gosec // args are hardcoded test values, not user input
+
+	cmd := exec.Command("git", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
 	}
@@ -113,7 +118,9 @@ func runGit(t *testing.T, args ...string) {
 
 func runGitEnv(t *testing.T, c fixtureCommit, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", args...) //nolint:gosec // args are hardcoded test values, not user input
+
+	cmd := exec.Command("git", args...)
+
 	cmd.Env = append(os.Environ(),
 		"GIT_AUTHOR_NAME="+c.author,
 		"GIT_AUTHOR_EMAIL="+c.email,
@@ -143,15 +150,19 @@ func TestIntegrationCollectFromRepo(t *testing.T) {
 	if mainChurn == nil {
 		t.Fatal("main.go missing from history")
 	}
+
 	if mainChurn.Commits != 4 {
 		t.Errorf("main.go Commits = %d, want 4", mainChurn.Commits)
 	}
+
 	if mainChurn.AuthorCount() != 2 {
 		t.Errorf("main.go AuthorCount = %d, want 2", mainChurn.AuthorCount())
 	}
+
 	if _, ok := mainChurn.Authors["Alice"]; !ok {
 		t.Error("main.go authors missing Alice")
 	}
+
 	if _, ok := mainChurn.Authors["Bob"]; !ok {
 		t.Error("main.go authors missing Bob")
 	}
@@ -160,6 +171,7 @@ func TestIntegrationCollectFromRepo(t *testing.T) {
 	if utilChurn == nil {
 		t.Fatal("util.go missing from history")
 	}
+
 	if utilChurn.Commits != 2 {
 		t.Errorf("util.go Commits = %d, want 2", utilChurn.Commits)
 	}
@@ -168,9 +180,11 @@ func TestIntegrationCollectFromRepo(t *testing.T) {
 	if helperChurn == nil {
 		t.Fatal("helper.go missing from history")
 	}
+
 	if helperChurn.Commits != 1 {
 		t.Errorf("helper.go Commits = %d, want 1", helperChurn.Commits)
 	}
+
 	if helperChurn.AuthorCount() != 1 {
 		t.Errorf("helper.go AuthorCount = %d, want 1", helperChurn.AuthorCount())
 	}
@@ -178,6 +192,7 @@ func TestIntegrationCollectFromRepo(t *testing.T) {
 	if !history.FirstCommit.Equal(time.Date(2026, 1, 1, 10, 0, 0, 0, time.UTC)) {
 		t.Errorf("FirstCommit = %v, want 2026-01-01", history.FirstCommit)
 	}
+
 	if !history.LastCommit.Equal(time.Date(2026, 5, 1, 10, 0, 0, 0, time.UTC)) {
 		t.Errorf("LastCommit = %v, want 2026-05-01", history.LastCommit)
 	}
@@ -187,6 +202,7 @@ func TestIntegrationFullPipeline(t *testing.T) {
 	setupFixtureRepo(t)
 
 	ctx := context.Background()
+
 	history, err := git.Collect(ctx, git.Options{HalfLifeDay: 180}, fixedNow)
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
@@ -211,9 +227,11 @@ func TestIntegrationFullPipeline(t *testing.T) {
 	if results[0].Path != "main.go" {
 		t.Errorf("top hotspot = %q, want main.go", results[0].Path)
 	}
+
 	if results[0].Cyclomatic < 2 {
 		t.Errorf("main.go cyclomatic = %d, want >= 2", results[0].Cyclomatic)
 	}
+
 	if results[0].Hotspot <= 0 {
 		t.Errorf("main.go hotspot = %.4f, want > 0", results[0].Hotspot)
 	}
@@ -226,11 +244,13 @@ func TestIntegrationFullPipeline(t *testing.T) {
 		TotalFiles:   len(results),
 		HalfLifeDays: 180,
 	}
+
 	for _, name := range []string{"table", "markdown", "csv", "json"} {
 		var buf bytes.Buffer
 		if err := report.Render(&buf, results, nil, summary, report.ParseFormat(name), 0); err != nil {
 			t.Errorf("Render(%s): %v", name, err)
 		}
+
 		if buf.Len() == 0 {
 			t.Errorf("Render(%s) produced empty output", name)
 		}
@@ -241,6 +261,7 @@ func TestIntegrationCouplingFromRepo(t *testing.T) {
 	setupFixtureRepo(t)
 
 	ctx := context.Background()
+
 	history, err := git.Collect(ctx, git.Options{HalfLifeDay: 180}, fixedNow)
 	if err != nil {
 		t.Fatalf("Collect: %v", err)
@@ -257,20 +278,25 @@ func TestIntegrationCouplingFromRepo(t *testing.T) {
 	}
 
 	var mainUtil *hotspot.CouplingPair
+
 	for i := range pairs {
 		p := &pairs[i]
 		if (p.FileA == "main.go" && p.FileB == "util.go") ||
 			(p.FileA == "util.go" && p.FileB == "main.go") {
 			mainUtil = p
+
 			break
 		}
 	}
+
 	if mainUtil == nil {
 		t.Fatal("expected main.go <-> util.go coupling pair, not found")
 	}
+
 	if mainUtil.SharedCommits != 2 {
 		t.Errorf("main.go<->util.go SharedCommits = %d, want 2", mainUtil.SharedCommits)
 	}
+
 	if mainUtil.Degree <= 0 {
 		t.Errorf("main.go<->util.go Degree = %.1f, want > 0", mainUtil.Degree)
 	}
