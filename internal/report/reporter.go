@@ -11,6 +11,7 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/larsartmann/go-hotspot/internal/errors"
 	"github.com/larsartmann/go-hotspot/internal/hotspot"
 )
 
@@ -64,38 +65,66 @@ func Render(
 
 	switch format {
 	case FormatJSON:
-		return renderJSON(w, limited, couplings, summary)
+		return renderJSONReport(w, limited, couplings, summary)
 	case FormatCSV:
-		return renderCSV(w, limited)
+		return renderCSVReport(w, limited)
 	case FormatMarkdown:
-		if err := writeHeader(w, summary); err != nil {
-			return err
-		}
-
-		if err := renderMarkdown(w, limited); err != nil {
-			return err
-		}
-
-		if len(couplings) > 0 {
-			return renderCouplingMarkdown(w, couplings)
-		}
-
-		return nil
+		return renderMarkdownReport(w, limited, couplings, summary)
 	default:
-		if err := writeHeader(w, summary); err != nil {
-			return err
-		}
-
-		if err := renderTable(w, limited); err != nil {
-			return err
-		}
-
-		if len(couplings) > 0 {
-			return renderCouplingTable(w, couplings)
-		}
-
-		return nil
+		return renderTableReport(w, limited, couplings, summary)
 	}
+}
+
+func renderJSONReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
+	if err := renderJSON(w, results, couplings, summary); err != nil {
+		return errors.ReportRender("render JSON", err)
+	}
+
+	return nil
+}
+
+func renderCSVReport(w io.Writer, results []hotspot.Result) error {
+	if err := renderCSV(w, results); err != nil {
+		return errors.ReportRender("render CSV", err)
+	}
+
+	return nil
+}
+
+func renderMarkdownReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
+	if err := writeHeader(w, summary); err != nil {
+		return errors.ReportRender("write header", err)
+	}
+
+	if err := renderMarkdown(w, results); err != nil {
+		return errors.ReportRender("render markdown", err)
+	}
+
+	if len(couplings) > 0 {
+		if err := renderCouplingMarkdown(w, couplings); err != nil {
+			return errors.ReportRender("render coupling markdown", err)
+		}
+	}
+
+	return nil
+}
+
+func renderTableReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
+	if err := writeHeader(w, summary); err != nil {
+		return errors.ReportRender("write header", err)
+	}
+
+	if err := renderTable(w, results); err != nil {
+		return errors.ReportRender("render table", err)
+	}
+
+	if len(couplings) > 0 {
+		if err := renderCouplingTable(w, couplings); err != nil {
+			return errors.ReportRender("render coupling table", err)
+		}
+	}
+
+	return nil
 }
 
 func writeHeader(w io.Writer, s Summary) error {

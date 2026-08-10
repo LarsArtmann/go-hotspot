@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	errorfamily "github.com/larsartmann/go-error-family"
+	apierrors "github.com/larsartmann/go-hotspot/internal/errors"
 	"github.com/larsartmann/go-hotspot/internal/hotspot"
 )
 
@@ -237,6 +239,8 @@ func (failingWriter) Write(p []byte) (int, error) {
 }
 
 func TestRenderWriteError(t *testing.T) {
+	t.Parallel()
+
 	results := sampleResults()
 	summary := sampleSummary()
 
@@ -246,6 +250,14 @@ func TestRenderWriteError(t *testing.T) {
 		err := Render(fw, results, nil, summary, format, 0)
 		if err == nil {
 			t.Errorf("Render with failingWriter (format %d) should return error", format)
+		}
+
+		if code := errorfamily.Code(err); code != apierrors.CodeReportRenderFailed {
+			t.Errorf("Code() = %q, want %q (format %d)", code, apierrors.CodeReportRenderFailed, format)
+		}
+
+		if family := errorfamily.Classify(err); family != errorfamily.Infrastructure {
+			t.Errorf("Classify() = %v, want Infrastructure (format %d)", family, format)
 		}
 	}
 }

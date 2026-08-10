@@ -24,7 +24,13 @@ func main() {
 
 	complexities := make(map[string]complexity.FileComplexity)
 	for path := range history.Files {
-		complexities[path] = complexity.Analyze(path)
+		fc, err := complexity.Analyze(path)
+		if err != nil {
+			log.Printf("warning: skipping %s: %v", path, err)
+			continue
+		}
+
+		complexities[path] = fc
 	}
 
 	results := hotspot.Score(history, complexities, hotspot.ScoreOptions{

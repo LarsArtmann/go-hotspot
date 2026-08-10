@@ -7,13 +7,15 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"math"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	apierrors "github.com/larsartmann/go-hotspot/internal/errors"
 )
 
 // commitPrefix marks the start of a git commit record in numstat output.
@@ -83,24 +85,24 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("git log pipe: %w", err)
+		return nil, apierrors.GitFailure("git log pipe", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("git log start: %w (%s)", err, stderr.String())
+		return nil, classifyGitError(err, stderr.String())
 	}
 
 	h := &History{Files: make(map[string]*FileChurn)}
 	if err := parseNumStat(ctx, stdout, h, opts.HalfLifeDay, now); err != nil {
 		if waitErr := cmd.Wait(); waitErr != nil {
-			return nil, fmt.Errorf("git log: %w (%s)", waitErr, stderr.String())
+			return nil, classifyGitError(waitErr, stderr.String())
 		}
 
-		return nil, err
+		return nil, apierrors.GitFailure("git log parse", err)
 	}
 
 	if err := cmd.Wait(); err != nil {
-		return nil, fmt.Errorf("git log: %w (%s)", err, stderr.String())
+		return nil, classifyGitError(err, stderr.String())
 	}
 
 	return h, nil
@@ -182,6 +184,27 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 	}
 
 	return sc.Err()
+}
+
+// classifyGitError inspects the cause and stderr to pick the most specific
+// error code, then wraps as an Infrastructure error. The stderr is used for
+// classification only — the user sees the MessageTemplate (What/Why/Fix/WayOut)
+// registered for the chosen code.
+func classifyGitError(cause error, stderr string) error {
+	stderr = strings.TrimSpace(stderr)
+
+	switch {
+	case errors.Is(cause, exec.ErrNotFound):
+		return apierrors.GitNotInstalled(cause)
+	case strings.Contains(stderr, "not a git repository"):
+		return apierrors.GitNotARepo(cause)
+	case strings.Contains(stderr, "ambiguous argument"):
+		return apierrors.GitBadRevision(cause)
+	case strings.Contains(stderr, "no commits"):
+		return apierrors.GitNoCommits(cause)
+	default:
+		return apierrors.GitFailure("git log", cause)
+	}
 }
 
 // extendWindow widens the first/last commit timestamps.

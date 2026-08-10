@@ -119,7 +119,10 @@ func (f Foo) method() bool {
 }
 `
 	path := writeFile(t, "test.go", source)
-	fc := Analyze(path)
+	fc, err := Analyze(path)
+	if err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
 
 	if fc.Language != "Go" {
 		t.Errorf("Language = %q, want Go", fc.Language)
@@ -181,7 +184,10 @@ func selectFunc(ch chan int) int {
 }
 `
 	path := writeFile(t, "select.go", source)
-	fc := Analyze(path)
+	fc, err := Analyze(path)
+	if err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
 	// select(+1) case(+1) if(+1) ||(+1) default-case(+1) = 5 decisions + 1 base = 6
 	if fc.Cyclomatic != 6 {
 		t.Errorf("Cyclomatic = %d, want 6", fc.Cyclomatic)
@@ -196,7 +202,10 @@ func TestAnalyzeNonGo(t *testing.T) {
         print("b")
 `
 	path := writeFile(t, "test.py", source)
-	fc := Analyze(path)
+	fc, err := Analyze(path)
+	if err != nil {
+		t.Fatalf("Analyze failed: %v", err)
+	}
 
 	if fc.Language != "Python" {
 		t.Errorf("Language = %q, want Python", fc.Language)
@@ -220,7 +229,13 @@ func TestAnalyzeNonGo(t *testing.T) {
 }
 
 func TestAnalyzeMissingFile(t *testing.T) {
-	fc := Analyze("/nonexistent/file.go")
+	t.Parallel()
+
+	fc, err := Analyze("/nonexistent/file.go")
+	if err == nil {
+		t.Error("expected error for missing file")
+	}
+
 	if fc.SLOC != 0 || fc.Cyclomatic != 0 {
 		t.Error("missing file should return zero-value complexity")
 	}

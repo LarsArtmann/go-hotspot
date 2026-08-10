@@ -15,12 +15,11 @@ import (
 	"time"
 
 	"github.com/larsartmann/go-hotspot/internal/complexity"
+	apierrors "github.com/larsartmann/go-hotspot/internal/errors"
 	"github.com/larsartmann/go-hotspot/internal/git"
 	"github.com/larsartmann/go-hotspot/internal/hotspot"
 	"github.com/larsartmann/go-hotspot/internal/report"
 )
-
-var errThresholdExceeded = errors.New("hotspot score exceeds --fail-above threshold")
 
 // Build-time variables, injected by goreleaser ldflags.
 var (
@@ -30,19 +29,14 @@ var (
 )
 
 func main() {
-	if err := run(os.Args[1:], os.Stdout, time.Now()); err != nil {
-		if errors.Is(err, errThresholdExceeded) {
-			fmt.Fprintln(os.Stderr, "go-hotspot:", err)
-			os.Exit(2)
-		}
-
-		fmt.Fprintln(os.Stderr, "go-hotspot:", err)
-		os.Exit(1)
+	if err := run(os.Args[1:], os.Stdout, os.Stderr, time.Now()); err != nil {
+		os.Exit(apierrors.HandleError(err))
 	}
 }
 
-func run(args []string, out io.Writer, now time.Time) error {
+func run(args []string, out, errOut io.Writer, now time.Time) error {
 	fs := flag.NewFlagSet("go-hotspot", flag.ContinueOnError)
+	fs.SetOutput(errOut)
 
 	since := fs.String("since", "1 year ago", "analyze commits since this git date")
 	until := fs.String("until", "", "analyze commits until this git date")
@@ -67,7 +61,11 @@ func run(args []string, out io.Writer, now time.Time) error {
 	showVersion := fs.Bool("version", false, "print version information and exit")
 
 	if err := fs.Parse(args); err != nil {
-		return err
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+
+		return apierrors.CLIUsage(err.Error())
 	}
 
 	if *showVersion {
@@ -84,7 +82,7 @@ func run(args []string, out io.Writer, now time.Time) error {
 		HalfLifeDay: *halfLife,
 	}, now)
 	if err != nil {
-		return fmt.Errorf("collecting git history: %w", err)
+		return err
 	}
 
 	// 2. Compute complexity for each file and filter.
@@ -96,6 +94,8 @@ func run(args []string, out io.Writer, now time.Time) error {
 	}
 
 	complexities := make(map[string]complexity.FileComplexity, len(history.Files))
+	var analysisWarnings int
+
 	for path := range history.Files {
 		if !filter.keep(path) {
 			delete(history.Files, path)
@@ -103,7 +103,20 @@ func run(args []string, out io.Writer, now time.Time) error {
 			continue
 		}
 
-		complexities[path] = complexity.Analyze(path)
+		fc, analyzeErr := complexity.Analyze(path)
+		if analyzeErr != nil {
+			fmt.Fprintln(errOut, "go-hotspot: warning:", analyzeErr)
+			analysisWarnings++
+			delete(history.Files, path)
+
+			continue
+		}
+
+		complexities[path] = fc
+	}
+
+	if analysisWarnings > 0 {
+		fmt.Fprintf(errOut, "go-hotspot: %d file(s) skipped due to analysis errors\n", analysisWarnings)
 	}
 
 	// 3. Score hotspots.
@@ -149,9 +162,13 @@ func run(args []string, out io.Writer, now time.Time) error {
 	if *output != "" {
 		f, err := os.Create(*output)
 		if err != nil {
-			return fmt.Errorf("creating output file: %w", err)
+			return apierrors.ReportCreate(*output, err)
 		}
-		defer func() { _ = f.Close() }()
+		defer func() {
+			if cerr := f.Close(); cerr != nil {
+				fmt.Fprintf(errOut, "go-hotspot: warning: failed to close output file: %v\n", cerr)
+			}
+		}()
 
 		w = f
 	}
@@ -165,13 +182,13 @@ func run(args []string, out io.Writer, now time.Time) error {
 		SortLabel:    *sortOrder,
 	}
 	if err := report.Render(w, results, couplings, summary, report.ParseFormat(*format), *top); err != nil {
-		return fmt.Errorf("rendering report: %w", err)
+		return err
 	}
 
 	// 7. Fail-above threshold check.
 	if *failAbove > 0 {
 		if maxScore := hotspot.MaxHotspot(results); maxScore > *failAbove {
-			return errThresholdExceeded
+			return apierrors.ThresholdExceeded(maxScore, *failAbove)
 		}
 	}
 
@@ -224,7 +241,9 @@ func isGeneratedContent(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		_ = f.Close()
+	}() // read-only file; close error is not actionable
 
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {

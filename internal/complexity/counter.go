@@ -13,6 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/larsartmann/go-hotspot/internal/errors"
 )
 
 // FileComplexity holds complexity metrics for a single source file.
@@ -37,27 +39,35 @@ type FuncComplexity struct {
 // tabWidth is the number of space-equivalents for one tab character.
 const tabWidth = 4
 
-// Analyze computes complexity metrics for a file. Returns zero-value on error.
-func Analyze(path string) FileComplexity {
+// Analyze computes complexity metrics for a file.
+// Returns an error if the file cannot be read or parsed; the returned
+// FileComplexity is zero-value in that case.
+func Analyze(path string) (FileComplexity, error) {
 	fc := FileComplexity{Path: path, Language: detectLanguage(path)}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return fc
+		return fc, errors.AnalysisRead(path, err)
 	}
 
 	lines := strings.Split(string(data), "\n")
 	fc.SLOC, fc.Indentation, fc.MaxDepth = countLines(lines)
 
 	if fc.Language == "Go" {
-		fc.Cyclomatic, fc.Functions = analyzeGo(path, data)
+		cyc, funcs, parseErr := analyzeGo(path, data)
+		if parseErr != nil {
+			return fc, errors.AnalysisParse(path, parseErr)
+		}
+
+		fc.Cyclomatic = cyc
+		fc.Functions = funcs
 	} else {
 		// Estimate cyclomatic from indentation: deeper nesting ≈ more branches.
 		// A reasonable heuristic: indentation / 4 + 1 (minimum complexity).
 		fc.Cyclomatic = fc.Indentation/tabWidth + 1
 	}
 
-	return fc
+	return fc, nil
 }
 
 // countLines returns SLOC, total indentation, and max nesting depth.
@@ -113,12 +123,12 @@ func isCommentLine(t string) bool {
 }
 
 // analyzeGo parses Go source and returns cyclomatic complexity + function breakdown.
-func analyzeGo(path string, src []byte) (int, []FuncComplexity) {
+func analyzeGo(path string, src []byte) (int, []FuncComplexity, error) {
 	fset := token.NewFileSet()
 
 	f, err := parser.ParseFile(fset, path, src, parser.ParseComments)
 	if err != nil {
-		return 1, nil
+		return 1, nil, err
 	}
 
 	var funcs []FuncComplexity
@@ -147,7 +157,7 @@ func analyzeGo(path string, src []byte) (int, []FuncComplexity) {
 		total = 1
 	}
 
-	return total, funcs
+	return total, funcs, nil
 }
 
 // cyclomaticOfFunc computes McCabe cyclomatic complexity for a Go function.

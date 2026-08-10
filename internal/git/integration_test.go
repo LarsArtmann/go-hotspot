@@ -210,7 +210,12 @@ func TestIntegrationFullPipeline(t *testing.T) {
 
 	complexities := make(map[string]complexity.FileComplexity, len(history.Files))
 	for path := range history.Files {
-		complexities[path] = complexity.Analyze(path)
+		fc, analyzeErr := complexity.Analyze(path)
+		if analyzeErr != nil {
+			t.Fatalf("Analyze(%s): %v", path, analyzeErr)
+		}
+
+		complexities[path] = fc
 	}
 
 	results := hotspot.Score(history, complexities, hotspot.ScoreOptions{

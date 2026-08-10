@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -172,7 +173,7 @@ func TestHasAuthor(t *testing.T) {
 func TestRunVersion(t *testing.T) {
 	var buf bytes.Buffer
 
-	err := run([]string{"--version"}, &buf, time.Now())
+	err := run([]string{"--version"}, &buf, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("run --version returned error: %v", err)
 	}
