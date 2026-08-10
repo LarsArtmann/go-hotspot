@@ -12,6 +12,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"text/tabwriter"
 	"time"
 
 	"github.com/larsartmann/go-hotspot/internal/complexity"
@@ -62,6 +63,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	noHeader := fs.Bool("no-header", false, "suppress summary header (for script piping)")
 	failRisk := fs.String("fail-risk", "", "fail if max hotspot exceeds risk band: critical|high|medium|low")
 	sinceVersion := fs.String("since-version", "", "analyze commits since this git tag (e.g., v1.0.0)")
+	functions := fs.Int("functions", 0, "show top N functions by hotspot score (0 = disabled, Go only)")
 
 	// Handle --version before parsing so it works even with other invalid flags.
 	if hasVersionFlag(args) {
@@ -148,7 +150,13 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		return err
 	}
 
-	// 7. Fail-above threshold check (--fail-risk overrides --fail-above if set).
+	// 7. Function-level ranking (optional, Go only).
+	if *functions > 0 {
+		topFuncs := hotspot.RankFunctions(results, complexities, *functions)
+		renderFunctions(out, topFuncs)
+	}
+
+	// 8. Fail-above threshold check (--fail-risk overrides --fail-above if set).
 	if err := checkThreshold(results, failThreshold(*failAbove, *failRisk)); err != nil {
 		return err
 	}
@@ -381,6 +389,29 @@ func parseChurnMetric(s string) hotspot.ChurnMetric {
 	default:
 		return hotspot.ChurnWeighted
 	}
+}
+
+func renderFunctions(out io.Writer, funcs []hotspot.FunctionResult) {
+	if len(funcs) == 0 {
+		return
+	}
+
+	var buf strings.Builder
+
+	buf.WriteString("\nTop Functions by Hotspot Score\n")
+	buf.WriteString(strings.Repeat("─", 60))
+	buf.WriteByte('\n')
+
+	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "hotspot\tcyc\tlines\tfunction\tfile")
+
+	for _, fn := range funcs {
+		fmt.Fprintf(tw, "%.4f\t%d\t%d\t%s\t%s\n",
+			fn.Hotspot, fn.Cyclomatic, fn.LineCount, fn.Function, fn.File)
+	}
+
+	tw.Flush()
+	io.WriteString(out, buf.String())
 }
 
 func resolveSince(since, sinceVersion string) (string, error) {

@@ -292,3 +292,54 @@ func MaxHotspot(results []Result) float64 {
 
 	return max
 }
+
+// FunctionResult is a function-level hotspot ranking entry. The hotspot
+// score is approximated by distributing the file's score proportionally
+// to each function's cyclomatic complexity share.
+type FunctionResult struct {
+	File       string
+	Function   string
+	Cyclomatic int
+	LineCount  int
+	StartLine  int
+	Hotspot    float64
+}
+
+// RankFunctions returns functions ranked by approximate hotspot score,
+// computed as file_hotspot * (func_cyc / file_cyc). Only Go files with
+// function-level data are included. Returns at most topN results (0 = all).
+func RankFunctions(
+	results []Result,
+	complexities map[string]complexity.FileComplexity,
+	topN int,
+) []FunctionResult {
+	var funcs []FunctionResult
+
+	for _, result := range results {
+		fc, ok := complexities[result.Path]
+		if !ok || fc.Cyclomatic == 0 {
+			continue
+		}
+
+		for _, fn := range fc.Functions {
+			funcs = append(funcs, FunctionResult{
+				File:       result.Path,
+				Function:   fn.Name,
+				Cyclomatic: fn.Cyclomatic,
+				LineCount:  fn.LineCount,
+				StartLine:  fn.StartLine,
+				Hotspot:    result.Hotspot * float64(fn.Cyclomatic) / float64(fc.Cyclomatic),
+			})
+		}
+	}
+
+	sort.Slice(funcs, func(i, j int) bool {
+		return funcs[i].Hotspot > funcs[j].Hotspot
+	})
+
+	if topN > 0 && topN < len(funcs) {
+		funcs = funcs[:topN]
+	}
+
+	return funcs
+}

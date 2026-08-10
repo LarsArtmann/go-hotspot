@@ -443,6 +443,53 @@ func TestScoreAlwaysInUnitInterval(t *testing.T) {
 	}
 }
 
+func TestRankFunctions(t *testing.T) {
+	t.Parallel()
+
+	results := []Result{
+		{Path: "a.go", Cyclomatic: 10, Hotspot: 0.5},
+		{Path: "b.go", Cyclomatic: 5, Hotspot: 0.3},
+	}
+	complexities := map[string]complexity.FileComplexity{
+		"a.go": {
+			Cyclomatic: 10,
+			Functions: []complexity.FuncComplexity{
+				{Name: "simpleFunc", Cyclomatic: 2, LineCount: 10, StartLine: 1},
+				{Name: "complexFunc", Cyclomatic: 8, LineCount: 50, StartLine: 11},
+			},
+		},
+		"b.go": {
+			Cyclomatic: 5,
+			Functions: []complexity.FuncComplexity{
+				{Name: "mediumFunc", Cyclomatic: 5, LineCount: 20, StartLine: 1},
+			},
+		},
+	}
+
+	funcs := RankFunctions(results, complexities, 0)
+
+	if len(funcs) != 3 {
+		t.Fatalf("got %d functions, want 3", len(funcs))
+	}
+
+	// complexFunc: 0.5 * 8/10 = 0.4
+	// mediumFunc: 0.3 * 5/5 = 0.3
+	// simpleFunc: 0.5 * 2/10 = 0.1
+	if funcs[0].Function != "complexFunc" {
+		t.Errorf("expected complexFunc first, got %s", funcs[0].Function)
+	}
+
+	if funcs[1].Function != "mediumFunc" {
+		t.Errorf("expected mediumFunc second, got %s", funcs[1].Function)
+	}
+
+	// Test topN limit.
+	top2 := RankFunctions(results, complexities, 2)
+	if len(top2) != 2 {
+		t.Errorf("topN=2: got %d, want 2", len(top2))
+	}
+}
+
 func TestCouplingDegreeBounds(t *testing.T) {
 	t.Parallel()
 
