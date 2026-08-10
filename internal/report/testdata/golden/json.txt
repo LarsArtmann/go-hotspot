@@ -1,0 +1,56 @@
+{
+  "summary": {
+    "first_commit": "2025-01-01",
+    "last_commit": "2026-08-09",
+    "total_commits": 500,
+    "total_files": 42
+  },
+  "hotspots": [
+    {
+      "path": "main.go",
+      "language": "Go",
+      "commits": 50,
+      "added": 500,
+      "deleted": 200,
+      "churn": 700,
+      "weighted_churn": 400,
+      "authors": 3,
+      "author_names": [
+        "Alice",
+        "Bob",
+        "Carol"
+      ],
+      "cyclomatic": 15,
+      "sloc": 200,
+      "indentation": 120,
+      "last_touch": "—",
+      "hotspot": 0.085
+    },
+    {
+      "path": "utils.go",
+      "language": "Go",
+      "commits": 10,
+      "added": 50,
+      "deleted": 20,
+      "churn": 70,
+      "weighted_churn": 30,
+      "authors": 1,
+      "author_names": [
+        "Alice"
+      ],
+      "cyclomatic": 4,
+      "sloc": 50,
+      "indentation": 20,
+      "last_touch": "—",
+      "hotspot": 0.012
+    }
+  ],
+  "couplings": [
+    {
+      "file_a": "a.go",
+      "file_b": "b.go",
+      "shared_commits": 15,
+      "degree": 80
+    }
+  ]
+}

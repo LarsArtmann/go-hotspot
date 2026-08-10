@@ -104,6 +104,10 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--sort` | `hotspot` | Sort: `hotspot`, `stable`, `churn`, `commits`, `complexity`, `age` |
 | `--coupling-min-shared` | `5` | Minimum shared commits for coupling |
 | `--coupling-min-degree` | `30` | Minimum coupling degree (%) |
+| `--output` | | Write report to file instead of stdout |
+| `--fail-above` | `0` | Exit with code 2 if max hotspot score exceeds this (0 = disabled) |
+| `--min-commits` | `0` | Exclude files with fewer commits (0 = no minimum) |
+| `--author` | | Show only files touched by this git author |
 
 ## How it works
 
@@ -123,16 +127,17 @@ The hotspot score normalizes both dimensions across all files in the project
 hotspot = normalized(complexity) × normalized(recency-weighted churn)
 ```
 
-## As a Go library
+## Library API
+
+The analysis pipeline is currently **module-internal** (`internal/` packages):
+`git.Collect` → `complexity.Analyze` → `hotspot.Score` → `report.Render`.
+
+A public library API is a [ROADMAP](ROADMAP.md) item. Until then, go-hotspot is
+a CLI tool. To embed the analysis in your own Go project today, vendor the
+relevant source files from `internal/`.
 
 ```go
-import (
-    "github.com/larsartmann/go-hotspot/internal/complexity"
-    "github.com/larsartmann/go-hotspot/internal/git"
-    "github.com/larsartmann/go-hotspot/internal/hotspot"
-)
-
-history, _ := git.Collect(git.Options{Since: "1 year ago", HalfLifeDay: 180}, time.Now())
+history, _ := git.Collect(ctx, git.Options{Since: "1 year ago", HalfLifeDay: 180}, time.Now())
 complexities := make(map[string]complexity.FileComplexity)
 for path := range history.Files {
     complexities[path] = complexity.Analyze(path)

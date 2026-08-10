@@ -4,8 +4,12 @@
 package main
 
 import (
+	"bufio"
+	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -16,14 +20,20 @@ import (
 	"github.com/larsartmann/go-hotspot/internal/report"
 )
 
+var errThresholdExceeded = errors.New("hotspot score exceeds --fail-above threshold")
+
 func main() {
 	if err := run(os.Args[1:], os.Stdout, time.Now()); err != nil {
+		if errors.Is(err, errThresholdExceeded) {
+			fmt.Fprintln(os.Stderr, "go-hotspot:", err)
+			os.Exit(2)
+		}
 		fmt.Fprintln(os.Stderr, "go-hotspot:", err)
 		os.Exit(1)
 	}
 }
 
-func run(args []string, out *os.File, now time.Time) error {
+func run(args []string, out io.Writer, now time.Time) error {
 	fs := flag.NewFlagSet("go-hotspot", flag.ContinueOnError)
 
 	since := fs.String("since", "1 year ago", "analyze commits since this git date")
@@ -42,13 +52,17 @@ func run(args []string, out *os.File, now time.Time) error {
 	couplingMinShared := fs.Int("coupling-min-shared", 5, "minimum shared commits for temporal coupling")
 	couplingMinDegree := fs.Float64("coupling-min-degree", 30, "minimum coupling degree (%)")
 	sortOrder := fs.String("sort", "hotspot", "sort order: hotspot|stable|churn|commits|complexity|age")
+	output := fs.String("output", "", "write report to file instead of stdout")
+	failAbove := fs.Float64("fail-above", 0, "exit with code 2 if max hotspot score exceeds this (0 = disabled)")
+	minCommits := fs.Int("min-commits", 0, "exclude files with fewer commits (0 = no minimum)")
+	author := fs.String("author", "", "show only files touched by this git author")
 
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 
 	// 1. Collect git history.
-	history, err := git.Collect(git.Options{
+	history, err := git.Collect(context.Background(), git.Options{
 		Since:       *since,
 		Until:       *until,
 		Branch:      *branch,
@@ -94,7 +108,32 @@ func run(args []string, out *os.File, now time.Time) error {
 		})
 	}
 
-	// 5. Render report.
+	// 5. Filter by min-commits and author.
+	if *minCommits > 0 || *author != "" {
+		filtered := results[:0]
+		for _, r := range results {
+			if *minCommits > 0 && r.Commits < *minCommits {
+				continue
+			}
+			if *author != "" && !hasAuthor(r.AuthorNames, *author) {
+				continue
+			}
+			filtered = append(filtered, r)
+		}
+		results = filtered
+	}
+
+	// 6. Render report.
+	w := out
+	if *output != "" {
+		f, err := os.Create(*output)
+		if err != nil {
+			return fmt.Errorf("creating output file: %w", err)
+		}
+		defer func() { _ = f.Close() }()
+		w = f
+	}
+
 	summary := report.Summary{
 		FirstCommit:  history.FirstCommit,
 		LastCommit:   history.LastCommit,
@@ -103,8 +142,15 @@ func run(args []string, out *os.File, now time.Time) error {
 		HalfLifeDays: *halfLife,
 		SortLabel:    *sortOrder,
 	}
-	if err := report.Render(out, results, couplings, summary, report.ParseFormat(*format), *top); err != nil {
+	if err := report.Render(w, results, couplings, summary, report.ParseFormat(*format), *top); err != nil {
 		return fmt.Errorf("rendering report: %w", err)
+	}
+
+	// 7. Fail-above threshold check.
+	if *failAbove > 0 {
+		if maxScore := hotspot.MaxHotspot(results); maxScore > *failAbove {
+			return errThresholdExceeded
+		}
 	}
 
 	return nil
@@ -122,7 +168,7 @@ func (f fileFilter) keep(path string) bool {
 	if strings.Contains("/"+path+"/", "/vendor/") {
 		return false
 	}
-	if !f.includeGenerated && isGenerated(path) {
+	if !f.includeGenerated && (isGenerated(path) || isGeneratedContent(path)) {
 		return false
 	}
 	if !f.includeTests && strings.HasSuffix(path, "_test.go") {
@@ -139,6 +185,36 @@ var generatedSuffixes = []string{".gen.go", "_gen.go", ".pb.go", ".pb.gw.go", ".
 func isGenerated(path string) bool {
 	for _, s := range generatedSuffixes {
 		if strings.HasSuffix(path, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// isGeneratedContent checks whether a file starts with a "Code generated ... DO NOT EDIT" header.
+func isGeneratedContent(path string) bool {
+	f, err := os.Open(path) //nolint:gosec // path comes from git history
+	if err != nil {
+		return false
+	}
+	defer func() { _ = f.Close() }()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		line := strings.TrimSpace(sc.Text())
+		if strings.HasPrefix(line, "// Code generated") && strings.Contains(line, "DO NOT EDIT") {
+			return true
+		}
+		if strings.HasPrefix(line, "package ") {
+			return false
+		}
+	}
+	return false
+}
+
+// hasAuthor reports whether the author name appears in the list (case-insensitive).
+func hasAuthor(names []string, author string) bool {
+	for _, name := range names {
+		if strings.EqualFold(name, author) {
 			return true
 		}
 	}

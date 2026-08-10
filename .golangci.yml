@@ -1,0 +1,26 @@
+version: "2"
+
+run:
+  timeout: 2m
+
+linters:
+  default: none
+  enable:
+    - errcheck
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - unused
+
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: unused-parameter
+          disabled: true
+        - name: redefines-builtin-id
+          disabled: true

@@ -1,6 +1,8 @@
 package git
 
 import (
+	"context"
+	"fmt"
 	"math"
 	"strings"
 	"testing"
@@ -124,7 +126,7 @@ func TestParseNumStatCoupling(t *testing.T) {
 
 	h := &History{Files: make(map[string]*FileChurn)}
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,7 +171,7 @@ func TestParseNumStatAuthorTracking(t *testing.T) {
 
 	h := &History{Files: make(map[string]*FileChurn)}
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
 		t.Fatal(err)
 	}
 
@@ -201,7 +203,7 @@ func TestParseNumStatMaxChangesetGuard(t *testing.T) {
 	input := strings.Join(lines, "\n")
 	h := &History{Files: make(map[string]*FileChurn)}
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
 		t.Fatal(err)
 	}
 
@@ -238,4 +240,42 @@ func TestHistoryWindow(t *testing.T) {
 	if !h.FirstCommit.Equal(t2) {
 		t.Errorf("FirstCommit changed after zero-time extend")
 	}
+}
+
+func BenchmarkParseNumStat(b *testing.B) {
+	var lines []string
+	for i := range 100 {
+		lines = append(lines, fmt.Sprintf("@@@hash%d|2026-01-01T00:00:00+00:00|Author%d", i, i%5))
+		for j := range 10 {
+			lines = append(lines, fmt.Sprintf("%d\t%d\tfile%d_%d.go", j+1, j, i, j))
+		}
+		lines = append(lines, "")
+	}
+	input := strings.Join(lines, "\n")
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+	b.ResetTimer()
+	for range b.N {
+		h := &History{Files: make(map[string]*FileChurn)}
+		if err := parseNumStat(context.Background(), strings.NewReader(input), h, 180, now); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func FuzzSplitNumStat(f *testing.F) {
+	f.Add("1\t2\tfile.go")
+	f.Add("notanumstat")
+	f.Add("-\t-\tbinary.png")
+	f.Fuzz(func(t *testing.T, line string) {
+		splitNumStat(line)
+	})
+}
+
+func FuzzNormalizeRename(f *testing.F) {
+	f.Add("old.go=>new.go")
+	f.Add("pkg/{old => new}/file.go")
+	f.Add("normal.go")
+	f.Fuzz(func(t *testing.T, path string) {
+		normalizeRename(path)
+	})
 }

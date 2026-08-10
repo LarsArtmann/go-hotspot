@@ -85,18 +85,14 @@ func Render(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingP
 	}
 }
 
-// writeStr writes s to w, returning the first error.
-func writeStr(w io.Writer, s string) error {
-	_, err := io.WriteString(w, s)
-	return err
-}
-
 func writeHeader(w io.Writer, s Summary) error {
 	var b strings.Builder
 	sep := strings.Repeat("─", 60)
-	b.WriteString(sep + "\n")
+	b.WriteString(sep)
+	b.WriteByte('\n')
 	b.WriteString(" go-hotspot — code complexity × churn analysis\n")
-	b.WriteString(sep + "\n")
+	b.WriteString(sep)
+	b.WriteByte('\n')
 	if !s.FirstCommit.IsZero() {
 		fmt.Fprintf(&b, " window:    %s → %s\n", s.FirstCommit.Format("2006-01-02"), s.LastCommit.Format("2006-01-02"))
 	}
@@ -109,38 +105,42 @@ func writeHeader(w io.Writer, s Summary) error {
 		fmt.Fprintf(&b, " sort:      %s\n", s.SortLabel)
 	}
 	b.WriteString("\n")
-	return writeStr(w, b.String())
+	_, err := io.WriteString(w, b.String())
+	return err
 }
 
 func renderTable(w io.Writer, results []hotspot.Result) error {
 	if len(results) == 0 {
-		return writeStr(w, "(no files match the current filters)\n")
+		_, err := io.WriteString(w, "(no files match the current filters)\n")
+		return err
 	}
 	maxScore := hotspot.MaxHotspot(results)
 	var buf strings.Builder
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-	if err := writeStr(tw, "RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tHOTSPOT\tRISK\n"); err != nil {
+	if _, err := io.WriteString(tw, "RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tHOTSPOT\tRISK\n"); err != nil {
 		return err
 	}
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore)
-		row := fmt.Sprintf("%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n",
+		row := fmt.Sprintf("%d\t%s\t%s\t%d\t%d\t%s\t%d\t%d\t%s\t%s\t%s\n",
 			i+1, truncPath(r.Path, 45), r.Language,
-			r.Commits, r.Churn, r.Authors, r.Cyclomatic, r.SLOC,
+			r.Commits, r.Churn, fmtAuthors(r.AuthorNames), r.Cyclomatic, r.SLOC,
 			lastTouch(r.LastTouch), fmtScore(r.Hotspot), risk)
-		if err := writeStr(tw, row); err != nil {
+		if _, err := io.WriteString(tw, row); err != nil {
 			return err
 		}
 	}
 	if err := tw.Flush(); err != nil {
 		return err
 	}
-	return writeStr(w, buf.String())
+	_, err := io.WriteString(w, buf.String())
+	return err
 }
 
 func renderMarkdown(w io.Writer, results []hotspot.Result) error {
 	if len(results) == 0 {
-		return writeStr(w, "_(no files match the current filters)_\n")
+		_, err := io.WriteString(w, "_(no files match the current filters)_\n")
+		return err
 	}
 	maxScore := hotspot.MaxHotspot(results)
 	var b strings.Builder
@@ -148,17 +148,18 @@ func renderMarkdown(w io.Writer, results []hotspot.Result) error {
 	b.WriteString("|--:|:--|:--|--:|--:|--:|--:|--:|--:|:--|\n")
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore)
-		fmt.Fprintf(&b, "| %d | `%s` | %s | %d | %d | %d | %d | %d | %s | %s |\n",
-			i+1, r.Path, r.Language, r.Commits, r.Churn, r.Authors,
+		fmt.Fprintf(&b, "| %d | `%s` | %s | %d | %d | %s | %d | %d | %s | %s |\n",
+			i+1, r.Path, r.Language, r.Commits, r.Churn, fmtAuthors(r.AuthorNames),
 			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk)
 	}
-	return writeStr(w, b.String())
+	_, err := io.WriteString(w, b.String())
+	return err
 }
 
 func renderCSV(w io.Writer, results []hotspot.Result) error {
 	var buf strings.Builder
 	cw := csv.NewWriter(&buf)
-	if err := cw.Write([]string{"path", "language", "commits", "added", "deleted", "churn", "weighted", "authors", "cyclomatic", "sloc", "indentation", "last_touch", "hotspot"}); err != nil {
+	if err := cw.Write([]string{"path", "language", "commits", "added", "deleted", "churn", "weighted", "authors", "author_names", "cyclomatic", "sloc", "indentation", "last_touch", "hotspot"}); err != nil {
 		return err
 	}
 	for _, r := range results {
@@ -170,6 +171,7 @@ func renderCSV(w io.Writer, results []hotspot.Result) error {
 			strconv.Itoa(r.Churn),
 			strconv.FormatFloat(r.Weighted, 'f', 1, 64),
 			strconv.Itoa(r.Authors),
+			strings.Join(r.AuthorNames, ";"),
 			strconv.Itoa(r.Cyclomatic),
 			strconv.Itoa(r.SLOC),
 			strconv.Itoa(r.Indentation),
@@ -183,29 +185,31 @@ func renderCSV(w io.Writer, results []hotspot.Result) error {
 	if err := cw.Error(); err != nil {
 		return err
 	}
-	return writeStr(w, buf.String())
+	_, err := io.WriteString(w, buf.String())
+	return err
 }
 
 func renderCouplingTable(w io.Writer, pairs []hotspot.CouplingPair) error {
-	if err := writeStr(w, "\n─ temporal coupling (files that change together) ─\n\n"); err != nil {
+	if _, err := io.WriteString(w, "\n─ temporal coupling (files that change together) ─\n\n"); err != nil {
 		return err
 	}
 	var buf strings.Builder
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-	if err := writeStr(tw, "FILE A\tFILE B\tSHARED\tDEGREE\n"); err != nil {
+	if _, err := io.WriteString(tw, "FILE A\tFILE B\tSHARED\tDEGREE\n"); err != nil {
 		return err
 	}
 	for _, p := range pairs {
 		row := fmt.Sprintf("%s\t%s\t%d\t%.0f%%\n",
 			truncPath(p.FileA, 35), truncPath(p.FileB, 35), p.SharedCommits, p.Degree)
-		if err := writeStr(tw, row); err != nil {
+		if _, err := io.WriteString(tw, row); err != nil {
 			return err
 		}
 	}
 	if err := tw.Flush(); err != nil {
 		return err
 	}
-	return writeStr(w, buf.String())
+	_, err := io.WriteString(w, buf.String())
+	return err
 }
 
 func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
@@ -217,7 +221,8 @@ func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
 		fmt.Fprintf(&b, "| `%s` | `%s` | %d | %.0f%% |\n",
 			p.FileA, p.FileB, p.SharedCommits, p.Degree)
 	}
-	return writeStr(w, b.String())
+	_, err := io.WriteString(w, b.String())
+	return err
 }
 
 // jsonReport is the JSON serialization structure.
@@ -234,19 +239,20 @@ type jsonReport struct {
 }
 
 type jsonHotspot struct {
-	Path        string  `json:"path"`
-	Language    string  `json:"language"`
-	Commits     int     `json:"commits"`
-	Added       int     `json:"added"`
-	Deleted     int     `json:"deleted"`
-	Churn       int     `json:"churn"`
-	Weighted    float64 `json:"weighted_churn"`
-	Authors     int     `json:"authors"`
-	Cyclomatic  int     `json:"cyclomatic"`
-	SLOC        int     `json:"sloc"`
-	Indentation int     `json:"indentation"`
-	LastTouch   string  `json:"last_touch,omitempty"`
-	Hotspot     float64 `json:"hotspot"`
+	Path        string   `json:"path"`
+	Language    string   `json:"language"`
+	Commits     int      `json:"commits"`
+	Added       int      `json:"added"`
+	Deleted     int      `json:"deleted"`
+	Churn       int      `json:"churn"`
+	Weighted    float64  `json:"weighted_churn"`
+	Authors     int      `json:"authors"`
+	AuthorNames []string `json:"author_names"`
+	Cyclomatic  int      `json:"cyclomatic"`
+	SLOC        int      `json:"sloc"`
+	Indentation int      `json:"indentation"`
+	LastTouch   string   `json:"last_touch,omitempty"`
+	Hotspot     float64  `json:"hotspot"`
 }
 
 type jsonCoupling struct {
@@ -272,7 +278,8 @@ func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.Coupl
 			Path: r.Path, Language: r.Language, Commits: r.Commits,
 			Added: r.Added, Deleted: r.Deleted, Churn: r.Churn,
 			Weighted: r.Weighted, Authors: r.Authors,
-			Cyclomatic: r.Cyclomatic, SLOC: r.SLOC,
+			AuthorNames: r.AuthorNames,
+			Cyclomatic:  r.Cyclomatic, SLOC: r.SLOC,
 			Indentation: r.Indentation,
 			LastTouch:   lastTouch(r.LastTouch),
 			Hotspot:     r.Hotspot,
@@ -289,6 +296,18 @@ func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.Coupl
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(rep)
+}
+
+// fmtAuthors renders author names for display, showing up to 2 names plus a count.
+func fmtAuthors(names []string) string {
+	switch len(names) {
+	case 0:
+		return "—"
+	case 1, 2:
+		return strings.Join(names, ", ")
+	default:
+		return fmt.Sprintf("%s, %s, +%d", names[0], names[1], len(names)-2)
+	}
 }
 
 // fmtScore renders a hotspot score with appropriate precision.

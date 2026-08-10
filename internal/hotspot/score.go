@@ -51,6 +51,7 @@ type Result struct {
 	Churn       int
 	Weighted    float64
 	Authors     int
+	AuthorNames []string
 	Language    string
 	SLOC        int
 	Indentation int
@@ -61,10 +62,11 @@ type Result struct {
 }
 
 // AgeDays returns the number of days since the file was last touched.
-// Requires a reference "now" time.
+// Returns math.MaxInt32 when LastTouch is zero (unknown age), NOT 0, so that
+// files with no git history are not mistaken for freshly-changed code.
 func (r Result) AgeDays(now time.Time) int {
 	if r.LastTouch.IsZero() {
-		return 0
+		return math.MaxInt32
 	}
 	return int(now.Sub(r.LastTouch).Hours() / 24)
 }
@@ -169,6 +171,7 @@ func Score(
 			Churn:       fc.Churn(),
 			Weighted:    fc.Weighted,
 			Authors:     fc.AuthorCount(),
+			AuthorNames: sortedAuthors(fc.Authors),
 			Language:    cx.Language,
 			SLOC:        cx.SLOC,
 			Indentation: cx.Indentation,
@@ -190,6 +193,16 @@ func Score(
 	}
 
 	return results
+}
+
+// sortedAuthors converts an author set to a lexicographically sorted slice.
+func sortedAuthors(authors map[string]struct{}) []string {
+	names := make([]string, 0, len(authors))
+	for name := range authors {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // complexityValue extracts the selected complexity metric from a result.

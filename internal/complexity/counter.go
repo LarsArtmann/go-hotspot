@@ -41,7 +41,7 @@ const tabWidth = 4
 func Analyze(path string) FileComplexity {
 	fc := FileComplexity{Path: path, Language: detectLanguage(path)}
 
-	data, err := os.ReadFile(path)
+	data, err := os.ReadFile(path) //nolint:gosec // path comes from git history, not user input
 	if err != nil {
 		return fc
 	}

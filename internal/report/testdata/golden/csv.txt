@@ -1,0 +1,3 @@
+path,language,commits,added,deleted,churn,weighted,authors,author_names,cyclomatic,sloc,indentation,last_touch,hotspot
+main.go,Go,50,500,200,700,400.0,3,Alice;Bob;Carol,15,200,120,—,0.085000
+utils.go,Go,10,50,20,70,30.0,1,Alice,4,50,20,—,0.012000

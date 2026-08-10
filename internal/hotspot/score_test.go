@@ -1,6 +1,8 @@
 package hotspot
 
 import (
+	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -191,16 +193,16 @@ func TestOrderedPair(t *testing.T) {
 
 func TestParseSortOrder(t *testing.T) {
 	cases := map[string]SortOrder{
-		"hotspot":     SortHotspot,
-		"stable":      SortStable,
-		"churn":       SortChurn,
-		"commits":     SortCommits,
-		"complexity":  SortComplexity,
-		"cyclomatic":  SortComplexity,
-		"age":         SortAge,
-		"old":         SortAge,
-		"stale":       SortAge,
-		"unknown":     SortHotspot, // default
+		"hotspot":    SortHotspot,
+		"stable":     SortStable,
+		"churn":      SortChurn,
+		"commits":    SortCommits,
+		"complexity": SortComplexity,
+		"cyclomatic": SortComplexity,
+		"age":        SortAge,
+		"old":        SortAge,
+		"stale":      SortAge,
+		"unknown":    SortHotspot, // default
 	}
 	for in, want := range cases {
 		if got := ParseSortOrder(in); got != want {
@@ -277,9 +279,31 @@ func TestResultAgeDays(t *testing.T) {
 		t.Errorf("AgeDays = %d, want ~30", got)
 	}
 
-	// Zero time returns 0
+	// Zero time returns MaxInt32 (unknown age, not "fresh")
 	r2 := Result{}
-	if got := r2.AgeDays(now); got != 0 {
-		t.Errorf("AgeDays with zero time = %d, want 0", got)
+	if got := r2.AgeDays(now); got != math.MaxInt32 {
+		t.Errorf("AgeDays with zero time = %d, want math.MaxInt32", got)
+	}
+}
+
+func BenchmarkScore(b *testing.B) {
+	files := make(map[string]*git.FileChurn)
+	cx := make(map[string]complexity.FileComplexity)
+	for i := range 1000 {
+		path := fmt.Sprintf("file%d.go", i)
+		files[path] = &git.FileChurn{
+			Path:     path,
+			Commits:  i%20 + 1,
+			Added:    i * 10,
+			Deleted:  i * 5,
+			Weighted: float64(i),
+			Authors:  map[string]struct{}{"A": {}},
+		}
+		cx[path] = complexity.FileComplexity{Cyclomatic: i%30 + 1}
+	}
+	history := &git.History{Files: files}
+	b.ResetTimer()
+	for range b.N {
+		Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
 	}
 }

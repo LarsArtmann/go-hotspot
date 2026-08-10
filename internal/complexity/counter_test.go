@@ -10,7 +10,7 @@ import (
 func writeFile(t *testing.T, name, content string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), name)
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return path
@@ -49,11 +49,11 @@ func TestCountLinesBlanksAndComments(t *testing.T) {
 
 func TestLeadingIndent(t *testing.T) {
 	cases := map[string]int{
-		"no indent":       0,
-		"\ttab":           tabWidth,
-		"\t\tdouble tab":  tabWidth * 2,
-		"    four space":  4,
-		"  two space":     2,
+		"no indent":      0,
+		"\ttab":          tabWidth,
+		"\t\tdouble tab": tabWidth * 2,
+		"    four space": 4,
+		"  two space":    2,
 	}
 	for line, want := range cases {
 		if got := leadingIndent(line); got != want {
@@ -236,5 +236,47 @@ func TestDetectLanguage(t *testing.T) {
 		if got := detectLanguage(path); got != want {
 			t.Errorf("detectLanguage(%q) = %q, want %q", path, got, want)
 		}
+	}
+}
+
+func BenchmarkAnalyze(b *testing.B) {
+	source := `package main
+
+import "fmt"
+
+func alpha(x int) int {
+	if x > 0 {
+		for i := 0; i < x; i++ {
+			if i%2 == 0 && i > 1 {
+				fmt.Println(i)
+			}
+		}
+	}
+	switch x {
+	case 1:
+		return 1
+	case 2:
+		return 2
+	default:
+		return 0
+	}
+}
+
+func beta(s string) bool {
+	for _, c := range s {
+		if c == 'x' || c == 'y' {
+			return true
+		}
+	}
+	return false
+}
+`
+	path := filepath.Join(b.TempDir(), "bench.go")
+	if err := os.WriteFile(path, []byte(source), 0o600); err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for range b.N {
+		Analyze(path)
 	}
 }

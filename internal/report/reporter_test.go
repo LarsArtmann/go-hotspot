@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -13,8 +16,8 @@ import (
 
 func sampleResults() []hotspot.Result {
 	return []hotspot.Result{
-		{Path: "main.go", Language: "Go", Commits: 50, Added: 500, Deleted: 200, Churn: 700, Weighted: 400, Authors: 3, Cyclomatic: 15, SLOC: 200, Indentation: 120, Hotspot: 0.085},
-		{Path: "utils.go", Language: "Go", Commits: 10, Added: 50, Deleted: 20, Churn: 70, Weighted: 30, Authors: 1, Cyclomatic: 4, SLOC: 50, Indentation: 20, Hotspot: 0.012},
+		{Path: "main.go", Language: "Go", Commits: 50, Added: 500, Deleted: 200, Churn: 700, Weighted: 400, Authors: 3, AuthorNames: []string{"Alice", "Bob", "Carol"}, Cyclomatic: 15, SLOC: 200, Indentation: 120, Hotspot: 0.085},
+		{Path: "utils.go", Language: "Go", Commits: 10, Added: 50, Deleted: 20, Churn: 70, Weighted: 30, Authors: 1, AuthorNames: []string{"Alice"}, Cyclomatic: 4, SLOC: 50, Indentation: 20, Hotspot: 0.012},
 	}
 }
 
@@ -29,12 +32,12 @@ func sampleSummary() Summary {
 
 func TestParseFormat(t *testing.T) {
 	cases := map[string]Format{
-		"table":     FormatTable,
-		"markdown":  FormatMarkdown,
-		"md":        FormatMarkdown,
-		"csv":       FormatCSV,
-		"json":      FormatJSON,
-		"unknown":   FormatTable,
+		"table":    FormatTable,
+		"markdown": FormatMarkdown,
+		"md":       FormatMarkdown,
+		"csv":      FormatCSV,
+		"json":     FormatJSON,
+		"unknown":  FormatTable,
 	}
 	for in, want := range cases {
 		if got := ParseFormat(in); got != want {
@@ -50,7 +53,7 @@ func TestRenderTable(t *testing.T) {
 	}
 	out := buf.String()
 
-	for _, want := range []string{"main.go", "RANK", "HOTSPOT", "Go", "commits"} {
+	for _, want := range []string{"main.go", "RANK", "HOTSPOT", "Go", "commits", "Alice"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table output missing %q", want)
 		}
@@ -87,6 +90,9 @@ func TestRenderCSV(t *testing.T) {
 	}
 	if rows[0][0] != "path" {
 		t.Errorf("CSV header[0] = %q, want 'path'", rows[0][0])
+	}
+	if rows[0][8] != "author_names" {
+		t.Errorf("CSV header[8] = %q, want 'author_names'", rows[0][8])
 	}
 	if rows[1][0] != "main.go" {
 		t.Errorf("CSV row[1][0] = %q, want 'main.go'", rows[1][0])
@@ -162,9 +168,9 @@ func TestRenderTopN(t *testing.T) {
 
 func TestTruncPath(t *testing.T) {
 	cases := map[string]string{
-		"short.go":                       "short.go",
-		"pkg/file.go":                    "pkg/file.go",
-		"very/deep/nested/path/file.go":  "…nested/path/file.go",
+		"short.go":                      "short.go",
+		"pkg/file.go":                   "pkg/file.go",
+		"very/deep/nested/path/file.go": "…nested/path/file.go",
 	}
 	for in, want := range cases {
 		// truncPath with width=20
@@ -174,6 +180,63 @@ func TestTruncPath(t *testing.T) {
 		}
 		if in == "short.go" && got != "short.go" {
 			t.Errorf("truncPath(short) = %q, want short.go", got)
+		}
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write(p []byte) (int, error) {
+	return 0, errors.New("simulated write failure")
+}
+
+func TestRenderWriteError(t *testing.T) {
+	results := sampleResults()
+	summary := sampleSummary()
+	for _, format := range []Format{FormatTable, FormatMarkdown, FormatCSV, FormatJSON} {
+		var fw failingWriter
+		err := Render(fw, results, nil, summary, format, 0)
+		if err == nil {
+			t.Errorf("Render with failingWriter (format %d) should return error", format)
+		}
+	}
+}
+
+func TestRenderCouplingWriteError(t *testing.T) {
+	pairs := []hotspot.CouplingPair{
+		{FileA: "a.go", FileB: "b.go", SharedCommits: 15, Degree: 80},
+	}
+	results := sampleResults()
+	summary := sampleSummary()
+	for _, format := range []Format{FormatTable, FormatMarkdown} {
+		var fw failingWriter
+		err := Render(fw, results, pairs, summary, format, 0)
+		if err == nil {
+			t.Errorf("Render with couplings + failingWriter (format %d) should return error", format)
+		}
+	}
+}
+
+func BenchmarkRenderTable(b *testing.B) {
+	results := make([]hotspot.Result, 1000)
+	for i := range results {
+		results[i] = hotspot.Result{
+			Path:        fmt.Sprintf("file%d.go", i),
+			Language:    "Go",
+			Commits:     i + 1,
+			Churn:       i * 10,
+			Authors:     3,
+			AuthorNames: []string{"Alice", "Bob", "Carol"},
+			Cyclomatic:  i%20 + 1,
+			SLOC:        i*5 + 10,
+			Hotspot:     float64(i) / 1000,
+		}
+	}
+	summary := Summary{TotalCommits: 5000, TotalFiles: 1000}
+	b.ResetTimer()
+	for range b.N {
+		if err := Render(io.Discard, results, nil, summary, FormatTable, 0); err != nil {
+			b.Fatal(err)
 		}
 	}
 }

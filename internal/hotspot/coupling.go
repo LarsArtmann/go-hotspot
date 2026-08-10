@@ -9,10 +9,10 @@ import (
 
 // CouplingPair represents two files that tend to change together.
 type CouplingPair struct {
-	FileA        string
-	FileB        string
-	SharedCommits int    // commits where both files changed
-	Degree       float64 // coupling percentage (code-maat formula)
+	FileA         string
+	FileB         string
+	SharedCommits int     // commits where both files changed
+	Degree        float64 // coupling percentage (code-maat formula)
 }
 
 // CouplingOptions controls temporal coupling analysis thresholds.

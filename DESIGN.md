@@ -47,6 +47,12 @@ build tag for non-Go cyclomatic complexity.
 ### Hotspot (risk score)
 - Score = normalized(complexity) × normalized(recency-weighted churn)
 - Normalization is relative within the project (Tornhill methodology)
+- RiskBand: relative to max score — critical (≥66%), high (≥33%), medium (≥10%), low (< 10%)
+
+### Result (merged view per file)
+- Merges FileChurn + Complexity into a single struct for scoring and rendering
+- AuthorNames: sorted slice of author names (populated from FileChurn.Authors)
+- AgeDays: days since last touch (MaxInt32 for unknown/zero-time)
 
 ### CouplingPair (hidden dependency)
 - FileA, FileB, SharedCommits
@@ -70,9 +76,9 @@ internal/report/reporter.go         output: table, markdown, csv, json
 2. Complexity (SLOC, indentation, go/ast cyclomatic for Go)
 3. Hotspot scoring (complexity × recency-weighted churn)
 4. Temporal coupling (code-maat formula)
-5. Author/bus-factor analysis
+5. Author tracking (count + names per file)
 6. Output: table, markdown, csv, json
-7. CLI + importable library
+7. CLI tool (library API is module-internal; public API is a v2 goal)
 
 ## Deferred (v2+)
 

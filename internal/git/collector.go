@@ -6,6 +6,7 @@ package git
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"math"
@@ -56,9 +57,12 @@ type History struct {
 }
 
 // Collect runs git log over the configured window and aggregates per-file stats.
-func Collect(opts Options, now time.Time) (*History, error) {
-	args := []string{"log", "--numstat", "--no-merges", "-M",
-		"--pretty=tformat:" + commitPrefix + "%H|%aI|%an"}
+// The ctx parameter allows cancellation of the underlying git process.
+func Collect(ctx context.Context, opts Options, now time.Time) (*History, error) {
+	args := []string{
+		"log", "--numstat", "--no-merges", "-M",
+		"--pretty=tformat:" + commitPrefix + "%H|%aI|%an",
+	}
 	if opts.Since != "" {
 		args = append(args, "--since="+opts.Since)
 	}
@@ -69,7 +73,7 @@ func Collect(opts Options, now time.Time) (*History, error) {
 		args = append(args, opts.Branch)
 	}
 
-	cmd := exec.Command("git", args...)
+	cmd := exec.CommandContext(ctx, "git", args...)
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	stdout, err := cmd.StdoutPipe()
@@ -81,7 +85,7 @@ func Collect(opts Options, now time.Time) (*History, error) {
 	}
 
 	h := &History{Files: make(map[string]*FileChurn)}
-	if err := parseNumStat(stdout, h, opts.HalfLifeDay, now); err != nil {
+	if err := parseNumStat(ctx, stdout, h, opts.HalfLifeDay, now); err != nil {
 		if waitErr := cmd.Wait(); waitErr != nil {
 			return nil, fmt.Errorf("git log: %w (%s)", waitErr, stderr.String())
 		}
@@ -94,7 +98,7 @@ func Collect(opts Options, now time.Time) (*History, error) {
 }
 
 // parseNumStat reads git log --numstat output and populates History.
-func parseNumStat(r io.Reader, h *History, halfLife float64, now time.Time) error {
+func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64, now time.Time) error {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<16), 1<<20)
 
@@ -127,6 +131,11 @@ func parseNumStat(r io.Reader, h *History, halfLife float64, now time.Time) erro
 	}
 
 	for sc.Scan() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
 		line := sc.Text()
 		switch {
 		case strings.HasPrefix(line, commitPrefix):
