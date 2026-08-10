@@ -56,8 +56,8 @@
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Typed error system               | 🟢 `FULLY_FUNCTIONAL`     | `internal/errors` package built on `go-error-family`. 11 domain-specific constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70). 4 tests. |
-| User-facing error messages       | 🟢 `FULLY_FUNCTIONAL`     | What/Why/Fix/WayOut message templates registered in `templates.go`. `HandleError()` renders to stderr with actionable guidance. 11 templates covering git, CLI, analysis, report, and threshold errors. |
+| Typed error system               | 🟢 `FULLY_FUNCTIONAL`     | `internal/errors` package built on `go-error-family`. 12 domain-specific constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70). 5 tests including golden stderr assertions. |
+| User-facing error messages       | 🟢 `FULLY_FUNCTIONAL`     | What/Why/Fix/WayOut message templates registered in `templates.go`. `HandleError()` renders to stderr with actionable guidance. 12 templates covering git, CLI, analysis, report, and threshold errors. |
 | Git error classification         | 🟢 `FULLY_FUNCTIONAL`     | `classifyGitError()` inspects cause + stderr to pick the most specific code: not-installed, not-a-repo, bad-revision, no-commits, generic failure. |
 | erraudit compliance              | 🟢 `FULLY_FUNCTIONAL`     | 0 violations in CI mode. 3 `//nolint:erraudit` directives with documented rationale for known false positives. |
 
@@ -65,11 +65,14 @@
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 21 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 8 unit tests + 3 integration tests. |
+| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 24 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 20 tests (12 unit + 8 integration with real git repos). |
 | File filtering                   | 🟢 `FULLY_FUNCTIONAL`     | Extension, test toggle, generated detection (suffix + content-based `// Code generated` header), path prefix, vendor exclusion, `--min-commits`, `--author` (`main.go`). |
 | Six sort modes                   | 🟢 `FULLY_FUNCTIONAL`     | hotspot, stable, churn, commits, complexity, age (`--sort` flag, `score.go:75`).      |
 | Coupling thresholds              | 🟢 `FULLY_FUNCTIONAL`     | `--coupling-min-shared`, `--coupling-min-degree` flags. Code-maat defaults (5, 30%).   |
 | CI gate (`--fail-above`)         | 🟢 `FULLY_FUNCTIONAL`     | Exits with code 2 when max hotspot exceeds threshold. For CI/CD pipelines.             |
+| Risk-band gate (`--fail-risk`)   | 🟢 `FULLY_FUNCTIONAL`     | Named risk bands (critical/high/medium/low) as convenient aliases for `--fail-above`.  |
+| Tag-based window (`--since-version`) | 🟢 `FULLY_FUNCTIONAL` | Analyze commits since a git tag (e.g., `--since-version v1.0.0`).                       |
+| Header suppression (`--no-header`) | 🟢 `FULLY_FUNCTIONAL`   | Suppress summary header for clean script piping.                                        |
 | File output (`--output`)         | 🟢 `FULLY_FUNCTIONAL`     | Write report to file instead of stdout.                                                 |
 | Version reporting (`--version`)  | 🟢 `FULLY_FUNCTIONAL`     | Prints version, commit, and build date (injected via goreleaser ldflags).              |
 
@@ -77,7 +80,7 @@
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 21 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
+| CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 24 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
 | Public importable packages       | ⚪ `PLANNED`              | All packages under `internal/` — CLI-only for now. Public library API is a ROADMAP item. |
 | Minimal external dependencies   | 🟢 `FULLY_FUNCTIONAL`     | One dependency: `go-error-family v0.10.0` (Lars's zero-dep typed error library). No CGo. All other code is stdlib. |
 
