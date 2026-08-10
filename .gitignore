@@ -1,0 +1,15 @@
+# go-hotspot binary
+/tmp/
+*.exe
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+go-hotspot
