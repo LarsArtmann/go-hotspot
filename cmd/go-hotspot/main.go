@@ -103,7 +103,9 @@ func run(args []string, out *os.File, now time.Time) error {
 		HalfLifeDays: *halfLife,
 		SortLabel:    *sortOrder,
 	}
-	report.Render(out, results, couplings, summary, report.ParseFormat(*format), *top)
+	if err := report.Render(out, results, couplings, summary, report.ParseFormat(*format), *top); err != nil {
+		return fmt.Errorf("rendering report: %w", err)
+	}
 
 	return nil
 }

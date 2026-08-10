@@ -82,7 +82,9 @@ func Collect(opts Options, now time.Time) (*History, error) {
 
 	h := &History{Files: make(map[string]*FileChurn)}
 	if err := parseNumStat(stdout, h, opts.HalfLifeDay, now); err != nil {
-		_ = cmd.Wait()
+		if waitErr := cmd.Wait(); waitErr != nil {
+			return nil, fmt.Errorf("git log: %w (%s)", waitErr, stderr.String())
+		}
 		return nil, err
 	}
 	if err := cmd.Wait(); err != nil {
@@ -172,12 +174,15 @@ func parseCommitMarker(line string) (author string, date time.Time) {
 	if len(parts) < 3 {
 		return "", time.Time{}
 	}
-	t, _ := time.Parse(time.RFC3339, parts[1])
+	t, err := time.Parse(time.RFC3339, parts[1])
+	if err != nil {
+		return parts[2], time.Time{}
+	}
 	return parts[2], t
 }
 
 // applyNumStatLine parses an "added\tdeleted\tpath" line and folds it into stats.
-// Returns the normalized file path (or "" if unparseable).
+// Returns the normalized file path (or "" if unparsable).
 func applyNumStatLine(line string, files map[string]*FileChurn, author string, date time.Time, halfLife float64, now time.Time) string {
 	add, del, file, ok := splitNumStat(line)
 	if !ok {

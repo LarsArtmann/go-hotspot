@@ -53,7 +53,7 @@ func Analyze(path string) FileComplexity {
 	} else {
 		// Estimate cyclomatic from indentation: deeper nesting ≈ more branches.
 		// A reasonable heuristic: indentation / 4 + 1 (minimum complexity).
-		fc.Cyclomatic = max(fc.Indentation/tabWidth, 0) + 1
+		fc.Cyclomatic = fc.Indentation/tabWidth + 1
 	}
 	return fc
 }

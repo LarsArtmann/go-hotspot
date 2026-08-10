@@ -10,8 +10,8 @@ No `flake.nix`, `Makefile`, or `justfile` exists. Use `go` directly.
 
 ```bash
 go build ./...                      # build (must pass — LSP caches lie, builds don't)
-go test ./...                       # run tests
-go test ./... -race                 # CONTRIBUTING.md recommends -race
+go test ./...                       # run tests (all pass)
+go test ./... -race -gcflags=all=-l # race tests (needs -l due to Go 1.26.5 linker bug)
 go vet ./...                        # vet (passes clean)
 golangci-lint run ./...             # lint (no .golangci.yml config present)
 go run ./cmd/go-hotspot             # run locally
@@ -83,22 +83,36 @@ filtering happens by deleting from `history.Files` before scoring.
 
 ## Known issues
 
-- **`TestScoreChurnMetricChoice` fails** (`internal/hotspot/score_test.go:78`):
-  expects `b.go` (high weighted churn) to outrank `a.go` (high commit count) when
-  using `ChurnWeighted`, but `a.go` wins. Pre-existing — investigate scoring vs.
-  test expectation before "fixing."
+- **Go 1.26.5 race detector linker bug**: `go test -race` panics with
+  `inlined function cmp.Compare[go.shape.int64] missing func info`. The `cmp.Compare`
+  comes from the stdlib (not our code). Workaround: add `-gcflags=all=-l` to disable
+  inlining during race builds. This is a Go toolchain bug, not a code issue.
 - **LSP shows stale `undefined: math`** on `score.go:263` — the build passes
   fine. Restart gopls if it blocks you.
+- **LSP shows stale errcheck warnings** on `reporter.go` (old line numbers) after
+  the error-handling refactor. Run `go build` to confirm the actual state.
 
 ## Conventions
 
 - **Zero external deps** — stdlib only. `go.mod` has no require directives.
+  Lint tools suggesting `lo.SliceToMap` or similar are rejected; this constraint is
+  deliberate.
 - **iota enums + `Parse*` functions** for all flag-driven choices (`Format`,
   `ComplexityMetric`, `ChurnMetric`, `SortOrder`). Follow this pattern for new
   flag-selectable options.
 - **Table-driven tests** throughout. Test helpers use `t.Helper()`.
 - **Package doc comments** explain the methodology and "why," not just "what."
-- **`fmt.Fprintln`/`Fprintf` return values are deliberately unchecked** in
-  `report/` — golangci-lint flags these as errcheck warnings; they are accepted.
+- **`report.Render` returns `error`** — all write errors propagate to the caller.
+  Renderers use `strings.Builder` + `fmt.Sprintf` for batched output (Builder writes
+  cannot fail), then a single `io.WriteString` to the real writer with error check.
+  Tabwriter functions use a `strings.Builder`-backed tabwriter, check `Flush`, then
+  write the aligned output.
+- **Functions return the `error` interface**, not custom error types. This is
+  standard Go for a CLI where errors are printed and the program exits — no caller
+  needs to type-switch on error kinds.
+- **DTO structs in `report/` intentionally duplicate domain types** (`jsonHotspot`
+  mirrors `hotspot.Result`, etc.). Serialization types need JSON tags and string
+  dates; domain types use Go conventions. Lint tools suggesting "mixins" or
+  consolidation are rejected — this separation is correct design.
 - See `DESIGN.md` for the full data model, competitive analysis, and v1/v2 scope.
 - See `README.md` for the complete flag reference and library usage example.

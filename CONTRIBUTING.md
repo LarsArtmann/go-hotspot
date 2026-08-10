@@ -13,7 +13,7 @@ Thanks for your interest in contributing!
 
 Run the following commands to set up your development environment:
 
-    go test ./... -race
+    go test ./... -race -gcflags=all=-l
     golangci-lint run ./...
 
 ## Reporting Issues

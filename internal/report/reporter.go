@@ -49,7 +49,7 @@ type Summary struct {
 }
 
 // Render writes the full report in the specified format.
-func Render(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary, format Format, topN int) {
+func Render(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary, format Format, topN int) error {
 	limited := results
 	if topN > 0 && topN < len(results) {
 		limited = results[:topN]
@@ -57,81 +57,112 @@ func Render(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingP
 
 	switch format {
 	case FormatJSON:
-		renderJSON(w, limited, couplings, summary)
+		return renderJSON(w, limited, couplings, summary)
 	case FormatCSV:
-		renderCSV(w, limited)
+		return renderCSV(w, limited)
 	case FormatMarkdown:
-		writeHeader(w, summary)
-		renderMarkdown(w, limited)
-		if len(couplings) > 0 {
-			renderCouplingMarkdown(w, couplings)
+		if err := writeHeader(w, summary); err != nil {
+			return err
 		}
+		if err := renderMarkdown(w, limited); err != nil {
+			return err
+		}
+		if len(couplings) > 0 {
+			return renderCouplingMarkdown(w, couplings)
+		}
+		return nil
 	default:
-		writeHeader(w, summary)
-		renderTable(w, limited)
-		if len(couplings) > 0 {
-			renderCouplingTable(w, couplings)
+		if err := writeHeader(w, summary); err != nil {
+			return err
 		}
+		if err := renderTable(w, limited); err != nil {
+			return err
+		}
+		if len(couplings) > 0 {
+			return renderCouplingTable(w, couplings)
+		}
+		return nil
 	}
 }
 
-func writeHeader(w io.Writer, s Summary) {
-	fmt.Fprintln(w, strings.Repeat("─", 60))
-	fmt.Fprintln(w, " go-hotspot — code complexity × churn analysis")
-	fmt.Fprintln(w, strings.Repeat("─", 60))
+// writeStr writes s to w, returning the first error.
+func writeStr(w io.Writer, s string) error {
+	_, err := io.WriteString(w, s)
+	return err
+}
+
+func writeHeader(w io.Writer, s Summary) error {
+	var b strings.Builder
+	sep := strings.Repeat("─", 60)
+	b.WriteString(sep + "\n")
+	b.WriteString(" go-hotspot — code complexity × churn analysis\n")
+	b.WriteString(sep + "\n")
 	if !s.FirstCommit.IsZero() {
-		fmt.Fprintf(w, " window:    %s → %s\n", s.FirstCommit.Format("2006-01-02"), s.LastCommit.Format("2006-01-02"))
+		b.WriteString(fmt.Sprintf(" window:    %s → %s\n", s.FirstCommit.Format("2006-01-02"), s.LastCommit.Format("2006-01-02")))
 	}
-	fmt.Fprintf(w, " commits:   %d\n", s.TotalCommits)
-	fmt.Fprintf(w, " files:     %d\n", s.TotalFiles)
+	b.WriteString(fmt.Sprintf(" commits:   %d\n", s.TotalCommits))
+	b.WriteString(fmt.Sprintf(" files:     %d\n", s.TotalFiles))
 	if s.HalfLifeDays > 0 {
-		fmt.Fprintf(w, " recency:   %.0f-day half-life\n", s.HalfLifeDays)
+		b.WriteString(fmt.Sprintf(" recency:   %.0f-day half-life\n", s.HalfLifeDays))
 	}
 	if s.SortLabel != "" && s.SortLabel != "hotspot" {
-		fmt.Fprintf(w, " sort:      %s\n", s.SortLabel)
+		b.WriteString(fmt.Sprintf(" sort:      %s\n", s.SortLabel))
 	}
-	fmt.Fprintln(w)
+	b.WriteString("\n")
+	return writeStr(w, b.String())
 }
 
-func renderTable(w io.Writer, results []hotspot.Result) {
+func renderTable(w io.Writer, results []hotspot.Result) error {
 	if len(results) == 0 {
-		fmt.Fprintln(w, "(no files match the current filters)")
-		return
+		return writeStr(w, "(no files match the current filters)\n")
 	}
 	maxScore := hotspot.MaxHotspot(results)
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tHOTSPOT\tRISK")
+	var buf strings.Builder
+	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+	if err := writeStr(tw, "RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tHOTSPOT\tRISK\n"); err != nil {
+		return err
+	}
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore)
-		fmt.Fprintf(tw, "%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n",
+		row := fmt.Sprintf("%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n",
 			i+1, truncPath(r.Path, 45), r.Language,
 			r.Commits, r.Churn, r.Authors, r.Cyclomatic, r.SLOC,
 			lastTouch(r.LastTouch), fmtScore(r.Hotspot), risk)
+		if err := writeStr(tw, row); err != nil {
+			return err
+		}
 	}
-	tw.Flush()
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	return writeStr(w, buf.String())
 }
 
-func renderMarkdown(w io.Writer, results []hotspot.Result) {
+func renderMarkdown(w io.Writer, results []hotspot.Result) error {
 	if len(results) == 0 {
-		fmt.Fprintln(w, "_(no files match the current filters)_")
-		return
+		return writeStr(w, "_(no files match the current filters)_\n")
 	}
 	maxScore := hotspot.MaxHotspot(results)
-	fmt.Fprintln(w, "| # | Path | Lang | Commits | Churn | Authors | Cyc | SLOC | Hotspot | Risk |")
-	fmt.Fprintln(w, "|--:|:--|:--|--:|--:|--:|--:|--:|--:|:--|")
+	var b strings.Builder
+	b.WriteString("| # | Path | Lang | Commits | Churn | Authors | Cyc | SLOC | Hotspot | Risk |\n")
+	b.WriteString("|--:|:--|:--|--:|--:|--:|--:|--:|--:|:--|\n")
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore)
-		fmt.Fprintf(w, "| %d | `%s` | %s | %d | %d | %d | %d | %d | %s | %s |\n",
+		b.WriteString(fmt.Sprintf("| %d | `%s` | %s | %d | %d | %d | %d | %d | %s | %s |\n",
 			i+1, r.Path, r.Language, r.Commits, r.Churn, r.Authors,
-			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk)
+			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk))
 	}
+	return writeStr(w, b.String())
 }
 
-func renderCSV(w io.Writer, results []hotspot.Result) {
-	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"path", "language", "commits", "added", "deleted", "churn", "weighted", "authors", "cyclomatic", "sloc", "indentation", "last_touch", "hotspot"})
+func renderCSV(w io.Writer, results []hotspot.Result) error {
+	var buf strings.Builder
+	cw := csv.NewWriter(&buf)
+	if err := cw.Write([]string{"path", "language", "commits", "added", "deleted", "churn", "weighted", "authors", "cyclomatic", "sloc", "indentation", "last_touch", "hotspot"}); err != nil {
+		return err
+	}
 	for _, r := range results {
-		_ = cw.Write([]string{
+		if err := cw.Write([]string{
 			r.Path, r.Language,
 			strconv.Itoa(r.Commits),
 			strconv.Itoa(r.Added),
@@ -144,34 +175,49 @@ func renderCSV(w io.Writer, results []hotspot.Result) {
 			strconv.Itoa(r.Indentation),
 			lastTouch(r.LastTouch),
 			strconv.FormatFloat(r.Hotspot, 'f', 6, 64),
-		})
+		}); err != nil {
+			return err
+		}
 	}
 	cw.Flush()
+	if err := cw.Error(); err != nil {
+		return err
+	}
+	return writeStr(w, buf.String())
 }
 
-func renderCouplingTable(w io.Writer, pairs []hotspot.CouplingPair) {
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "─ temporal coupling (files that change together) ─")
-	fmt.Fprintln(w)
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "FILE A\tFILE B\tSHARED\tDEGREE")
+func renderCouplingTable(w io.Writer, pairs []hotspot.CouplingPair) error {
+	if err := writeStr(w, "\n─ temporal coupling (files that change together) ─\n\n"); err != nil {
+		return err
+	}
+	var buf strings.Builder
+	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+	if err := writeStr(tw, "FILE A\tFILE B\tSHARED\tDEGREE\n"); err != nil {
+		return err
+	}
 	for _, p := range pairs {
-		fmt.Fprintf(tw, "%s\t%s\t%d\t%.0f%%\n",
+		row := fmt.Sprintf("%s\t%s\t%d\t%.0f%%\n",
 			truncPath(p.FileA, 35), truncPath(p.FileB, 35), p.SharedCommits, p.Degree)
+		if err := writeStr(tw, row); err != nil {
+			return err
+		}
 	}
-	tw.Flush()
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+	return writeStr(w, buf.String())
 }
 
-func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) {
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "## Temporal Coupling")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "| File A | File B | Shared | Degree |")
-	fmt.Fprintln(w, "|:--|:--|--:|--:|")
+func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
+	var b strings.Builder
+	b.WriteString("\n## Temporal Coupling\n\n")
+	b.WriteString("| File A | File B | Shared | Degree |\n")
+	b.WriteString("|:--|:--|--:|--:|\n")
 	for _, p := range pairs {
-		fmt.Fprintf(w, "| `%s` | `%s` | %d | %.0f%% |\n",
-			p.FileA, p.FileB, p.SharedCommits, p.Degree)
+		b.WriteString(fmt.Sprintf("| `%s` | `%s` | %d | %.0f%% |\n",
+			p.FileA, p.FileB, p.SharedCommits, p.Degree))
 	}
+	return writeStr(w, b.String())
 }
 
 // jsonReport is the JSON serialization structure.
@@ -210,7 +256,7 @@ type jsonCoupling struct {
 	Degree        float64 `json:"degree"`
 }
 
-func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) {
+func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
 	var rep jsonReport
 	if !summary.FirstCommit.IsZero() {
 		rep.Summary.FirstCommit = summary.FirstCommit.Format("2006-01-02")
@@ -242,7 +288,7 @@ func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.Coupl
 
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	_ = enc.Encode(rep)
+	return enc.Encode(rep)
 }
 
 // fmtScore renders a hotspot score with appropriate precision.

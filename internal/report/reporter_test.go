@@ -45,7 +45,9 @@ func TestParseFormat(t *testing.T) {
 
 func TestRenderTable(t *testing.T) {
 	var buf bytes.Buffer
-	Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0)
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0); err != nil {
+		t.Fatal(err)
+	}
 	out := buf.String()
 
 	for _, want := range []string{"main.go", "RANK", "HOTSPOT", "Go", "commits"} {
@@ -57,7 +59,9 @@ func TestRenderTable(t *testing.T) {
 
 func TestRenderMarkdown(t *testing.T) {
 	var buf bytes.Buffer
-	Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0)
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0); err != nil {
+		t.Fatal(err)
+	}
 	out := buf.String()
 
 	for _, want := range []string{"| # |", "`main.go`", "|--:|"} {
@@ -69,7 +73,9 @@ func TestRenderMarkdown(t *testing.T) {
 
 func TestRenderCSV(t *testing.T) {
 	var buf bytes.Buffer
-	Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0)
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0); err != nil {
+		t.Fatal(err)
+	}
 
 	reader := csv.NewReader(&buf)
 	rows, err := reader.ReadAll()
@@ -89,7 +95,9 @@ func TestRenderCSV(t *testing.T) {
 
 func TestRenderJSON(t *testing.T) {
 	var buf bytes.Buffer
-	Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0)
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0); err != nil {
+		t.Fatal(err)
+	}
 
 	var rep jsonReport
 	if err := json.Unmarshal(buf.Bytes(), &rep); err != nil {
@@ -111,7 +119,9 @@ func TestRenderCoupling(t *testing.T) {
 		{FileA: "a.go", FileB: "b.go", SharedCommits: 15, Degree: 80},
 	}
 	var buf bytes.Buffer
-	Render(&buf, sampleResults(), pairs, sampleSummary(), FormatTable, 0)
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatTable, 0); err != nil {
+		t.Fatal(err)
+	}
 	out := buf.String()
 
 	if !strings.Contains(out, "temporal coupling") {
@@ -127,7 +137,9 @@ func TestRenderCoupling(t *testing.T) {
 
 func TestRenderEmptyResults(t *testing.T) {
 	var buf bytes.Buffer
-	Render(&buf, nil, nil, sampleSummary(), FormatTable, 0)
+	if err := Render(&buf, nil, nil, sampleSummary(), FormatTable, 0); err != nil {
+		t.Fatal(err)
+	}
 	out := buf.String()
 	if !strings.Contains(out, "no files") {
 		t.Errorf("empty results output should mention 'no files', got: %s", out)
@@ -136,7 +148,9 @@ func TestRenderEmptyResults(t *testing.T) {
 
 func TestRenderTopN(t *testing.T) {
 	var buf bytes.Buffer
-	Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 1)
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 1); err != nil {
+		t.Fatal(err)
+	}
 	out := buf.String()
 	if strings.Contains(out, "utils.go") {
 		t.Error("topN=1 should exclude utils.go")
