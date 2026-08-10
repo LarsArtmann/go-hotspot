@@ -22,6 +22,13 @@ import (
 
 var errThresholdExceeded = errors.New("hotspot score exceeds --fail-above threshold")
 
+// Build-time variables, injected by goreleaser ldflags.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
 	if err := run(os.Args[1:], os.Stdout, time.Now()); err != nil {
 		if errors.Is(err, errThresholdExceeded) {
@@ -56,8 +63,14 @@ func run(args []string, out io.Writer, now time.Time) error {
 	failAbove := fs.Float64("fail-above", 0, "exit with code 2 if max hotspot score exceeds this (0 = disabled)")
 	minCommits := fs.Int("min-commits", 0, "exclude files with fewer commits (0 = no minimum)")
 	author := fs.String("author", "", "show only files touched by this git author")
+	showVersion := fs.Bool("version", false, "print version information and exit")
 
 	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if *showVersion {
+		_, err := fmt.Fprintf(out, "go-hotspot version %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
 		return err
 	}
 

@@ -19,7 +19,7 @@
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
 | Git churn collection             | 🟢 `FULLY_FUNCTIONAL`     | `internal/git/collector.go` — parses `git log --numstat`, tracks commits, lines, churn. 9 tests. |
 | Recency-weighted churn           | 🟢 `FULLY_FUNCTIONAL`     | Exponential decay with configurable half-life (`recencyWeight`). Default 180-day. The key differentiator. |
-| Author attribution               | 🟡 `PARTIALLY_FUNCTIONAL` | `Authors` set collected per file (`collector.go:28`), count shown in output. Author **names** not surfaced. No bus-factor metric. |
+| Author attribution               | 🟢 `FULLY_FUNCTIONAL`     | `Authors` set collected per file (`collector.go:28`). Count and names shown in all output formats (table, md, csv `author_names`, json `author_names`). No bus-factor metric yet. |
 | Temporal coupling (code-maat)    | 🟢 `FULLY_FUNCTIONAL`     | `internal/hotspot/coupling.go` — degree = sharedCommits / ceil(avg(totalCommits)) x 100. Mega-commit guard (30 files). 5 tests. |
 | First/last touch tracking        | 🟢 `FULLY_FUNCTIONAL`     | Temporal span collected and displayed. No complexity-trend-over-time yet.              |
 
@@ -50,30 +50,34 @@
 | Markdown output                  | 🟢 `FULLY_FUNCTIONAL`     | `--format markdown`. Pipe-table with backtick-wrapped paths.                           |
 | CSV output                       | 🟢 `FULLY_FUNCTIONAL`     | `--format csv`. Full metrics for programmatic use.                                     |
 | JSON output                      | 🟢 `FULLY_FUNCTIONAL`     | `--format json`. Includes summary metadata + hotspots + couplings.                     |
-| Error propagation                | 🟢 `FULLY_FUNCTIONAL`     | `report.Render` returns `error`; all renderers use `strings.Builder` + single write. Tested happy path; error path untested. |
+| Error propagation                | 🟢 `FULLY_FUNCTIONAL`     | `report.Render` returns `error`; all renderers use `strings.Builder` + single write. Tested happy path AND error path (failingWriter). Golden-file tests for all 4 formats. |
 
 ## CLI
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 16 flags for window, metrics, filtering, output. `cmd/go-hotspot/main.go`.             |
-| File filtering                   | 🟢 `FULLY_FUNCTIONAL`     | Extension, test toggle, generated detection (suffix-based), path prefix, vendor exclusion (`main.go:113`). |
+| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 21 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 8 unit tests. |
+| File filtering                   | 🟢 `FULLY_FUNCTIONAL`     | Extension, test toggle, generated detection (suffix + content-based `// Code generated` header), path prefix, vendor exclusion, `--min-commits`, `--author` (`main.go`). |
 | Six sort modes                   | 🟢 `FULLY_FUNCTIONAL`     | hotspot, stable, churn, commits, complexity, age (`--sort` flag, `score.go:75`).      |
 | Coupling thresholds              | 🟢 `FULLY_FUNCTIONAL`     | `--coupling-min-shared`, `--coupling-min-degree` flags. Code-maat defaults (5, 30%).   |
+| CI gate (`--fail-above`)         | 🟢 `FULLY_FUNCTIONAL`     | Exits with code 2 when max hotspot exceeds threshold. For CI/CD pipelines.             |
+| File output (`--output`)         | 🟢 `FULLY_FUNCTIONAL`     | Write report to file instead of stdout.                                                 |
+| Version reporting (`--version`)  | 🟢 `FULLY_FUNCTIONAL`     | Prints version, commit, and build date (injected via goreleaser ldflags).              |
 
 ## Library API
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Importable packages              | 🟡 `PARTIALLY_FUNCTIONAL` | All packages under `internal/` — not externally importable. The README library example uses `internal/` paths which won't compile from outside the module. |
+| CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 21 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
+| Public importable packages       | ⚪ `PLANNED`              | All packages under `internal/` — CLI-only for now. Public library API is a ROADMAP item. |
 | Zero external dependencies       | 🟢 `FULLY_FUNCTIONAL`     | Stdlib only. `go.mod` has zero require directives. No CGo.                             |
 
 ## Infrastructure
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 42 tests across 4 packages. All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). |
-| flake.nix                        | ⚪ `PLANNED`              | No Nix infrastructure exists.                                                                 |
-| CI/CD                            | ⚪ `PLANNED`              | No GitHub Actions, no release pipeline.                                                |
-| Git tags / releases              | ⚪ `PLANNED`              | Zero tags exist. `go install ...@latest` in README will fail.                          |
-| Linting config                   | ⚪ `PLANNED`              | No `.golangci.yml`. Only `go vet` available.                                           |
+| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 58 tests across 5 packages (unit + integration + golden + fuzz). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 4 benchmarks. |
+| flake.nix                        | 🟢 `FULLY_FUNCTIONAL`     | build/test/lint/format/vet apps + devShell with go, golangci-lint, gofumpt, goreleaser. |
+| GitHub Actions CI                | 🟢 `FULLY_FUNCTIONAL`     | `.github/workflows/ci.yml` — build, test (race), vet, lint on push and PR.            |
+| Git tags / releases              | 🟢 `FULLY_FUNCTIONAL`     | Tag `v0.1.0` exists. `.goreleaser.yml` configured (6 OS/arch targets, CGO_ENABLED=0). |
+| Linting config                   | 🟢 `FULLY_FUNCTIONAL`     | `.golangci.yml` (errcheck, gosec, govet, ineffassign, misspell, revive, staticcheck, unused). 0 issues. |

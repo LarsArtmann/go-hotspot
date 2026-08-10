@@ -108,6 +108,7 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--fail-above` | `0` | Exit with code 2 if max hotspot score exceeds this (0 = disabled) |
 | `--min-commits` | `0` | Exclude files with fewer commits (0 = no minimum) |
 | `--author` | | Show only files touched by this git author |
+| `--version` | | Print version information and exit |
 
 ## How it works
 

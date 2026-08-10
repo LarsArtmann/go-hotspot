@@ -12,7 +12,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
-go-hotspot
 
 # >>> buildflow-managed (.gitignore) >>>
 # Auto-managed by buildflow. Edit outside these markers; this block is regenerated on `buildflow --fix`.
@@ -59,5 +58,7 @@ vendor/
 go.work
 go.work.sum
 # <<< buildflow-managed (.gitignore) <<<
+
 # Build artifacts
 /go-hotspot
+/dist/

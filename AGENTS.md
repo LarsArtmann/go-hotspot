@@ -1,21 +1,34 @@
 # go-hotspot — Agent Guide
 
-Go CLI + importable library that ranks source files by **complexity × git churn**
-(Tornhill "Your Code as a Crime Scene" methodology). Zero external dependencies —
-pure standard library, zero CGo.
+Go CLI that ranks source files by **complexity × git churn** (Tornhill "Your
+Code as a Crime Scene" methodology). Zero external dependencies — pure standard
+library, zero CGo.
 
 ## Commands
 
-No `flake.nix`, `Makefile`, or `justfile` exists. Use `go` directly.
+A `flake.nix` provides reproducible builds. Raw `go` commands also work.
 
 ```bash
 go build ./...                      # build (must pass — LSP caches lie, builds don't)
 go test ./...                       # run tests (all pass)
 go test ./... -race -gcflags=all=-l # race tests (needs -l due to Go 1.26.5 linker bug)
 go vet ./...                        # vet (passes clean)
-golangci-lint run ./...             # lint (no .golangci.yml config present)
+golangci-lint run ./...             # lint (.golangci.yml config present, 0 issues)
+gofumpt -w .                        # format
 go run ./cmd/go-hotspot             # run locally
 go install ./cmd/go-hotspot         # install binary
+goreleaser release --snapshot --clean # test release build locally
+```
+
+Nix equivalents:
+
+```bash
+nix run .#build    # go build
+nix run .#test     # go test -race -gcflags=all=-l
+nix run .#lint     # golangci-lint run ./...
+nix run .#format   # gofumpt -w .
+nix run .#vet      # go vet ./...
+nix develop        # dev shell with go, golangci-lint, gofumpt, goreleaser
 ```
 
 Go 1.26.5. Module: `github.com/larsartmann/go-hotspot`.
@@ -30,14 +43,15 @@ git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspo
 
 | Package | Responsibility |
 |---|---|
-| `cmd/go-hotspot/main.go` | Flag parsing, filter logic, pipeline orchestration. No tests. |
-| `internal/git` | Runs `git log --numstat`, parses into `FileChurn` + coupling data. |
+| `cmd/go-hotspot/main.go` | Flag parsing, filter logic, pipeline orchestration. 8 tests + 3 integration tests. |
+| `internal/git` | Runs `git log --numstat`, parses into `FileChurn` + coupling data. Context-cancelable. |
 | `internal/complexity` | SLOC, indentation, and go/ast cyclomatic complexity. |
 | `internal/hotspot` | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`). |
-| `internal/report` | Output rendering: table, markdown, csv, json. |
+| `internal/report` | Output rendering: table, markdown, csv, json. Golden-file tested. |
 
-All packages are `internal/` — the library API surface is the package-level
-functions (`git.Collect`, `complexity.Analyze`, `hotspot.Score`, `hotspot.Coupling`).
+All packages are `internal/` — go-hotspot is a CLI tool, not an importable library.
+The library API is module-internal; a public API is a ROADMAP item. See `examples/`
+for usage patterns that work within the module.
 
 ## Key design decisions & gotchas
 
@@ -76,8 +90,10 @@ shared commits, min 30% degree. Pairs are canonicalized via `orderedPair` so
 (A,B) and (B,A) dedupe.
 
 ### Generated/test file filtering lives in `main.go`, not the packages
-`fileFilter`, `isGenerated`, `generatedSuffixes` are all in `cmd/go-hotspot/main.go`.
-Generated suffixes: `.gen.go`, `_gen.go`, `.pb.go`, `.pb.gw.go`, `.templ.go`.
+`fileFilter`, `isGenerated`, `isGeneratedContent`, `generatedSuffixes` are all in
+`cmd/go-hotspot/main.go`. Generated detection is twofold: suffix-based
+(`.gen.go`, `_gen.go`, `.pb.go`, `.pb.gw.go`, `.templ.go`) and content-based
+(scans for `// Code generated ... DO NOT EDIT` header).
 `vendor/` is always excluded. The internal packages are filter-agnostic —
 filtering happens by deleting from `history.Files` before scoring.
 
@@ -112,3 +128,14 @@ filtering happens by deleting from `history.Files` before scoring.
   consolidation are rejected — this separation is correct design.
 - See `DESIGN.md` for the full data model, competitive analysis, and v1/v2 scope.
 - See `README.md` for the complete flag reference and library usage example.
+
+## BuildFlow triage (branching-flow)
+
+All 49 findings reviewed and **rejected** with rationale:
+
+| Rule | Count | Verdict | Rationale |
+|------|-------|---------|-----------|
+| `NIL_POINTER_DEREF` | 29 | Reject | False positives — flags `*flag.String()` dereferences. Go's `flag` package guarantees non-nil pointers after `Parse()`. |
+| `PHANTOM_TYPE` | 15 | Reject | Branded types for primitive counts (`Commits`, `SLOC`, `Cyclomatic`) would break natural arithmetic (`Added + Deleted`) for marginal safety in a CLI tool. |
+| `COMPOSITION_mixin` | 3 | Reject | DTO duplication is intentional (see above). `History`/`Summary` field overlap is deliberate decoupling — `report` must not import `git`. |
+| `DUPLICATE_TYPE` | 2 | Reject | Same as mixin — `jsonCoupling` intentionally mirrors `CouplingPair` for JSON serialization with string dates. |
