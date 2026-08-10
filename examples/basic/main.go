@@ -23,10 +23,12 @@ func main() {
 	}
 
 	complexities := make(map[string]complexity.FileComplexity)
+
 	for path := range history.Files {
 		fc, err := complexity.Analyze(path)
-		if err != nil {
+		if err != nil { //nolint:erraudit // example program; error logged and file skipped
 			log.Printf("warning: skipping %s: %v", path, err)
+
 			continue
 		}
 

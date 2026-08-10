@@ -70,8 +70,11 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 
 	if *showVersion {
 		_, err := fmt.Fprintf(out, "go-hotspot version %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
+		if err != nil {
+			return apierrors.ReportRender("version output", err)
+		}
 
-		return err
+		return nil
 	}
 
 	// 1. Collect git history.
@@ -82,7 +85,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		HalfLifeDay: *halfLife,
 	}, now)
 	if err != nil {
-		return err
+		return err //nolint:erraudit // git.Collect already classifies via classifyGitError
 	}
 
 	// 2. Compute complexity for each file and filter.
@@ -94,6 +97,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	}
 
 	complexities := make(map[string]complexity.FileComplexity, len(history.Files))
+
 	var analysisWarnings int
 
 	for path := range history.Files {
@@ -106,7 +110,9 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		fc, analyzeErr := complexity.Analyze(path)
 		if analyzeErr != nil {
 			fmt.Fprintln(errOut, "go-hotspot: warning:", analyzeErr)
+
 			analysisWarnings++
+
 			delete(history.Files, path)
 
 			continue
@@ -182,7 +188,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		SortLabel:    *sortOrder,
 	}
 	if err := report.Render(w, results, couplings, summary, report.ParseFormat(*format), *top); err != nil {
-		return err
+		return err //nolint:erraudit // report.Render already classifies via errors.ReportRender
 	}
 
 	// 7. Fail-above threshold check.
@@ -241,9 +247,7 @@ func isGeneratedContent(path string) bool {
 	if err != nil {
 		return false
 	}
-	defer func() {
-		_ = f.Close()
-	}() // read-only file; close error is not actionable
+	defer f.Close() //nolint:erraudit // read-only file; close error is not actionable
 
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {

@@ -91,7 +91,12 @@ func renderCSVReport(w io.Writer, results []hotspot.Result) error {
 	return nil
 }
 
-func renderMarkdownReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
+func renderMarkdownReport(
+	w io.Writer,
+	results []hotspot.Result,
+	couplings []hotspot.CouplingPair,
+	summary Summary,
+) error {
 	if err := writeHeader(w, summary); err != nil {
 		return errors.ReportRender("write header", err)
 	}

@@ -119,6 +119,7 @@ func (f Foo) method() bool {
 }
 `
 	path := writeFile(t, "test.go", source)
+
 	fc, err := Analyze(path)
 	if err != nil {
 		t.Fatalf("Analyze failed: %v", err)
@@ -184,6 +185,7 @@ func selectFunc(ch chan int) int {
 }
 `
 	path := writeFile(t, "select.go", source)
+
 	fc, err := Analyze(path)
 	if err != nil {
 		t.Fatalf("Analyze failed: %v", err)
@@ -202,6 +204,7 @@ func TestAnalyzeNonGo(t *testing.T) {
         print("b")
 `
 	path := writeFile(t, "test.py", source)
+
 	fc, err := Analyze(path)
 	if err != nil {
 		t.Fatalf("Analyze failed: %v", err)
