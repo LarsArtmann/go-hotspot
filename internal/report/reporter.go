@@ -98,15 +98,15 @@ func writeHeader(w io.Writer, s Summary) error {
 	b.WriteString(" go-hotspot — code complexity × churn analysis\n")
 	b.WriteString(sep + "\n")
 	if !s.FirstCommit.IsZero() {
-		b.WriteString(fmt.Sprintf(" window:    %s → %s\n", s.FirstCommit.Format("2006-01-02"), s.LastCommit.Format("2006-01-02")))
+		fmt.Fprintf(&b, " window:    %s → %s\n", s.FirstCommit.Format("2006-01-02"), s.LastCommit.Format("2006-01-02"))
 	}
-	b.WriteString(fmt.Sprintf(" commits:   %d\n", s.TotalCommits))
-	b.WriteString(fmt.Sprintf(" files:     %d\n", s.TotalFiles))
+	fmt.Fprintf(&b, " commits:   %d\n", s.TotalCommits)
+	fmt.Fprintf(&b, " files:     %d\n", s.TotalFiles)
 	if s.HalfLifeDays > 0 {
-		b.WriteString(fmt.Sprintf(" recency:   %.0f-day half-life\n", s.HalfLifeDays))
+		fmt.Fprintf(&b, " recency:   %.0f-day half-life\n", s.HalfLifeDays)
 	}
 	if s.SortLabel != "" && s.SortLabel != "hotspot" {
-		b.WriteString(fmt.Sprintf(" sort:      %s\n", s.SortLabel))
+		fmt.Fprintf(&b, " sort:      %s\n", s.SortLabel)
 	}
 	b.WriteString("\n")
 	return writeStr(w, b.String())
@@ -148,9 +148,9 @@ func renderMarkdown(w io.Writer, results []hotspot.Result) error {
 	b.WriteString("|--:|:--|:--|--:|--:|--:|--:|--:|--:|:--|\n")
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore)
-		b.WriteString(fmt.Sprintf("| %d | `%s` | %s | %d | %d | %d | %d | %d | %s | %s |\n",
+		fmt.Fprintf(&b, "| %d | `%s` | %s | %d | %d | %d | %d | %d | %s | %s |\n",
 			i+1, r.Path, r.Language, r.Commits, r.Churn, r.Authors,
-			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk))
+			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk)
 	}
 	return writeStr(w, b.String())
 }
@@ -214,8 +214,8 @@ func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
 	b.WriteString("| File A | File B | Shared | Degree |\n")
 	b.WriteString("|:--|:--|--:|--:|\n")
 	for _, p := range pairs {
-		b.WriteString(fmt.Sprintf("| `%s` | `%s` | %d | %.0f%% |\n",
-			p.FileA, p.FileB, p.SharedCommits, p.Degree))
+		fmt.Fprintf(&b, "| `%s` | `%s` | %d | %.0f%% |\n",
+			p.FileA, p.FileB, p.SharedCommits, p.Degree)
 	}
 	return writeStr(w, b.String())
 }
