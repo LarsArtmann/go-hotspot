@@ -350,3 +350,95 @@ func TestVersionBeforeParse(t *testing.T) {
 		t.Errorf("expected version output, got: %s", buf.String())
 	}
 }
+
+func TestOutputToFile(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	reportPath := filepath.Join(t.TempDir(), "report.txt")
+
+	err := run([]string{"--output", reportPath}, io.Discard, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, readErr := os.ReadFile(reportPath)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+
+	if len(data) == 0 {
+		t.Error("expected non-empty output file")
+	}
+}
+
+func TestMinCommitsFilter(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	// Mini repo has 1 commit. --min-commits 2 should produce no results.
+	var buf bytes.Buffer
+
+	err := run([]string{"--min-commits", "2", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := strings.TrimSpace(buf.String())
+	if strings.Contains(output, "main.go") {
+		t.Errorf("expected main.go filtered out with --min-commits 2, got: %s", output)
+	}
+}
+
+func TestAuthorFilter(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	// Author "Test" should include main.go; "Nobody" should exclude it.
+	var buf bytes.Buffer
+
+	err := run([]string{"--author", "Test", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "main.go") {
+		t.Errorf("expected main.go with --author Test, got: %s", buf.String())
+	}
+
+	// --author Nobody should produce empty results.
+	buf.Reset()
+	err = run([]string{"--author", "Nobody", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if strings.Contains(buf.String(), "main.go") {
+		t.Errorf("expected main.go excluded with --author Nobody, got: %s", buf.String())
+	}
+}
+
+func TestNoHeader(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	var buf bytes.Buffer
+
+	err := run([]string{"--no-header", "--no-coupling"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if strings.Contains(buf.String(), "commits:") {
+		t.Errorf("expected no header with --no-header, got: %s", buf.String())
+	}
+}
+
+func TestFailRiskCritical(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	err := run([]string{"--fail-risk", "critical"}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected threshold-exceeded error")
+	}
+
+	if code := apierrors.ExitCode(err); code != 2 {
+		t.Errorf("ExitCode = %d, want 2 (threshold via --fail-risk)", code)
+	}
+}
