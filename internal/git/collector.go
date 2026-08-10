@@ -212,6 +212,22 @@ func classifyGitError(cause error, stderr string) error {
 	}
 }
 
+// ResolveTag returns the author date of the given git ref (tag, branch, or hash)
+// in ISO 8601 format, suitable for use as a --since value.
+func ResolveTag(ctx context.Context, ref string) (string, error) {
+	cmd := exec.CommandContext(ctx, "git", "log", "-1", "--format=%aI", ref)
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	output, err := cmd.Output()
+	if err != nil {
+		return "", classifyGitError(err, stderr.String())
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
 // extendWindow widens the first/last commit timestamps.
 func (h *History) extendWindow(t time.Time) {
 	if t.IsZero() {

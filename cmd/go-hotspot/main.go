@@ -61,6 +61,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	fs.Bool("version", false, "print version information and exit")
 	noHeader := fs.Bool("no-header", false, "suppress summary header (for script piping)")
 	failRisk := fs.String("fail-risk", "", "fail if max hotspot exceeds risk band: critical|high|medium|low")
+	sinceVersion := fs.String("since-version", "", "analyze commits since this git tag (e.g., v1.0.0)")
 
 	// Handle --version before parsing so it works even with other invalid flags.
 	if hasVersionFlag(args) {
@@ -80,9 +81,15 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		return apierrors.CLIUsage(err.Error())
 	}
 
-	// 1. Collect git history.
+	// 1. Resolve --since-version to a date if set.
+	sinceArg, err := resolveSince(*since, *sinceVersion)
+	if err != nil {
+		return err
+	}
+
+	// 2. Collect git history.
 	history, err := git.Collect(context.Background(), git.Options{
-		Since:       *since,
+		Since:       sinceArg,
 		Until:       *until,
 		Branch:      *branch,
 		HalfLifeDay: *halfLife,
@@ -374,6 +381,14 @@ func parseChurnMetric(s string) hotspot.ChurnMetric {
 	default:
 		return hotspot.ChurnWeighted
 	}
+}
+
+func resolveSince(since, sinceVersion string) (string, error) {
+	if sinceVersion == "" {
+		return since, nil
+	}
+
+	return git.ResolveTag(context.Background(), sinceVersion)
 }
 
 func parseFailRisk(risk string) float64 {
