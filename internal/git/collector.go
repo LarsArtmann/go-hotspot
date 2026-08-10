@@ -151,7 +151,7 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 	for sc.Scan() {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return apierrors.GitFailure("collect canceled", ctx.Err())
 		default:
 		}
 
@@ -183,7 +183,11 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 		flushCoupling()
 	}
 
-	return sc.Err()
+	if err := sc.Err(); err != nil {
+		return apierrors.GitFailure("scan numstat output", err)
+	}
+
+	return nil
 }
 
 // classifyGitError inspects the cause and stderr to pick the most specific
@@ -200,7 +204,8 @@ func classifyGitError(cause error, stderr string) error {
 		return apierrors.GitNotARepo(cause)
 	case strings.Contains(stderr, "ambiguous argument"):
 		return apierrors.GitBadRevision(cause)
-	case strings.Contains(stderr, "no commits"):
+	case strings.Contains(stderr, "no commits"),
+		strings.Contains(stderr, "does not have any commits"):
 		return apierrors.GitNoCommits(cause)
 	default:
 		return apierrors.GitFailure("git log", cause)

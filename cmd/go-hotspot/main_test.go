@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	apierrors "github.com/larsartmann/go-hotspot/internal/errors"
 	"github.com/larsartmann/go-hotspot/internal/hotspot"
 )
 
@@ -181,5 +183,108 @@ func TestRunVersion(t *testing.T) {
 	out := buf.String()
 	if !strings.Contains(out, "go-hotspot version") {
 		t.Errorf("version output missing header, got: %q", out)
+	}
+}
+
+// setupMiniRepo creates a temporary git repository with a single .go file,
+// changes into it, and commits it. Used by exit-code integration tests that
+// need a real git repo to operate on.
+func setupMiniRepo(t *testing.T) {
+	t.Helper()
+
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	execGit(t, "init")
+	execGit(t, "config", "user.name", "Test")
+	execGit(t, "config", "user.email", "test@example.com")
+
+	goFile := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	execGit(t, "add", "main.go")
+
+	cmd := exec.CommandContext(t.Context(), "git", "commit", "-m", "init")
+
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_DATE=2026-01-01T10:00:00Z",
+		"GIT_COMMITTER_DATE=2026-01-01T10:00:00Z",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git commit: %v\n%s", err, out)
+	}
+}
+
+func execGit(t *testing.T, args ...string) {
+	t.Helper()
+
+	cmd := exec.CommandContext(t.Context(), "git", args...)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+}
+
+func TestExitCodeSuccess(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+
+	err := run([]string{"--version"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if code := apierrors.ExitCode(err); code != 0 {
+		t.Errorf("ExitCode = %d, want 0 (success)", code)
+	}
+}
+
+func TestExitCodeUsage(t *testing.T) {
+	t.Parallel()
+
+	err := run([]string{"--bad-flag"}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected error for invalid flag")
+	}
+
+	if code := apierrors.ExitCode(err); code != 1 {
+		t.Errorf("ExitCode = %d, want 1 (EX_USAGE)", code)
+	}
+}
+
+func TestExitCodeGitFailure(t *testing.T) { //nolint:paralleltest // uses t.Chdir — mutates process CWD
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	err := run(nil, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected error in non-git directory")
+	}
+
+	if code := apierrors.ExitCode(err); code != 69 {
+		t.Errorf("ExitCode = %d, want 69 (EX_UNAVAILABLE)", code)
+	}
+}
+
+func TestExitCodeThreshold(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	err := run([]string{"--fail-above", "0.000001"}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected threshold-exceeded error")
+	}
+
+	if code := apierrors.ExitCode(err); code != 2 {
+		t.Errorf("ExitCode = %d, want 2 (threshold)", code)
 	}
 }

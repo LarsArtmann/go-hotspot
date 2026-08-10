@@ -1,6 +1,8 @@
 package errors_test
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	errorfamily "github.com/larsartmann/go-error-family"
@@ -82,6 +84,12 @@ func TestConstructors(t *testing.T) {
 			wantCode: errors.CodeThresholdExceeded,
 			wantKind: errorfamily.Rejection,
 		},
+		{
+			name:     "CLIOutput",
+			err:      errors.CLIOutput(errStub("broken pipe")),
+			wantCode: errors.CodeCLIOutputFailed,
+			wantKind: errorfamily.Infrastructure,
+		},
 	}
 
 	for _, tt := range tests {
@@ -121,6 +129,7 @@ func TestExitCodes(t *testing.T) {
 		{"ReportRender", errors.ReportRender("op", errStub("")), 69},
 		{"ReportCreate", errors.ReportCreate("f.txt", errStub("")), 69},
 		{"ThresholdExceeded", errors.ThresholdExceeded(1.0, 0.5), 2},
+		{"CLIOutput", errors.CLIOutput(errStub("")), 69},
 		{"plain error", errStub("boom"), 75},
 	}
 
@@ -157,3 +166,40 @@ type stubError string
 func (s stubError) Error() string { return string(s) }
 
 func errStub(msg string) error { return stubError(msg) }
+
+func TestHandleErrorOutput(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		err      error
+		wantWhat string
+	}{
+		{"GitNotInstalled", errors.GitNotInstalled(errStub("")), "Git is not installed or not on PATH."},
+		{"GitNotARepo", errors.GitNotARepo(errStub("")), "go-hotspot must be run from inside a Git repository."},
+		{"GitBadRevision", errors.GitBadRevision(errStub("")), "The specified Git branch or revision does not exist."},
+		{"GitNoCommits", errors.GitNoCommits(errStub("")), "no commits in the analysis window"},
+		{"GitFailure", errors.GitFailure("op", errStub("")), "git command failed"},
+		{"CLIUsage", errors.CLIUsage("bad"), "Invalid command-line arguments."},
+		{"AnalysisRead", errors.AnalysisRead("f.go", errStub("")), "source file could not be read"},
+		{"AnalysisParse", errors.AnalysisParse("f.go", errStub("")), "Go source file could not be parsed"},
+		{"ReportRender", errors.ReportRender("op", errStub("")), "Failed to render or write the output report."},
+		{"ReportCreate", errors.ReportCreate("f.txt", errStub("")), "Failed to create the output file."},
+		{"CLIOutput", errors.CLIOutput(errStub("")), "Failed to write output to stdout."},
+		{"ThresholdExceeded", errors.ThresholdExceeded(1.0, 0.5), "maximum hotspot score exceeds"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var buf bytes.Buffer
+			errorfamily.HandleErrorWithConfig(tt.err, errorfamily.HandleConfig{Output: &buf})
+			output := buf.String()
+
+			if !strings.Contains(output, tt.wantWhat) {
+				t.Errorf("HandleError output missing %q:\n%s", tt.wantWhat, output)
+			}
+		})
+	}
+}

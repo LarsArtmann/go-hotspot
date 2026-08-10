@@ -33,6 +33,7 @@ const (
 	CodeAnalysisParseFailed = "analysis.parse_failed"
 	CodeReportRenderFailed  = "report.render_failed"
 	CodeReportCreateFailed  = "report.create_failed"
+	CodeCLIOutputFailed     = "cli.output_failed"
 	CodeThresholdExceeded   = "hotspot.threshold_exceeded"
 )
 
@@ -82,6 +83,11 @@ func GitFailure(operation string, cause error) error {
 // CLIUsage signals invalid command-line input from the flag parser.
 func CLIUsage(message string) error {
 	return errorfamily.NewRejection(CodeCLIUsage, message)
+}
+
+// CLIOutput wraps a failure to write to standard output (e.g., broken pipe).
+func CLIOutput(cause error) error {
+	return errorfamily.WrapInfrastructure(cause, CodeCLIOutputFailed, "write to stdout")
 }
 
 // --- Analysis errors (Corruption, exit 65 EX_DATAERR) ----------------------

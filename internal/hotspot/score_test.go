@@ -232,6 +232,65 @@ func TestOrderedPair(t *testing.T) {
 	}
 }
 
+func TestCouplingEmptyHistory(t *testing.T) {
+	history := makeHistory(map[string]*git.FileChurn{})
+
+	pairs := Coupling(history, DefaultCouplingOptions())
+	if len(pairs) != 0 {
+		t.Errorf("got %d pairs, want 0 for empty history", len(pairs))
+	}
+}
+
+func TestCouplingMaxPairs(t *testing.T) {
+	history := makeHistory(map[string]*git.FileChurn{
+		"a.go": {Path: "a.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"b.go": 10, "c.go": 8, "d.go": 6}},
+		"b.go": {Path: "b.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 10}},
+		"c.go": {Path: "c.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 8}},
+		"d.go": {Path: "d.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 6}},
+	})
+
+	pairs := Coupling(history, CouplingOptions{MinSharedCommits: 1, MinDegree: 0, MaxPairs: 2})
+	if len(pairs) != 2 {
+		t.Fatalf("got %d pairs, want 2 (MaxPairs)", len(pairs))
+	}
+
+	// Top pair should be a-b (highest shared = highest degree).
+	if pairs[0].SharedCommits < pairs[1].SharedCommits {
+		t.Error("pairs not sorted by degree/shared descending")
+	}
+}
+
+func TestCouplingSortOrder(t *testing.T) {
+	history := makeHistory(map[string]*git.FileChurn{
+		"a.go": {Path: "a.go", Commits: 20, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"b.go": 10, "c.go": 8}},
+		"b.go": {Path: "b.go", Commits: 20, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 10}},
+		"c.go": {Path: "c.go", Commits: 20, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 8}},
+	})
+
+	pairs := Coupling(history, CouplingOptions{MinSharedCommits: 1, MinDegree: 0})
+	if len(pairs) != 2 {
+		t.Fatalf("got %d pairs, want 2", len(pairs))
+	}
+
+	// a-b: degree = 10/ceil(20)*100 = 50%. a-c: degree = 8/ceil(20)*100 = 40%.
+	// So a-b should come first.
+	if pairs[0].Degree < pairs[1].Degree {
+		t.Errorf("pairs not sorted by degree descending: %.1f before %.1f", pairs[0].Degree, pairs[1].Degree)
+	}
+}
+
+func TestCouplingMissingFileInHistory(t *testing.T) {
+	// CommitsWith references a file not in history.Files — should skip gracefully.
+	history := makeHistory(map[string]*git.FileChurn{
+		"a.go": {Path: "a.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"ghost.go": 10}},
+	})
+
+	pairs := Coupling(history, CouplingOptions{MinSharedCommits: 1, MinDegree: 0})
+	if len(pairs) != 0 {
+		t.Errorf("got %d pairs, want 0 (ghost.go not in history)", len(pairs))
+	}
+}
+
 func TestParseSortOrder(t *testing.T) {
 	cases := map[string]SortOrder{
 		"hotspot":    SortHotspot,

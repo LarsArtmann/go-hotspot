@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
+
+	errorfamily "github.com/larsartmann/go-error-family"
+	apierrors "github.com/larsartmann/go-hotspot/internal/errors"
 )
 
 func TestSplitNumStat(t *testing.T) {
@@ -232,6 +236,41 @@ func TestParseNumStatMaxChangesetGuard(t *testing.T) {
 	}
 }
 
+func TestParseNumStatCouplingBoundaryAt30Files(t *testing.T) {
+	// Exactly 30 files (the maxCouplingFiles threshold) SHOULD record coupling.
+	// The guard is > 30, not >= 30.
+	var lines []string
+
+	lines = append(lines, "@@@hash1|2026-01-01T00:00:00+00:00|Alice")
+	for i := range 30 {
+		lines = append(lines, fmt.Sprintf("1\t1\tfile%02d.go", i))
+	}
+
+	lines = append(lines, "")
+
+	input := strings.Join(lines, "\n")
+	h := &History{Files: make(map[string]*FileChurn)}
+
+	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(h.Files) != 30 {
+		t.Fatalf("files = %d, want 30", len(h.Files))
+	}
+
+	// At exactly 30 files, coupling SHOULD be recorded.
+	first := h.Files["file00.go"]
+	if first == nil {
+		t.Fatal("missing file00.go")
+	}
+
+	if len(first.CommitsWith) == 0 {
+		t.Error("file00.go has no coupling entries — boundary at 30 should allow coupling")
+	}
+}
+
 func TestHistoryWindow(t *testing.T) {
 	h := &History{Files: make(map[string]*FileChurn)}
 	t1 := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
@@ -255,6 +294,92 @@ func TestHistoryWindow(t *testing.T) {
 
 	if !h.FirstCommit.Equal(t2) {
 		t.Errorf("FirstCommit changed after zero-time extend")
+	}
+}
+
+func TestClassifyGitError(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name     string
+		cause    error
+		stderr   string
+		wantCode string
+	}{
+		// --- 5 primary classification branches ---
+		{
+			name:     "git binary not found",
+			cause:    exec.ErrNotFound,
+			stderr:   "",
+			wantCode: apierrors.CodeGitNotInstalled,
+		},
+		{
+			name:     "not a git repository",
+			cause:    fmt.Errorf("exit status 128"),
+			stderr:   "fatal: not a git repository (or any of the parent directories): .git",
+			wantCode: apierrors.CodeGitNotARepo,
+		},
+		{
+			name:     "ambiguous argument / bad revision",
+			cause:    fmt.Errorf("exit status 128"),
+			stderr:   "fatal: ambiguous argument 'unknown-ref': unknown revision",
+			wantCode: apierrors.CodeGitBadRevision,
+		},
+		{
+			name:     "no commits in range",
+			cause:    fmt.Errorf("exit status 128"),
+			stderr:   "fatal: your current branch 'main' does not have any commits yet",
+			wantCode: apierrors.CodeGitNoCommits,
+		},
+		{
+			name:     "no commits literal substring",
+			cause:    fmt.Errorf("exit status 128"),
+			stderr:   "fatal: no commits in the specified range",
+			wantCode: apierrors.CodeGitNoCommits,
+		},
+		{
+			name:     "default fallback for unknown git error",
+			cause:    fmt.Errorf("exit status 1"),
+			stderr:   "some unrecognized git error",
+			wantCode: apierrors.CodeGitCollectFailed,
+		},
+
+		// --- Edge cases ---
+		{
+			name:     "empty stderr falls to default",
+			cause:    fmt.Errorf("exit status 1"),
+			stderr:   "",
+			wantCode: apierrors.CodeGitCollectFailed,
+		},
+		{
+			name:     "whitespace-only stderr trimmed then default",
+			cause:    fmt.Errorf("exit status 1"),
+			stderr:   "   \n\t  ",
+			wantCode: apierrors.CodeGitCollectFailed,
+		},
+		{
+			name:     "multi-line stderr with not-a-repo somewhere",
+			cause:    fmt.Errorf("exit status 128"),
+			stderr:   "error: something\nfatal: not a git repository\nusage: git ...",
+			wantCode: apierrors.CodeGitNotARepo,
+		},
+		{
+			name:     "no-commits takes priority over ambiguous when both present",
+			cause:    fmt.Errorf("exit status 128"),
+			stderr:   "fatal: ambiguous argument and no commits",
+			wantCode: apierrors.CodeGitBadRevision, // first match wins (ambiguous checked before no-commits)
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := classifyGitError(c.cause, c.stderr)
+			if code := errorfamily.Code(err); code != c.wantCode {
+				t.Errorf("classifyGitError Code() = %q, want %q (msg: %s)", code, c.wantCode, err.Error())
+			}
+		})
 	}
 }
 

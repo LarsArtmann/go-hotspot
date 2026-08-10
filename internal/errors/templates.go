@@ -73,6 +73,12 @@ func init() {
 			Fix:    "Ensure the directory exists and is writable.",
 			WayOut: "Use a different --output path or omit the flag for stdout.",
 		},
+		CodeCLIOutputFailed: {
+			What:   "Failed to write output to stdout.",
+			Why:    "The output stream may be closed or unavailable (e.g., a broken pipe).",
+			Fix:    "Ensure the output stream is available and not closed prematurely.",
+			WayOut: "Redirect to a file instead: go-hotspot --output report.txt",
+		},
 		CodeThresholdExceeded: {
 			What:   "The maximum hotspot score exceeds the --fail-above threshold.",
 			Why:    "One or more files have high complexity and churn, indicating technical debt hotspots.",

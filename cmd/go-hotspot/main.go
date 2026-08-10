@@ -71,7 +71,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	if *showVersion {
 		_, err := fmt.Fprintf(out, "go-hotspot version %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
 		if err != nil {
-			return apierrors.ReportRender("version output", err)
+			return apierrors.CLIOutput(err)
 		}
 
 		return nil
@@ -96,30 +96,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		prefixes:         splitCSV(*paths),
 	}
 
-	complexities := make(map[string]complexity.FileComplexity, len(history.Files))
-
-	var analysisWarnings int
-
-	for path := range history.Files {
-		if !filter.keep(path) {
-			delete(history.Files, path)
-
-			continue
-		}
-
-		fc, analyzeErr := complexity.Analyze(path)
-		if analyzeErr != nil {
-			fmt.Fprintln(errOut, "go-hotspot: warning:", analyzeErr)
-
-			analysisWarnings++
-
-			delete(history.Files, path)
-
-			continue
-		}
-
-		complexities[path] = fc
-	}
+	complexities, analysisWarnings := analyzeFiles(history, filter, errOut)
 
 	if analysisWarnings > 0 {
 		fmt.Fprintf(errOut, "go-hotspot: %d file(s) skipped due to analysis errors\n", analysisWarnings)
@@ -145,40 +122,9 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	}
 
 	// 5. Filter by min-commits and author.
-	if *minCommits > 0 || *author != "" {
-		filtered := results[:0]
-		for _, r := range results {
-			if *minCommits > 0 && r.Commits < *minCommits {
-				continue
-			}
-
-			if *author != "" && !hasAuthor(r.AuthorNames, *author) {
-				continue
-			}
-
-			filtered = append(filtered, r)
-		}
-
-		results = filtered
-	}
+	results = filterResults(results, *minCommits, *author)
 
 	// 6. Render report.
-	w := out
-
-	if *output != "" {
-		f, err := os.Create(*output)
-		if err != nil {
-			return apierrors.ReportCreate(*output, err)
-		}
-		defer func() {
-			if cerr := f.Close(); cerr != nil {
-				fmt.Fprintf(errOut, "go-hotspot: warning: failed to close output file: %v\n", cerr)
-			}
-		}()
-
-		w = f
-	}
-
 	summary := report.Summary{
 		FirstCommit:  history.FirstCommit,
 		LastCommit:   history.LastCommit,
@@ -187,15 +133,120 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		HalfLifeDays: *halfLife,
 		SortLabel:    *sortOrder,
 	}
-	if err := report.Render(w, results, couplings, summary, report.ParseFormat(*format), *top); err != nil {
-		return err //nolint:erraudit // report.Render already classifies via errors.ReportRender
+	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top); err != nil {
+		return err
 	}
 
 	// 7. Fail-above threshold check.
-	if *failAbove > 0 {
-		if maxScore := hotspot.MaxHotspot(results); maxScore > *failAbove {
-			return apierrors.ThresholdExceeded(maxScore, *failAbove)
+	if err := checkThreshold(results, *failAbove); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// analyzeFiles runs complexity analysis on each surviving file in history,
+// removing filtered/unanalyzable files and returning the complexity map
+// plus a count of files that failed analysis.
+func analyzeFiles(
+	history *git.History,
+	filter fileFilter,
+	errOut io.Writer,
+) (map[string]complexity.FileComplexity, int) {
+	complexities := make(map[string]complexity.FileComplexity, len(history.Files))
+
+	var warnings int
+
+	for path := range history.Files {
+		if !filter.keep(path) {
+			delete(history.Files, path)
+
+			continue
 		}
+
+		fc, analyzeErr := complexity.Analyze(path)
+		if analyzeErr != nil {
+			fmt.Fprintln(errOut, "go-hotspot: warning:", analyzeErr)
+
+			delete(history.Files, path)
+
+			warnings++
+
+			continue
+		}
+
+		complexities[path] = fc
+	}
+
+	return complexities, warnings
+}
+
+// filterResults removes results that don't meet the minimum commit count
+// or don't include the specified author.
+func filterResults(results []hotspot.Result, minCommits int, author string) []hotspot.Result {
+	if minCommits == 0 && author == "" {
+		return results
+	}
+
+	filtered := results[:0]
+	for _, result := range results {
+		if minCommits > 0 && result.Commits < minCommits {
+			continue
+		}
+
+		if author != "" && !hasAuthor(result.AuthorNames, author) {
+			continue
+		}
+
+		filtered = append(filtered, result)
+	}
+
+	return filtered
+}
+
+// renderReport renders the hotspot report, optionally to a file instead of stdout.
+func renderReport(
+	out, errOut io.Writer,
+	outputPath string,
+	results []hotspot.Result,
+	couplings []hotspot.CouplingPair,
+	summary report.Summary,
+	format string,
+	topN int,
+) error {
+	writer := out
+
+	if outputPath != "" {
+		file, err := os.Create(outputPath)
+		if err != nil {
+			return apierrors.ReportCreate(outputPath, err)
+		}
+
+		defer func() {
+			if cerr := file.Close(); cerr != nil {
+				fmt.Fprintf(errOut, "go-hotspot: warning: failed to close output file: %v\n", cerr)
+			}
+		}()
+
+		writer = file
+	}
+
+	if err := report.Render(writer, results, couplings, summary, report.ParseFormat(format), topN); err != nil {
+		return err //nolint:erraudit // report.Render already classifies via errors.ReportRender
+	}
+
+	return nil
+}
+
+// checkThreshold returns a threshold-exceeded error if the max hotspot score
+// surpasses the configured limit. A limit of 0 disables the check.
+func checkThreshold(results []hotspot.Result, failAbove float64) error {
+	if failAbove <= 0 {
+		return nil
+	}
+
+	if maxScore := hotspot.MaxHotspot(results); maxScore > failAbove {
+		return apierrors.ThresholdExceeded(maxScore, failAbove)
 	}
 
 	return nil
