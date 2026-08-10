@@ -29,9 +29,9 @@ func main() {
 }
 `
 	sloc, indent, maxDepth := countLines(strings.Split(source, "\n"))
-	// Non-blank, non-comment lines: package, func, if, Println, two closing braces
-	if sloc != 6 {
-		t.Errorf("SLOC = %d, want 5", sloc)
+	// Non-blank, non-comment, non-brace-only lines: package, func, if, Println
+	if sloc != 4 {
+		t.Errorf("SLOC = %d, want 4", sloc)
 	}
 
 	if indent == 0 {

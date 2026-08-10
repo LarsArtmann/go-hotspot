@@ -82,6 +82,10 @@ func countLines(lines []string) (sloc, totalIndent, maxDepth int) {
 			continue
 		}
 
+		if isBraceOnly(trimmed) {
+			continue
+		}
+
 		sloc++
 		indent := leadingIndent(raw)
 		totalIndent += indent
@@ -120,6 +124,21 @@ func isCommentLine(t string) bool {
 		strings.HasPrefix(t, "*") ||
 		strings.HasPrefix(t, "--") ||
 		strings.HasPrefix(t, "#") && !strings.HasPrefix(t, "#!")
+}
+
+// isBraceOnly reports whether a trimmed line is only structural punctuation
+// (braces, semicolons, parentheses) with no executable content.
+func isBraceOnly(t string) bool {
+	for _, ch := range t {
+		switch ch {
+		case '{', '}', '(', ')', ';', ',':
+			continue
+		default:
+			return false
+		}
+	}
+
+	return t != ""
 }
 
 // analyzeGo parses Go source and returns cyclomatic complexity + function breakdown.
