@@ -40,11 +40,12 @@ func ParseFormat(s string) Format {
 
 // Summary holds metadata for the report header.
 type Summary struct {
-	FirstCommit time.Time
-	LastCommit  time.Time
+	FirstCommit  time.Time
+	LastCommit   time.Time
 	TotalCommits int
 	TotalFiles   int
 	HalfLifeDays float64
+	SortLabel    string // human-readable sort mode label
 }
 
 // Render writes the full report in the specified format.
@@ -86,6 +87,9 @@ func writeHeader(w io.Writer, s Summary) {
 	if s.HalfLifeDays > 0 {
 		fmt.Fprintf(w, " recency:   %.0f-day half-life\n", s.HalfLifeDays)
 	}
+	if s.SortLabel != "" && s.SortLabel != "hotspot" {
+		fmt.Fprintf(w, " sort:      %s\n", s.SortLabel)
+	}
 	fmt.Fprintln(w)
 }
 
@@ -96,13 +100,13 @@ func renderTable(w io.Writer, results []hotspot.Result) {
 	}
 	maxScore := hotspot.MaxHotspot(results)
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tHOTSPOT\tRISK")
+	fmt.Fprintln(tw, "RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tHOTSPOT\tRISK")
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore)
-		fmt.Fprintf(tw, "%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\n",
+		fmt.Fprintf(tw, "%d\t%s\t%s\t%d\t%d\t%d\t%d\t%d\t%s\t%s\t%s\n",
 			i+1, truncPath(r.Path, 45), r.Language,
 			r.Commits, r.Churn, r.Authors, r.Cyclomatic, r.SLOC,
-			fmtScore(r.Hotspot), risk)
+			lastTouch(r.LastTouch), fmtScore(r.Hotspot), risk)
 	}
 	tw.Flush()
 }
@@ -125,7 +129,7 @@ func renderMarkdown(w io.Writer, results []hotspot.Result) {
 
 func renderCSV(w io.Writer, results []hotspot.Result) {
 	cw := csv.NewWriter(w)
-	_ = cw.Write([]string{"path", "language", "commits", "added", "deleted", "churn", "weighted", "authors", "cyclomatic", "sloc", "indentation", "hotspot"})
+	_ = cw.Write([]string{"path", "language", "commits", "added", "deleted", "churn", "weighted", "authors", "cyclomatic", "sloc", "indentation", "last_touch", "hotspot"})
 	for _, r := range results {
 		_ = cw.Write([]string{
 			r.Path, r.Language,
@@ -138,6 +142,7 @@ func renderCSV(w io.Writer, results []hotspot.Result) {
 			strconv.Itoa(r.Cyclomatic),
 			strconv.Itoa(r.SLOC),
 			strconv.Itoa(r.Indentation),
+			lastTouch(r.LastTouch),
 			strconv.FormatFloat(r.Hotspot, 'f', 6, 64),
 		})
 	}
@@ -194,6 +199,7 @@ type jsonHotspot struct {
 	Cyclomatic  int     `json:"cyclomatic"`
 	SLOC        int     `json:"sloc"`
 	Indentation int     `json:"indentation"`
+	LastTouch   string  `json:"last_touch,omitempty"`
 	Hotspot     float64 `json:"hotspot"`
 }
 
@@ -221,7 +227,9 @@ func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.Coupl
 			Added: r.Added, Deleted: r.Deleted, Churn: r.Churn,
 			Weighted: r.Weighted, Authors: r.Authors,
 			Cyclomatic: r.Cyclomatic, SLOC: r.SLOC,
-			Indentation: r.Indentation, Hotspot: r.Hotspot,
+			Indentation: r.Indentation,
+			LastTouch:   lastTouch(r.LastTouch),
+			Hotspot:     r.Hotspot,
 		})
 	}
 
@@ -243,6 +251,14 @@ func fmtScore(h float64) string {
 		return strconv.FormatFloat(h, 'f', 4, 64)
 	}
 	return strconv.FormatFloat(h, 'f', 6, 64)
+}
+
+// lastTouch formats a file's last-commit date for display, or "—" if unknown.
+func lastTouch(t time.Time) string {
+	if t.IsZero() {
+		return "—"
+	}
+	return t.Format("2006-01-02")
 }
 
 // truncPath keeps a path within width for terminal display.

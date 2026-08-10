@@ -5,6 +5,8 @@ package hotspot
 import (
 	"math"
 	"sort"
+	"strings"
+	"time"
 
 	"github.com/larsartmann/go-hotspot/internal/complexity"
 	"github.com/larsartmann/go-hotspot/internal/git"
@@ -54,6 +56,96 @@ type Result struct {
 	Indentation int
 	Cyclomatic  int
 	Hotspot     float64 // normalized 0-1 score
+	FirstTouch  time.Time
+	LastTouch   time.Time
+}
+
+// AgeDays returns the number of days since the file was last touched.
+// Requires a reference "now" time.
+func (r Result) AgeDays(now time.Time) int {
+	if r.LastTouch.IsZero() {
+		return 0
+	}
+	return int(now.Sub(r.LastTouch).Hours() / 24)
+}
+
+// SortOrder selects how results are ranked.
+type SortOrder int
+
+const (
+	// SortHotspot ranks by descending hotspot score (most complex + churned first).
+	SortHotspot SortOrder = iota
+	// SortStable ranks by ascending hotspot score (least churned, most stable first).
+	SortStable
+	// SortChurn ranks by descending raw churn (most lines changed first).
+	SortChurn
+	// SortCommits ranks by descending commit count.
+	SortCommits
+	// SortComplexity ranks by descending cyclomatic complexity.
+	SortComplexity
+	// SortAge ranks by descending age (oldest untouched code first).
+	SortAge
+)
+
+// ParseSortOrder maps a flag string to a SortOrder.
+func ParseSortOrder(s string) SortOrder {
+	switch strings.ToLower(s) {
+	case "stable":
+		return SortStable
+	case "churn":
+		return SortChurn
+	case "commits", "commit":
+		return SortCommits
+	case "complexity", "cyc", "cyclomatic":
+		return SortComplexity
+	case "age", "stale", "old":
+		return SortAge
+	default:
+		return SortHotspot
+	}
+}
+
+// Sort reorders results by the given sort order. The now parameter is used for
+// age-based sorting.
+func Sort(results []Result, order SortOrder, now time.Time) {
+	sort.Slice(results, func(i, j int) bool {
+		switch order {
+		case SortStable:
+			// Ascending hotspot: stable files first. Ties break on path.
+			if results[i].Hotspot != results[j].Hotspot {
+				return results[i].Hotspot < results[j].Hotspot
+			}
+		case SortChurn:
+			if results[i].Churn != results[j].Churn {
+				return results[i].Churn > results[j].Churn
+			}
+		case SortCommits:
+			if results[i].Commits != results[j].Commits {
+				return results[i].Commits > results[j].Commits
+			}
+		case SortComplexity:
+			if results[i].Cyclomatic != results[j].Cyclomatic {
+				return results[i].Cyclomatic > results[j].Cyclomatic
+			}
+		case SortAge:
+			// Older LastTouch = more stale. Zero-time sorts last (unknown age).
+			ai, aj := results[i].LastTouch, results[j].LastTouch
+			if ai.IsZero() && !aj.IsZero() {
+				return false
+			}
+			if !ai.IsZero() && aj.IsZero() {
+				return true
+			}
+			if !ai.Equal(aj) {
+				return ai.Before(aj) // earlier = older = first
+			}
+		default: // SortHotspot
+			if results[i].Hotspot != results[j].Hotspot {
+				return results[i].Hotspot > results[j].Hotspot
+			}
+		}
+		return results[i].Path < results[j].Path
+	})
 }
 
 // Score combines git history and complexity analysis into ranked hotspot results.
@@ -81,6 +173,8 @@ func Score(
 			SLOC:        cx.SLOC,
 			Indentation: cx.Indentation,
 			Cyclomatic:  cx.Cyclomatic,
+			FirstTouch:  fc.FirstTouch,
+			LastTouch:   fc.LastTouch,
 		}
 		results = append(results, r)
 
@@ -94,13 +188,6 @@ func Score(
 		ch := churnValue(results[i], opts.Churn)
 		results[i].Hotspot = normalizedProduct(cx, sumComplexity, ch, sumChurn)
 	}
-
-	sort.Slice(results, func(i, j int) bool {
-		if results[i].Hotspot != results[j].Hotspot {
-			return results[i].Hotspot > results[j].Hotspot
-		}
-		return results[i].Path < results[j].Path
-	})
 
 	return results
 }

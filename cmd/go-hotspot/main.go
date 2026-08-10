@@ -41,6 +41,7 @@ func run(args []string, out *os.File, now time.Time) error {
 	noCoupling := fs.Bool("no-coupling", false, "skip temporal coupling analysis")
 	couplingMinShared := fs.Int("coupling-min-shared", 5, "minimum shared commits for temporal coupling")
 	couplingMinDegree := fs.Float64("coupling-min-degree", 30, "minimum coupling degree (%)")
+	sortOrder := fs.String("sort", "hotspot", "sort order: hotspot|stable|churn|commits|complexity|age")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -81,6 +82,9 @@ func run(args []string, out *os.File, now time.Time) error {
 	}
 	results := hotspot.Score(history, complexities, scoreOpts)
 
+	// 4. Sort results by the selected order.
+	hotspot.Sort(results, hotspot.ParseSortOrder(*sortOrder), now)
+
 	// 4. Compute temporal coupling (unless disabled).
 	var couplings []hotspot.CouplingPair
 	if !*noCoupling {
@@ -97,6 +101,7 @@ func run(args []string, out *os.File, now time.Time) error {
 		TotalCommits: history.TotalCommits,
 		TotalFiles:   len(results),
 		HalfLifeDays: *halfLife,
+		SortLabel:    *sortOrder,
 	}
 	report.Render(out, results, couplings, summary, report.ParseFormat(*format), *top)
 

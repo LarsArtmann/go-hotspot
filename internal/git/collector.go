@@ -244,15 +244,15 @@ func normalizeRename(path string) string {
 		rest := path[leftBrace:]
 		if rightBrace := strings.Index(rest, "}"); rightBrace > 0 {
 			inner := rest[1:rightBrace]
-			if arrow := strings.Index(inner, "=>"); arrow >= 0 {
-				newPart := strings.TrimSpace(inner[arrow+2:])
+			if _, after, ok := strings.Cut(inner, "=>"); ok {
+				newPart := strings.TrimSpace(after)
 				return path[:leftBrace] + newPart + path[leftBrace+rightBrace+1:]
 			}
 		}
 	}
 	// Simple form: old => new
-	if arrow := strings.Index(path, "=>"); arrow >= 0 {
-		return strings.TrimSpace(path[arrow+2:])
+	if _, after, ok := strings.Cut(path, "=>"); ok {
+		return strings.TrimSpace(after)
 	}
 	return path
 }

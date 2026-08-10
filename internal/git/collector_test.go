@@ -193,7 +193,7 @@ func TestParseNumStatMaxChangesetGuard(t *testing.T) {
 	// Coupling should NOT be recorded.
 	var lines []string
 	lines = append(lines, "@@@hash1|2026-01-01T00:00:00+00:00|Alice")
-	for i := 0; i < 31; i++ {
+	for i := range 31 {
 		lines = append(lines, "1\t1\tfile"+string(rune('A'+i))+".go")
 	}
 	lines = append(lines, "")

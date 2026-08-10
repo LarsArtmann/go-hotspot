@@ -2,6 +2,7 @@ package hotspot
 
 import (
 	"testing"
+	"time"
 
 	"github.com/larsartmann/go-hotspot/internal/complexity"
 	"github.com/larsartmann/go-hotspot/internal/git"
@@ -22,6 +23,7 @@ func TestScoreBasicRanking(t *testing.T) {
 	}
 
 	results := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
+	Sort(results, SortHotspot, time.Now())
 
 	if len(results) != 2 {
 		t.Fatalf("got %d results, want 2", len(results))
@@ -68,12 +70,14 @@ func TestScoreChurnMetricChoice(t *testing.T) {
 
 	// With commit-count churn: a.go (50 commits) should rank higher.
 	byCommits := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnCommits})
+	Sort(byCommits, SortHotspot, time.Now())
 	if byCommits[0].Path != "a.go" {
 		t.Errorf("by commits, top = %s, want a.go", byCommits[0].Path)
 	}
 
 	// With weighted churn: b.go (1500 weighted) should rank higher.
 	byWeighted := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
+	Sort(byWeighted, SortHotspot, time.Now())
 	if byWeighted[0].Path != "b.go" {
 		t.Errorf("by weighted, top = %s, want b.go", byWeighted[0].Path)
 	}
@@ -182,5 +186,100 @@ func TestOrderedPair(t *testing.T) {
 	b := orderedPair("apple.go", "zebra.go")
 	if a != b {
 		t.Errorf("orderedPair not canonical: %v != %v", a, b)
+	}
+}
+
+func TestParseSortOrder(t *testing.T) {
+	cases := map[string]SortOrder{
+		"hotspot":     SortHotspot,
+		"stable":      SortStable,
+		"churn":       SortChurn,
+		"commits":     SortCommits,
+		"complexity":  SortComplexity,
+		"cyclomatic":  SortComplexity,
+		"age":         SortAge,
+		"old":         SortAge,
+		"stale":       SortAge,
+		"unknown":     SortHotspot, // default
+	}
+	for in, want := range cases {
+		if got := ParseSortOrder(in); got != want {
+			t.Errorf("ParseSortOrder(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
+func TestSortStable(t *testing.T) {
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+	results := []Result{
+		{Path: "hot.go", Hotspot: 0.9, Commits: 100, Churn: 5000, Cyclomatic: 50, LastTouch: now},
+		{Path: "stable.go", Hotspot: 0.01, Commits: 1, Churn: 10, Cyclomatic: 2, LastTouch: now.AddDate(-1, 0, 0)},
+		{Path: "mid.go", Hotspot: 0.1, Commits: 10, Churn: 500, Cyclomatic: 10, LastTouch: now.AddDate(0, -6, 0)},
+	}
+
+	Sort(results, SortStable, now)
+	// Stable sort: lowest hotspot first
+	if results[0].Path != "stable.go" {
+		t.Errorf("stable sort top = %s, want stable.go", results[0].Path)
+	}
+}
+
+func TestSortAge(t *testing.T) {
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+	old := now.AddDate(-2, 0, 0)
+	recent := now.AddDate(0, 0, -7)
+	results := []Result{
+		{Path: "recent.go", LastTouch: recent},
+		{Path: "old.go", LastTouch: old},
+		{Path: "unknown.go", LastTouch: time.Time{}},
+	}
+
+	Sort(results, SortAge, now)
+	// Age sort: oldest first
+	if results[0].Path != "old.go" {
+		t.Errorf("age sort top = %s, want old.go", results[0].Path)
+	}
+	// Unknown time should sort last
+	if results[len(results)-1].Path != "unknown.go" {
+		t.Errorf("age sort bottom = %s, want unknown.go", results[len(results)-1].Path)
+	}
+}
+
+func TestSortChurnAndCommits(t *testing.T) {
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+	results := []Result{
+		{Path: "a.go", Commits: 5, Churn: 100},
+		{Path: "b.go", Commits: 50, Churn: 50},
+		{Path: "c.go", Commits: 10, Churn: 1000},
+	}
+
+	Sort(results, SortChurn, now)
+	if results[0].Path != "c.go" {
+		t.Errorf("churn sort top = %s, want c.go", results[0].Path)
+	}
+
+	// Reset and sort by commits
+	results = []Result{
+		{Path: "a.go", Commits: 5, Churn: 100},
+		{Path: "b.go", Commits: 50, Churn: 50},
+		{Path: "c.go", Commits: 10, Churn: 1000},
+	}
+	Sort(results, SortCommits, now)
+	if results[0].Path != "b.go" {
+		t.Errorf("commits sort top = %s, want b.go", results[0].Path)
+	}
+}
+
+func TestResultAgeDays(t *testing.T) {
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+	r := Result{LastTouch: now.AddDate(0, 0, -30)}
+	if got := r.AgeDays(now); got < 29 || got > 31 {
+		t.Errorf("AgeDays = %d, want ~30", got)
+	}
+
+	// Zero time returns 0
+	r2 := Result{}
+	if got := r2.AgeDays(now); got != 0 {
+		t.Errorf("AgeDays with zero time = %d, want 0", got)
 	}
 }
