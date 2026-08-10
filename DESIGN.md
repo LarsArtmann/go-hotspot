@@ -62,12 +62,13 @@ build tag for non-Go cyclomatic complexity.
 ## Architecture
 
 ```
-cmd/go-hotspot/main.go              CLI entry point, flag parsing
+cmd/go-hotspot/main.go              CLI entry point, flag parsing, pipeline orchestration
 internal/git/collector.go           git log parsing, churn + coupling data
 internal/complexity/counter.go      SLOC, indentation, go/ast cyclomatic
 internal/hotspot/score.go           hotspot scoring + normalization
 internal/hotspot/coupling.go        temporal coupling (code-maat formula)
 internal/report/reporter.go         output: table, markdown, csv, json
+internal/errors/                    typed errors: Family + Code + BSD exit code + What/Why/Fix/WayOut templates
 ```
 
 ## v1 Scope

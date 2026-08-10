@@ -110,6 +110,21 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--author` | | Show only files touched by this git author |
 | `--version` | | Print version information and exit |
 
+### Exit Codes
+
+go-hotspot follows BSD `sysexits.h` conventions for CI/CD integration:
+
+| Code | BSD Name | Meaning | When |
+|------|----------|---------|------|
+| 0 | — | Success | Analysis completed without errors |
+| 1 | EX_USAGE | Invalid input | Bad flag value or missing argument |
+| 2 | — | Threshold exceeded | `--fail-above` limit triggered |
+| 65 | EX_DATAERR | Source corrupt | Unparseable Go file or read failure |
+| 69 | EX_UNAVAILABLE | Infrastructure | Git not installed, not a repo, or output write failed |
+| 70 | EX_SOFTWARE | Internal bug | Unexpected error (please report) |
+
+Each error prints a structured What/Why/Fix/WayOut message to stderr before exiting.
+
 ## How it works
 
 go-hotspot combines two signals:
