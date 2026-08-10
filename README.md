@@ -101,6 +101,7 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--include-generated` | `false` | Include `*.gen.go`, `*.pb.go` |
 | `--paths` | | Comma-separated path prefixes to include |
 | `--no-coupling` | `false` | Skip temporal coupling analysis |
+| `--sort` | `hotspot` | Sort: `hotspot`, `stable`, `churn`, `commits`, `complexity`, `age` |
 | `--coupling-min-shared` | `5` | Minimum shared commits for coupling |
 | `--coupling-min-degree` | `30` | Minimum coupling degree (%) |
 

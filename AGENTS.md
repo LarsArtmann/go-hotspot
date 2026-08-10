@@ -87,10 +87,6 @@ filtering happens by deleting from `history.Files` before scoring.
   `inlined function cmp.Compare[go.shape.int64] missing func info`. The `cmp.Compare`
   comes from the stdlib (not our code). Workaround: add `-gcflags=all=-l` to disable
   inlining during race builds. This is a Go toolchain bug, not a code issue.
-- **LSP shows stale `undefined: math`** on `score.go:263` — the build passes
-  fine. Restart gopls if it blocks you.
-- **LSP shows stale errcheck warnings** on `reporter.go` (old line numbers) after
-  the error-handling refactor. Run `go build` to confirm the actual state.
 
 ## Conventions
 
