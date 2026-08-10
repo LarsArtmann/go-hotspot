@@ -50,13 +50,22 @@
 | Markdown output                  | 🟢 `FULLY_FUNCTIONAL`     | `--format markdown`. Pipe-table with backtick-wrapped paths.                           |
 | CSV output                       | 🟢 `FULLY_FUNCTIONAL`     | `--format csv`. Full metrics for programmatic use.                                     |
 | JSON output                      | 🟢 `FULLY_FUNCTIONAL`     | `--format json`. Includes summary metadata + hotspots + couplings.                     |
-| Error propagation                | 🟢 `FULLY_FUNCTIONAL`     | `report.Render` returns `error`; all renderers use `strings.Builder` + single write. Tested happy path AND error path (failingWriter). Golden-file tests for all 4 formats. |
+| Error propagation                | 🟢 `FULLY_FUNCTIONAL`     | `report.Render` returns `error`; all renderers use `strings.Builder` + single write. Errors wrapped at boundary via `internal/errors.ReportRender()`. Tested happy path AND error path (failingWriter asserts `*errorfamily.Error` + Code). Golden-file tests for all 4 formats. |
+
+## Error Handling
+
+| Feature                          | Status                    | Notes                                                                                  |
+| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
+| Typed error system               | 🟢 `FULLY_FUNCTIONAL`     | `internal/errors` package built on `go-error-family`. 11 domain-specific constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70). 4 tests. |
+| User-facing error messages       | 🟢 `FULLY_FUNCTIONAL`     | What/Why/Fix/WayOut message templates registered in `templates.go`. `HandleError()` renders to stderr with actionable guidance. 11 templates covering git, CLI, analysis, report, and threshold errors. |
+| Git error classification         | 🟢 `FULLY_FUNCTIONAL`     | `classifyGitError()` inspects cause + stderr to pick the most specific code: not-installed, not-a-repo, bad-revision, no-commits, generic failure. |
+| erraudit compliance              | 🟢 `FULLY_FUNCTIONAL`     | 0 violations in CI mode. 3 `//nolint:erraudit` directives with documented rationale for known false positives. |
 
 ## CLI
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 21 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 8 unit tests. |
+| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 21 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 8 unit tests + 3 integration tests. |
 | File filtering                   | 🟢 `FULLY_FUNCTIONAL`     | Extension, test toggle, generated detection (suffix + content-based `// Code generated` header), path prefix, vendor exclusion, `--min-commits`, `--author` (`main.go`). |
 | Six sort modes                   | 🟢 `FULLY_FUNCTIONAL`     | hotspot, stable, churn, commits, complexity, age (`--sort` flag, `score.go:75`).      |
 | Coupling thresholds              | 🟢 `FULLY_FUNCTIONAL`     | `--coupling-min-shared`, `--coupling-min-degree` flags. Code-maat defaults (5, 30%).   |
@@ -70,13 +79,13 @@
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
 | CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 21 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
 | Public importable packages       | ⚪ `PLANNED`              | All packages under `internal/` — CLI-only for now. Public library API is a ROADMAP item. |
-| Zero external dependencies       | 🟢 `FULLY_FUNCTIONAL`     | Stdlib only. `go.mod` has zero require directives. No CGo.                             |
+| Minimal external dependencies   | 🟢 `FULLY_FUNCTIONAL`     | One dependency: `go-error-family v0.10.0` (Lars's zero-dep typed error library). No CGo. All other code is stdlib. |
 
 ## Infrastructure
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 58 tests across 5 packages (unit + integration + golden + fuzz). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 4 benchmarks. |
+| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 106 tests (62 top-level + 44 subtests) across 6 packages (unit + integration + golden + fuzz). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 4 benchmarks, 2 fuzz targets. |
 | flake.nix                        | 🟢 `FULLY_FUNCTIONAL`     | build/test/lint/format/vet apps + devShell with go, golangci-lint, gofumpt, goreleaser. |
 | GitHub Actions CI                | 🟢 `FULLY_FUNCTIONAL`     | `.github/workflows/ci.yml` — build, test (race), vet, lint on push and PR.            |
 | Git tags / releases              | 🟢 `FULLY_FUNCTIONAL`     | Tag `v0.1.0` exists. `.goreleaser.yml` configured (6 OS/arch targets, CGO_ENABLED=0). |

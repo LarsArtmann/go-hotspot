@@ -16,7 +16,9 @@ Raw ideas:
 - D2/Mermaid diagram output for the temporal coupling graph
 - Bubble Tea TUI with interactive heatmap exploration
 - Terminal heatmap rendering (color-coded complexity x churn matrix)
+- Color-coded risk bands in terminal output (red/orange/yellow when stdout is a TTY)
 - SARIF output for GitHub code scanning integration
+- HTML report output for CI dashboards
 
 ### 2. Advanced Analysis
 
@@ -58,7 +60,11 @@ Raw ideas:
 - Delta mode (`--compare v0.1.0..v0.2.0` — what changed between releases)
 - Progress bar for large repos (5000+ files take several seconds)
 - `--quiet` and `--verbose` flags
-- goreleaser for automated releases with Homebrew/nix taps
+- `--watch` mode (re-analyze on file change)
+- Unix man page and shell completions (bash/zsh/fish)
+- `--debug` flag for verbose error context (full chain, context map)
+- JSON error output mode for CI tooling
+- Structured logging with `slog` for warnings
 
 ## Non-goals
 

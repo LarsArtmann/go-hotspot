@@ -48,6 +48,7 @@ git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspo
 | `internal/complexity` | SLOC, indentation, and go/ast cyclomatic complexity. |
 | `internal/hotspot` | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`). |
 | `internal/report` | Output rendering: table, markdown, csv, json. Golden-file tested. |
+| `internal/errors` | Domain-specific typed errors built on `go-error-family`. BSD exit codes + What/Why/Fix/WayOut message templates. |
 
 All packages are `internal/` — go-hotspot is a CLI tool, not an importable library.
 The library API is module-internal; a public API is a ROADMAP item. See `examples/`
@@ -106,9 +107,9 @@ filtering happens by deleting from `history.Files` before scoring.
 
 ## Conventions
 
-- **Zero external deps** — stdlib only. `go.mod` has no require directives.
-  Lint tools suggesting `lo.SliceToMap` or similar are rejected; this constraint is
-  deliberate.
+- **One external dep: `go-error-family`** — stdlib plus Lars's zero-dependency typed error
+  library (`github.com/larsartmann/go-error-family`). Lint tools suggesting `lo.SliceToMap`
+  or similar are rejected; this constraint is deliberate.
 - **iota enums + `Parse*` functions** for all flag-driven choices (`Format`,
   `ComplexityMetric`, `ChurnMetric`, `SortOrder`). Follow this pattern for new
   flag-selectable options.
@@ -119,9 +120,12 @@ filtering happens by deleting from `history.Files` before scoring.
   cannot fail), then a single `io.WriteString` to the real writer with error check.
   Tabwriter functions use a `strings.Builder`-backed tabwriter, check `Flush`, then
   write the aligned output.
-- **Functions return the `error` interface**, not custom error types. This is
-  standard Go for a CLI where errors are printed and the program exits — no caller
-  needs to type-switch on error kinds.
+- **Errors use `go-error-family` typed errors** (`internal/errors` package) — every
+  error site wraps via a domain constructor (`errors.GitNotARepo`, `errors.AnalysisRead`,
+  etc.) that assigns a Family (Rejection, Infrastructure, Corruption) and BSD exit code.
+  `main()` calls `errors.HandleError(err)` once, which renders a What/Why/Fix/WayOut
+  template to stderr and returns the exit code. Never use bare `fmt.Errorf` for user-facing
+  errors — use the appropriate `internal/errors` constructor.
 - **DTO structs in `report/` intentionally duplicate domain types** (`jsonHotspot`
   mirrors `hotspot.Result`, etc.). Serialization types need JSON tags and string
   dates; domain types use Go conventions. Lint tools suggesting "mixins" or

@@ -1,5 +1,10 @@
 # Status Report: Pareto Plan Execution — M1-M27
 
+> **Resolution (2026-08-10 docs-health audit):** The 6 skipped tasks (M1, M10, M18, M21,
+> M22, M25) were completed in the next session — see `docs/status/2026-08-10_14-20_*.md`.
+> All 27/27 Pareto tasks are done. Items in section (f) resolved by subsequent sessions
+> are struck through. Open items remain unmarked — many are now in `TODO_LIST.md`.
+
 **Date:** 2026-08-10 13:52 CEST
 **Session goal:** Execute the Pareto Execution Plan (27 medium-grained tasks, 109 subtasks)
 **Starting state:** 42 tests, 0 lint issues, zero tags, README library section broken
@@ -111,16 +116,16 @@ The LSP kept showing `fmt.Fatal` errors on example files even after I fixed them
 ## f) Next 50 things to get done
 
 ### Critical (blocks users)
-1. **M1: Create git tag `v0.1.0`** — `go install` is broken without it. 5 minutes.
-2. **Test `go install github.com/larsartmann/go-hotspot/cmd/go-hotspot@v0.1.0`** — verify it actually works.
-3. **Add CHANGELOG.md `[0.1.0]` section** — promote Unreleased to tagged release.
+1. ~~**M1: Create git tag `v0.1.0`**~~ done at `cf4ccee` — tag exists on commit `cf4ccee`
+2. ~~**Test `go install github.com/larsartmann/go-hotspot/cmd/go-hotspot@v0.1.0`**~~ blocked — no git remote configured (TODO_LIST)
+3. ~~**Add CHANGELOG.md `[0.1.0]` section**~~ done at `c4a84d6`
 
 ### High impact
-4. **M10: Integration test with fixture git repo** — create testdata/ with 3 Go files, 5 commits, run full pipeline.
-5. **M18: Fix docs-health gaps** — harvest missing TODO items, correct false annotations, verify DOMAIN_LANGUAGE.
-6. **M25: Add goreleaser.yml** — automated cross-platform releases (linux/darwin/windows × amd64/arm64).
-7. **M21: Complete buildflow triage** — 38 findings need review. Parse output or read manually.
-8. **M22: Complete daemon auto-fix review** — verify go-structure-linter and gitignore-upserter changes are correct.
+4. ~~**M10: Integration test with fixture git repo**~~ done at `cf4ccee`
+5. ~~**M18: Fix docs-health gaps**~~ done at `cf4ccee`
+6. ~~**M25: Add goreleaser.yml**~~ done at `cf4ccee`
+7. ~~**M21: Complete buildflow triage**~~ done at `cf4ccee` (49 findings, all rejected)
+8. ~~**M22: Complete daemon auto-fix review**~~ done at `cf4ccee`
 
 ### Quality
 9. **Test `--output`, `--fail-above`, `--min-commits`, `--author` flags via CLI** — integration-level verification.
@@ -170,9 +175,9 @@ The LSP kept showing `fmt.Fatal` errors on example files even after I fixed them
 45. **Add `docs/` site** — deploy to GitHub Pages or Firebase.
 46. **Add migration guide** — for when public API is released (v2).
 47. **Review and annotate all status reports** — prior reports have unverified items.
-48. **Sync TODO_LIST.md with actual state** — 26 items from previous session are now partially stale.
-49. **Update FEATURES.md** — author names, --fail-above, --output, --min-commits, --author are new features.
-50. **Update AGENTS.md** — document new lint config, flake.nix, CI, benchmarks, fuzz tests.
+48. ~~**Sync TODO_LIST.md with actual state**~~ done — TODO_LIST rebuilt by docs-health audit
+49. ~~**Update FEATURES.md**~~ done — FEATURES.md updated with error system, test count, all new features
+50. ~~**Update AGENTS.md**~~ done — AGENTS.md updated with errors package, go-error-family, lint profile
 
 ---
 

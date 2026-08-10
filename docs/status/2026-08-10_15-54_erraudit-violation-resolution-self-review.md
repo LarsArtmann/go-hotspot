@@ -1,5 +1,8 @@
 # erraudit Violation Resolution — Self-Review
 
+> **Resolution (2026-08-10 docs-health audit):** Items resolved since this report are
+> struck through inline. Open items remain unmarked — many are now in `TODO_LIST.md`.
+
 **Date:** 2026-08-10 15:54
 **Session scope:** Resolving 5 erraudit violations reported with `--no-suppress --enforce-generic-return --enforce-go-error-family --enforce-samber-oops`
 **Prior commit:** `31d6acb feat: introduce typed error family for CLI, git, analysis, and report boundaries`
@@ -180,16 +183,16 @@ lint BEFORE my first verification claim.
    `CodeCLIOutput` constructor + template, or suppress with `//nolint:erraudit` instead
 2. **Add a test for the version output error path** — write to failing `io.Writer`, verify
    error code and exit code
-3. **Run `golangci-lint` on changed files only** — verify no new lint issues from the fix
+3. ~~**Run `golangci-lint` on changed files only** — verify no new lint issues from the fix~~ done — lint is clean
 
 ### High priority (should do soon)
 
-4. **Commit all changes** — `git add` the 2 intentionally changed files + the 2 gofumpt
-   side-effect files, with a clear commit message
-5. **Decide on the gofumpt side-effect changes** — keep or revert `counter_test.go` and
-   `reporter.go` formatting changes (recommend: keep, they're correct gofumpt style)
+4. ~~**Commit all changes** — `git add` the 2 intentionally changed files + the 2 gofumpt
+   side-effect files, with a clear commit message~~ done — committed by auto-git daemon
+5. ~~**Decide on the gofumpt side-effect changes** — keep or revert `counter_test.go` and
+   `reporter.go` formatting changes (recommend: keep, they're correct gofumpt style)~~ done — kept
 6. **Run `erraudit nolint-audit .`** to verify the 4 `//nolint` directives are not stale
-7. **Update `CHANGELOG.md`** — add `[Unreleased]` entry for erraudit violation resolution
+7. ~~**Update `CHANGELOG.md`** — add `[Unreleased]` entry for erraudit violation resolution~~ done
 
 ### Medium priority
 

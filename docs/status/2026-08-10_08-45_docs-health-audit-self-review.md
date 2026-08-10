@@ -1,5 +1,9 @@
 # Status Report — go-hotspot Docs-Health Audit
 
+> **Resolution (2026-08-10 docs-health audit):** The 50 items in section (f) were addressed
+> by the Pareto plan execution (commits `6999d76`, `cf4ccee`) and subsequent sessions. Resolved
+> items are struck through inline. Open items remain unmarked — many are now in `TODO_LIST.md`.
+
 **Date:** 2026-08-10 08:45 CEST
 **Session scope:** Full docs-health AUDIT — BUILD + HARVEST + VERIFY + ANNOTATE across the entire documentation set
 **Changed files:** 10 (4 created, 6 modified)
@@ -114,48 +118,48 @@ DESIGN.md contains the competitive analysis, data model, and v1/v2 scope. I read
 ## f) Up to 50 things to do next
 
 ### Critical — fix this session's gaps
-1. **Harvest missing report 2 items into TODO_LIST** — the 5+ items from report 2 section (f) that were skipped (items 3-7, 10-11). Impact: High. Effort: S. Category: Documentation.
-2. **Fix README library example** — either move packages out of `internal/` or add a clear note that the library API is module-internal only. Impact: High. Effort: M. Category: Bug.
-3. **Correct report 1 annotation d.7** — the "resolved" claim is partially false for `.gitignore`/`.gitattributes`. Read those files, then update the annotation honestly. Impact: Medium. Effort: S. Category: Documentation.
-4. **Complete report 2 annotations** — verify items 2, 3, 6, 8 (section d) and all untouched section f items. Strike through resolved, leave open ones unmarked. Impact: Medium. Effort: M. Category: Documentation.
-5. **Move "Knowledge island" and "Bus factor" from DOMAIN_LANGUAGE** — either mark clearly as "Not yet implemented" or move to ROADMAP. Impact: Low. Effort: S. Category: Documentation.
-6. **Verify DESIGN.md against code** — check data model section for drift from actual structs. Impact: Medium. Effort: M. Category: Documentation.
+1. ~~**Harvest missing report 2 items into TODO_LIST**~~ done — TODO_LIST rebuilt multiple times
+2. ~~**Fix README library example**~~ done at `6999d76` — rewrote to "CLI tool" with honest module-internal note
+3. ~~**Correct report 1 annotation d.7**~~ done — `.gitignore`/`.gitattributes` reviewed in M22 at `cf4ccee`
+4. ~~**Complete report 2 annotations**~~ done — reports annotated by docs-health audits
+5. ~~**Move "Knowledge island" and "Bus factor" from DOMAIN_LANGUAGE**~~ done — already marked "Planned"
+6. ~~**Verify DESIGN.md against code**~~ done at `6999d76` (M24)
 
 ### High priority — infrastructure (from prior reports, still open)
-7. **Create first git tag (`v0.1.0`)** — `go install ...@latest` in README will fail without it. Impact: Critical. Effort: S. Category: Infrastructure.
-8. **Add `flake.nix`** — build/test/lint/devShell automation. Required by project conventions. Impact: High. Effort: M. Category: Infrastructure.
-9. **Add GitHub Actions CI** — build, vet, test, race, lint on push/PR. Impact: High. Effort: S. Category: Infrastructure.
-10. **Add `.golangci.yml`** — errcheck, revive, gosec, gofumpt. Impact: High. Effort: S. Category: Infrastructure.
-11. **Run `golangci-lint run ./...`** — confirm zero errcheck warnings remain after the reporter refactor. Impact: High. Effort: S. Category: Quality.
-12. **Run `buildflow -s erraudit --format finding`** — see all 9 findings, verify resolution. Impact: High. Effort: S. Category: Quality.
+7. ~~**Create first git tag (`v0.1.0`)**~~ done at `cf4ccee`
+8. ~~**Add `flake.nix`**~~ done at `6999d76`
+9. ~~**Add GitHub Actions CI**~~ done at `6999d76`
+10. ~~**Add `.golangci.yml`**~~ done at `6999d76`
+11. ~~**Run `golangci-lint run ./...`**~~ done — 0 issues
+12. ~~**Run `buildflow -s erraudit --format finding`**~~ done — erraudit 0 violations in CI mode at `bade91c`
 
 ### Medium priority — code quality (from prior reports, still open)
-13. **Add error-path test for `report.Render`** — failingWriter that verifies error propagation. Impact: High. Effort: S. Category: Testing.
-14. **Add `context.Context` to `git.Collect`** — cancellation support. Impact: Medium. Effort: M. Category: Feature.
-15. **Surface author names in report** — data exists, only count shown. Impact: Medium. Effort: S. Category: Feature.
+13. ~~**Add error-path test for `report.Render`**~~ done at `6999d76`
+14. ~~**Add `context.Context` to `git.Collect`**~~ done at `6999d76`
+15. ~~**Surface author names in report**~~ done at `6999d76`
 16. **Add function-level hotspot ranking** — `FuncComplexity` data collected but unused. Impact: Medium. Effort: M. Category: Feature.
-17. **Add content-based generated file detection** — `// Code generated` header. Impact: Medium. Effort: S. Category: Feature.
-18. **Add `--fail-above` threshold exit code** — CI gate capability. Impact: Medium. Effort: S. Category: Feature.
-19. **Replace `writeStr` with `io.WriteString`** — eliminate wrapper. Impact: Low. Effort: S. Category: Cleanup.
-20. **Fix `AgeDays()` zero-time contradiction** — method returns 0 ("fresh") but sort treats zero-time as oldest. Impact: Medium. Effort: S. Category: Bug.
-21. **Add benchmark tests** — prove "fast" claim. Impact: Medium. Effort: S. Category: Testing.
-22. **Add fuzz tests for git parsing** — malformed numstat input. Impact: Medium. Effort: M. Category: Testing.
-23. **Add integration test with fixture git repo** — not just string parsing. Impact: Medium. Effort: M. Category: Testing.
-24. **Add golden-file tests for output formats** — catch formatting regressions. Impact: Medium. Effort: S. Category: Testing.
-25. **Add test coverage for `main.go`** — filter logic and flag parsing. Impact: Medium. Effort: M. Category: Testing.
-26. **Review branching-flow findings** — 38 reported, 5 reviewed. Impact: Medium. Effort: M. Category: Quality.
-27. **Review go-structure-linter auto-fixes** — 4 changes, never reviewed. Impact: Low. Effort: S. Category: Quality.
-28. **Review gitignore-upserter auto-fixes** — 7 changes, never reviewed. Impact: Low. Effort: S. Category: Quality.
-29. **Diff CLI output before/after reporter refactor** — verify byte-identical formatting. Impact: Medium. Effort: S. Category: Quality.
-30. **Add `--output` flag** — write report to file. Impact: Low. Effort: S. Category: Feature.
+17. ~~**Add content-based generated file detection**~~ done at `6999d76`
+18. ~~**Add `--fail-above` threshold exit code**~~ done at `6999d76`
+19. ~~**Replace `writeStr` with `io.WriteString`**~~ done at `6999d76`
+20. ~~**Fix `AgeDays()` zero-time contradiction**~~ done at `6999d76`
+21. ~~**Add benchmark tests**~~ done at `6999d76`
+22. ~~**Add fuzz tests for git parsing**~~ done at `6999d76`
+23. ~~**Add integration test with fixture git repo**~~ done at `cf4ccee`
+24. ~~**Add golden-file tests for output formats**~~ done at `6999d76`
+25. ~~**Add test coverage for `main.go`**~~ done at `6999d76`
+26. ~~**Review branching-flow findings**~~ done at `cf4ccee` (49 findings, all rejected)
+27. ~~**Review go-structure-linter auto-fixes**~~ done at `cf4ccee`
+28. ~~**Review gitignore-upserter auto-fixes**~~ done at `cf4ccee`
+29. ~~**Diff CLI output before/after reporter refactor**~~ done at `6999d76`
+30. ~~**Add `--output` flag**~~ done at `6999d76`
 
 ### Lower priority — features and polish
-31. **Add `--min-commits` filter** — exclude one-off noise files. Impact: Low. Effort: S. Category: Feature.
-32. **Add `--author` filter** — bus-factor analysis. Impact: Low. Effort: S. Category: Feature.
+31. ~~**Add `--min-commits` filter**~~ done at `6999d76`
+32. ~~**Add `--author` filter**~~ done at `6999d76`
 33. **Add `--since-version TAG`** — release-to-release analysis. Impact: Low. Effort: M. Category: Feature.
 34. **Add `dprint.json` config** — BuildFlow step passes. Impact: Low. Effort: S. Category: Infrastructure.
-35. **Run gofumpt formatting pass** — no formatter run yet. Impact: Low. Effort: S. Category: Cleanup.
-36. **Add `examples/` directory** — library usage examples. Impact: Low. Effort: S. Category: Documentation.
+35. ~~**Run gofumpt formatting pass**~~ done at `6999d76`
+36. ~~**Add `examples/` directory**~~ done at `6999d76`
 37. **Add `SPDX-License-Identifier` headers** — source files have none. Impact: Low. Effort: S. Category: Cleanup.
 38. **Track Go 1.26.5 race detector bug** — remove `-gcflags` workaround when Go is patched. Impact: Low. Effort: Ongoing. Category: Infrastructure.
 39. **Add HTML treemap output** — CodeScene signature viz. Impact: Low. Effort: L. Category: Feature.
@@ -168,8 +172,8 @@ DESIGN.md contains the competitive analysis, data model, and v1/v2 scope. I read
 46. **Add duplication detection** — token-level clone detection. Impact: Low. Effort: L. Category: Feature.
 47. **Add dependency graph analysis** — fan-in, fan-out, cycle detection. Impact: Low. Effort: L. Category: Feature.
 48. **Add config file support** — `.go-hotspot.yaml`. Impact: Low. Effort: M. Category: Feature.
-49. **Add `goreleaser.yml`** — automated releases. Impact: Low. Effort: M. Category: Infrastructure.
-50. **Rebuild CONTRIBUTING.md** — thin (22 lines), doesn't reference lint config or development workflow. Impact: Low. Effort: S. Category: Documentation.
+49. ~~**Add `goreleaser.yml`**~~ done at `cf4ccee`
+50. ~~**Rebuild CONTRIBUTING.md**~~ done at `6999d76` (M24)
 
 ---
 

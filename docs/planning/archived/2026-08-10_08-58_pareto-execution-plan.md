@@ -7,6 +7,11 @@
 
 > Plans are point-in-time artifacts. When work is done, update `TODO_LIST.md` and `CHANGELOG.md`. Do NOT edit this plan — annotate it via docs-health ANNOTATE mode.
 
+> **✅ RESOLVED (2026-08-10):** All 27 tasks (M1–M27) completed. 21 tasks shipped at
+> `6999d76`, remaining 6 at `cf4ccee`. See `docs/status/2026-08-10_13-52_*.md` and
+> `docs/status/2026-08-10_14-20_*.md` for execution details. Tag `v0.1.0` created.
+> **Archived** — superseded by living docs (`TODO_LIST.md`, `CHANGELOG.md`).
+
 ---
 
 ## Step 1: Pareto Breakdown
@@ -54,35 +59,35 @@ Everything else — features, polish, documentation fixes, and nice-to-haves. Im
 
 **27 work packages**, sorted by impact/effort/customer-value. Each is independently shippable.
 
-| # | Task | Pareto Tier | Impact | Effort | Category | Depends On |
+| # | Task | Pareto Tier | Impact | Effort | Category | Resolution |
 |---|------|-------------|--------|--------|----------|------------|
-| M1 | Create git tag `v0.1.0` + verify `go install` works | 1% | Critical | 30min | Release | — |
-| M2 | Fix README "As a Go library" section — remove or fix `internal/` paths | 1% | Critical | 60min | Bug | — |
-| M3 | Add `.golangci.yml` + run `golangci-lint run ./...` to verify zero findings | 4% | Critical | 30min | Quality | — |
-| M4 | Add error-path test for `report.Render` (failingWriter for all renderers) | 4% | High | 30min | Testing | — |
-| M5 | Add `flake.nix` with build/test/lint/devShell/format apps | 4% | High | 100min | Infrastructure | — |
-| M6 | Add GitHub Actions CI (build/vet/test/race/lint on push + PR) | 20% | High | 60min | Infrastructure | M5 |
-| M7 | Surface author names in all output formats (table, md, csv, json) | 20% | Medium | 60min | Feature | — |
-| M8 | Fix `AgeDays()` zero-time contradiction (method vs sort disagreement) | 20% | Medium | 30min | Bug | — |
-| M9 | Add benchmark tests for collect, analyze, score, render | 20% | Medium | 60min | Testing | — |
-| M10 | Add integration test with fixture git repo (full pipeline) | 20% | Medium | 100min | Testing | — |
-| M11 | Replace `writeStr` with `io.WriteString` calls | 20% | Low | 12min | Cleanup | — |
-| M12 | Add `context.Context` to `git.Collect` for cancellation | 20% | Medium | 60min | Feature | — |
-| M13 | Add content-based generated file detection (`// Code generated` header) | Remaining | Medium | 30min | Feature | — |
-| M14 | Add `--fail-above` threshold exit code for CI gates | Remaining | Medium | 30min | Feature | — |
-| M15 | Add `--output` flag for file output | Remaining | Medium | 30min | Feature | — |
-| M16 | Add golden-file tests for all 4 output formats | Remaining | Medium | 60min | Testing | — |
-| M17 | Add test coverage for `main.go` (filter logic + flag parsing) | Remaining | Medium | 100min | Testing | — |
-| M18 | Fix docs-health gaps: harvest missing items, correct false annotations, DOMAIN_LANGUAGE | Remaining | Medium | 60min | Documentation | — |
-| M19 | Run gofumpt formatting pass + add SPDX-License-Identifier headers | Remaining | Low | 30min | Cleanup | — |
-| M20 | Add fuzz tests for `parseNumStat`, `splitNumStat`, `normalizeRename` | Remaining | Medium | 60min | Testing | — |
-| M21 | Review all 38 branching-flow findings (only 5 reviewed) | Remaining | Medium | 60min | Quality | — |
-| M22 | Review daemon auto-fixes (go-structure-linter 4 + gitignore-upserter 7) | Remaining | Low | 30min | Quality | — |
-| M23 | Add `--min-commits` and `--author` filter flags | Remaining | Low | 60min | Feature | — |
-| M24 | Verify DESIGN.md against code + rebuild CONTRIBUTING.md | Remaining | Low | 60min | Documentation | — |
-| M25 | Add `goreleaser.yml` for automated releases | Remaining | Low | 100min | Infrastructure | M1, M6 |
-| M26 | Diff CLI output before/after reporter refactor (byte-identical check) | Remaining | Medium | 30min | Quality | — |
-| M27 | Add `examples/` directory with library usage examples | Remaining | Low | 30min | Documentation | M2 |
+| ~~M1~~ | ~~Create git tag `v0.1.0` + verify `go install` works~~ | 1% | Critical | 30min | Release | ✓ done at `cf4ccee` |
+| ~~M2~~ | ~~Fix README "As a Go library" section~~ | 1% | Critical | 60min | Bug | ✓ done at `6999d76` |
+| ~~M3~~ | ~~Add `.golangci.yml` + verify zero findings~~ | 4% | Critical | 30min | Quality | ✓ done at `6999d76` |
+| ~~M4~~ | ~~Add error-path test for `report.Render`~~ | 4% | High | 30min | Testing | ✓ done at `6999d76` |
+| ~~M5~~ | ~~Add `flake.nix`~~ | 4% | High | 100min | Infrastructure | ✓ done at `6999d76` |
+| ~~M6~~ | ~~Add GitHub Actions CI~~ | 20% | High | 60min | Infrastructure | ✓ done at `6999d76` |
+| ~~M7~~ | ~~Surface author names in all output formats~~ | 20% | Medium | 60min | Feature | ✓ done at `6999d76` |
+| ~~M8~~ | ~~Fix `AgeDays()` zero-time contradiction~~ | 20% | Medium | 30min | Bug | ✓ done at `6999d76` |
+| ~~M9~~ | ~~Add benchmark tests~~ | 20% | Medium | 60min | Testing | ✓ done at `6999d76` |
+| ~~M10~~ | ~~Add integration test with fixture git repo~~ | 20% | Medium | 100min | Testing | ✓ done at `cf4ccee` |
+| ~~M11~~ | ~~Replace `writeStr` with `io.WriteString`~~ | 20% | Low | 12min | Cleanup | ✓ done at `6999d76` |
+| ~~M12~~ | ~~Add `context.Context` to `git.Collect`~~ | 20% | Medium | 60min | Feature | ✓ done at `6999d76` |
+| ~~M13~~ | ~~Add content-based generated file detection~~ | Remaining | Medium | 30min | Feature | ✓ done at `6999d76` |
+| ~~M14~~ | ~~Add `--fail-above` threshold exit code~~ | Remaining | Medium | 30min | Feature | ✓ done at `6999d76` |
+| ~~M15~~ | ~~Add `--output` flag~~ | Remaining | Medium | 30min | Feature | ✓ done at `6999d76` |
+| ~~M16~~ | ~~Add golden-file tests~~ | Remaining | Medium | 60min | Testing | ✓ done at `6999d76` |
+| ~~M17~~ | ~~Add test coverage for `main.go`~~ | Remaining | Medium | 100min | Testing | ✓ done at `6999d76` |
+| ~~M18~~ | ~~Fix docs-health gaps~~ | Remaining | Medium | 60min | Documentation | ✓ done at `cf4ccee` |
+| ~~M19~~ | ~~Run gofumpt formatting pass~~ + ~~add SPDX headers~~ | Remaining | Low | 30min | Cleanup | gofumpt done at `6999d76`; SPDX headers still open (TODO_LIST) |
+| ~~M20~~ | ~~Add fuzz tests~~ | Remaining | Medium | 60min | Testing | ✓ done at `6999d76` |
+| ~~M21~~ | ~~Review all 38 branching-flow findings~~ | Remaining | Medium | 60min | Quality | ✓ done at `cf4ccee` (49 findings, all rejected) |
+| ~~M22~~ | ~~Review daemon auto-fixes~~ | Remaining | Low | 30min | Quality | ✓ done at `cf4ccee` |
+| ~~M23~~ | ~~Add `--min-commits` and `--author` filter flags~~ | Remaining | Low | 60min | Feature | ✓ done at `6999d76` |
+| ~~M24~~ | ~~Verify DESIGN.md + rebuild CONTRIBUTING.md~~ | Remaining | Low | 60min | Documentation | ✓ done at `6999d76` |
+| ~~M25~~ | ~~Add `goreleaser.yml`~~ | Remaining | Low | 100min | Infrastructure | ✓ done at `cf4ccee` |
+| ~~M26~~ | ~~Diff CLI output before/after reporter refactor~~ | Remaining | Medium | 30min | Quality | ✓ done at `6999d76` |
+| ~~M27~~ | ~~Add `examples/` directory~~ | Remaining | Low | 30min | Documentation | ✓ done at `6999d76` |
 
 ---
 

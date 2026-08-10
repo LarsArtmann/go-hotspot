@@ -1,5 +1,9 @@
 # Pareto Plan Completion — Brutal Self-Review & Status Report
 
+> **Resolution (2026-08-10 docs-health audit):** All 27 Pareto tasks (M1–M27) confirmed
+> complete. Items in section (f) resolved by subsequent sessions are struck through inline.
+> Open items remain unmarked — many are now in `TODO_LIST.md` or `ROADMAP.md`.
+
 **Created:** 2026-08-10 14:20 CEST
 **Session scope:** Execute the remaining 6 Pareto tasks (M1, M10, M18, M21, M22, M25) from `docs/planning/2026-08-10_08-58_pareto-execution-plan.md`
 **Commits this session:** `c4a84d6` (release notes), `cf4ccee` (goreleaser + integration tests + version flag + docs sync)
@@ -149,8 +153,8 @@ The CHANGELOG `[0.1.0]` section was written before I discovered the gitignore bu
 6. **Add Nix flake output to goreleaser** (if desired) — requires a Nixpkgs PR or user flake
 
 ### CI/CD hardening
-7. **Trigger first CI run** — Push and verify all 4 jobs pass on GitHub Actions
-8. **Add race detector to CI** — Current `ci.yml` test job uses `-race -gcflags=all=-l`; verify this works in Actions
+7. **Trigger first CI run** — Push and verify all 4 jobs pass on GitHub Actions (still blocked — no git remote)
+8. ~~**Add race detector to CI**~~ done — `ci.yml` already uses `-race -gcflags=all=-l`
 9. **Add `GOFLAGS=-trimpath` to builds** — Reproducible build paths
 10. **Add release automation** — GitHub Action that runs `goreleaser release` on tag push
 11. **Pin Go version in CI** — Use `go-version: 1.26.5` explicitly, not `^1.26`
@@ -182,7 +186,7 @@ The CHANGELOG `[0.1.0]` section was written before I discovered the gitignore bu
 33. **Consider `--watch` mode** — Re-analyze on file change (likely v2)
 
 ### Documentation
-34. **Update CHANGELOG `[0.1.0]` with the gitignore fix and main_test.go recovery**
+34. ~~**Update CHANGELOG `[0.1.0]` with the gitignore fix and main_test.go recovery**~~ done — CHANGELOG rebuilt with `[Unreleased]` section covering all post-v0.1.0 work
 35. **Add `CONTRIBUTING.md` section on integration tests** — How to run, how to debug fixture failures
 36. **Add `SECURITY.md`** — Reporting policy for security issues
 37. **Add `CODE_OF_CONDUCT.md`** — Standard for open source
@@ -191,7 +195,7 @@ The CHANGELOG `[0.1.0]` section was written before I discovered the gitignore bu
 40. **Review README competitive comparison table** — Pareto plan Q2: should claims be empirically verified?
 41. **Add badges to README** — CI status, Go version, license, Go Report Card
 42. **Add `pkg.go.dev` documentation link** — Once packages are public (ROADMAP)
-43. **Document the `@@@` commit delimiter design decision** — Why not `--format`?
+43. ~~**Document the `@@@` commit delimiter design decision**~~ done — documented in AGENTS.md
 
 ### Infrastructure
 44. **Add `direnv` support** — `.envrc` that loads `nix develop`

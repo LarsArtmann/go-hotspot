@@ -1,5 +1,8 @@
 # Status Report: go-error-family Migration & Error System Redesign
 
+> **Resolution (2026-08-10 docs-health audit):** Items resolved since this report are
+> struck through inline. Open items remain unmarked — many are now in `TODO_LIST.md`.
+
 **Date:** 2026-08-10 15:38
 **Session Goal:** Redesign the typed error system by studying how `erraudit` does it, then build something better.
 
@@ -143,15 +146,15 @@ The 20-item next steps list in the prior status report references `fault.Git()`,
 ## f) NEXT STEPS (Up to 50)
 
 #### CRITICAL — Do Now
-1. Commit all changes: `git add -A && git commit -m "feat: adopt go-error-family for typed errors with BSD exit codes"`
-2. Add `//nolint` directives for the 5 remaining erraudit false positives
+1. ~~Commit all changes: `git add -A && git commit -m "feat: adopt go-error-family for typed errors with BSD exit codes"`~~ done at `31d6acb`, `bade91c`
+2. ~~Add `//nolint` directives for the 5 remaining erraudit false positives~~ done at `bade91c`
 3. Write table-driven test for `classifyGitError()` covering all 5 branches
-4. Annotate prior status report (`docs/status/2026-08-10_14-53_*.md`) as SUPERSEDED
+4. ~~Annotate prior status report (`docs/status/2026-08-10_14-53_*.md`) as SUPERSEDED~~ done — annotated and archived
 
 #### HIGH — Do Soon
-5. Update `CHANGELOG.md` with `[Unreleased]` section for the migration
+5. ~~Update `CHANGELOG.md` with `[Unreleased]` section for the migration~~ done
 6. Update `README.md` with exit code table (0, 1, 2, 65, 69, 70)
-7. Update `AGENTS.md` with `internal/errors` package description and go-error-family dependency note
+7. ~~Update `AGENTS.md` with `internal/errors` package description and go-error-family dependency note~~ done
 8. Add error message assertions to `errors_test.go`
 9. Write end-to-end exit code integration test (build binary, run against test scenarios)
 10. Add golden test for stderr What/Why/Fix/WayOut output
@@ -172,12 +175,12 @@ The 20-item next steps list in the prior status report references `fault.Git()`,
 23. Fix `mnd` warnings — extract magic numbers to named constants
 24. Fix `tagliatelle` warnings — adjust struct field naming or add config exceptions
 25. Add `t.Parallel()` to all test functions and subtests
-26. Verify `examples/coupling/main.go` compiles and uses correct API
+26. ~~Verify `examples/coupling/main.go` compiles and uses correct API~~ done — `go build ./...` passes
 27. Add `goerrorfamily` to the `README.md` dependencies section
 28. Add error system architecture diagram to docs
 
 #### LOWER — Nice to Have
-29. Add `golangci-lint` to CI (GitHub Actions)
+29. ~~Add `golangci-lint` to CI (GitHub Actions)~~ done — `.github/workflows/ci.yml` already has lint job
 30. Add `erraudit` to CI as a quality gate
 31. Add goreleaser snapshot test to CI
 32. Consider structured logging with `slog` for warnings (currently `fmt.Fprintln`)

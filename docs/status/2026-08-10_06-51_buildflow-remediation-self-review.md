@@ -62,17 +62,21 @@
 
 **Resolved:** Stale errcheck diagnostics are gone. LSP now shows only 2 cosmetic `writestring` warnings at `reporter.go:97,99`. The stale-line-number issue is resolved.
 
-### 2. Didn't verify ALL erraudit findings — only the visible 5
+### 2. ~~Didn't verify ALL erraudit findings — only the visible 5~~
 
-The BuildFlow output said "9 finding(s) remain" but showed only 5, with "+4 more." I assumed the remaining 4 were all in `reporter.go` and fixed them via the rewrite. But I never confirmed this. If any of the "+4 more" are in other files (main.go, score.go, coupling.go), they're still unfixed.
+~~The BuildFlow output said "9 finding(s) remain" but showed only 5, with "+4 more." I assumed the remaining 4 were all in `reporter.go` and fixed them via the rewrite. But I never confirmed this. If any of the "+4 more" are in other files (main.go, score.go, coupling.go), they're still unfixed.~~
 
-**Should have:** Run the full erraudit output command before claiming the findings are addressed.
+~~**Should have:** Run the full erraudit output command before claiming the findings are addressed.~~
 
-### 3. Didn't add error-path tests for the reporter refactor
+**Resolved:** erraudit fully resolved at `bade91c` — 0 violations in CI mode.
 
-I refactored every renderer to return errors. I updated existing tests to check the happy path (`if err := Render(...); err != nil { t.Fatal(err) }`). But I never tested that errors actually propagate correctly — no test uses a failing `io.Writer` to verify error passthrough. The error handling code is untested.
+### 3. ~~Didn't add error-path tests for the reporter refactor~~
 
-**Should have:** Added `TestRenderWriteError` with a `failingWriter` that returns an error, verifying each renderer propagates it.
+~~I refactored every renderer to return errors. I updated existing tests to check the happy path (`if err := Render(...); err != nil { t.Fatal(err) }`). But I never tested that errors actually propagate correctly — no test uses a failing `io.Writer` to verify error passthrough. The error handling code is untested.~~
+
+~~**Should have:** Added `TestRenderWriteError` with a `failingWriter` that returns an error, verifying each renderer propagates it.~~
+
+**Resolved:** Done at `6999d76` (M4) — `failingWriter` type + `TestRenderWriteError` + `TestRenderCouplingWriteError`.
 
 ### 4. ~~Didn't update CHANGELOG.md~~
 
@@ -86,9 +90,11 @@ I refactored every renderer to return errors. I updated existing tests to check 
 
 **Resolved:** Simplification kept and acknowledged. Code is correct regardless of motivation.
 
-### 6. Didn't review go-structure-linter and gitignore-upserter auto-fixes
+### 6. ~~Didn't review go-structure-linter and gitignore-upserter auto-fixes~~
 
-BuildFlow reported "go-structure-linter 4 fixed" and "gitignore-upserter 7 fixed." These changes are in the working tree. I never reviewed what they changed. The `.gitignore` modification was already in the git status at session start, and I didn't investigate whether the auto-fixes are correct or introduce problems.
+~~BuildFlow reported "go-structure-linter 4 fixed" and "gitignore-upserter 7 fixed." These changes are in the working tree. I never reviewed what they changed. The `.gitignore` modification was already in the git status at session start, and I didn't investigate whether the auto-fixes are correct or introduce problems.~~
+
+**Resolved:** Done at `cf4ccee` (M22) — all daemon auto-fixes reviewed, no structural damage found.
 
 ### 7. ~~Didn't investigate the TestScoreChurnMetricChoice status change~~
 
@@ -96,9 +102,11 @@ BuildFlow reported "go-structure-linter 4 fixed" and "gitignore-upserter 7 fixed
 
 **Resolved:** Test passes consistently (42/42 tests green). Status is stable.
 
-### 8. Didn't verify byte-identical output before/after reporter refactor
+### 8. ~~Didn't verify byte-identical output before/after reporter refactor~~
 
-The reporter tests only check for substring presence (`strings.Contains(out, "main.go")`). A formatting regression (extra newline, changed spacing, reordered columns) could slip through. I should have run the binary before and after and diffed the output, or added golden-file tests.
+~~The reporter tests only check for substring presence (`strings.Contains(out, "main.go")`). A formatting regression (extra newline, changed spacing, reordered columns) could slip through. I should have run the binary before and after and diffed the output, or added golden-file tests.~~
+
+**Resolved:** Done at `6999d76` (M16, M26) — golden-file tests for all 4 formats + CLI output verification.
 
 ---
 
@@ -118,7 +126,7 @@ The reporter tests only check for substring presence (`strings.Contains(out, "ma
 
 5. **The reporter refactor introduced `strings.Builder` allocation in hot paths.** Every render call now builds a full `strings.Builder` buffer before writing. For large result sets, this doubles memory (build buffer + write). The original code wrote directly to the output writer. The error-handling benefit is real, but the performance tradeoff should be acknowledged. Could use a `bufio.Writer` with error checking on `Flush` instead.
 
-6. **`writeStr` helper is reinventing `io.WriteString`.** The function is a one-line wrapper: `func writeStr(w io.Writer, s string) error { _, err := io.WriteString(w, s); return err }`. This adds indirection for no benefit — callers could call `io.WriteString` directly.
+6. ~~**`writeStr` helper is reinventing `io.WriteString`.** The function is a one-line wrapper: `func writeStr(w io.Writer, s string) error { _, err := io.WriteString(w, s); return err }`. This adds indirection for no benefit — callers could call `io.WriteString` directly.~~ done at `6999d76` — `writeStr` deleted, all callers use `io.WriteString` directly
 
 7. **CSV writer error checking is over-engineered.** `csv.Writer.Write` backed by `strings.Builder` can never fail. Checking every `Write` return is defensive but noisy. The `cw.Error()` check after `Flush` already catches any real error. The per-row checks are dead code.
 
@@ -126,9 +134,9 @@ The reporter tests only check for substring presence (`strings.Contains(out, "ma
 
 ### Missing verification
 
-9. **No integration test was run.** All verification was unit tests + build. Never ran the actual binary on the repo itself to confirm the output looks correct after the refactor.
+9. ~~**No integration test was run.** All verification was unit tests + build. Never ran the actual binary on the repo itself to confirm the output looks correct after the refactor.~~ done at `cf4ccee` — integration tests with fixture git repo
 
-10. **No `golangci-lint run ./...` was executed** to confirm the errcheck warnings are actually gone.
+10. ~~**No `golangci-lint run ./...` was executed** to confirm the errcheck warnings are actually gone.~~ done — 0 issues
 
 ---
 
@@ -136,51 +144,51 @@ The reporter tests only check for substring presence (`strings.Contains(out, "ma
 
 ### Critical — verify this session's work (do these FIRST)
 1. ~~**Restart gopls** to clear stale errcheck diagnostics on reporter.go~~ resolved — stale diagnostics cleared
-2. **Run `golangci-lint run ./...`** to confirm zero errcheck warnings remain
-3. **Run `buildflow -s erraudit --format finding`** to see all 9 findings and verify resolution
-4. **Run `buildflow -s golangci-lint --format finding`** to see all 8 findings and verify resolution
-5. **Review all 38 branching-flow findings** — not just the 5 visible ones
-6. **Add error-path test for reporter** — failingWriter that verifies error propagation
-7. **Diff CLI output before/after refactor** to verify byte-identical formatting
+2. ~~**Run `golangci-lint run ./...`** to confirm zero errcheck warnings remain~~ done — 0 issues
+3. ~~**Run `buildflow -s erraudit --format finding`** to see all 9 findings and verify resolution~~ done at `bade91c`
+4. ~~**Run `buildflow -s golangci-lint --format finding`** to see all 8 findings and verify resolution~~ done — 0 issues
+5. ~~**Review all 38 branching-flow findings** — not just the 5 visible ones~~ done at `cf4ccee` (49 findings, all rejected)
+6. ~~**Add error-path test for reporter** — failingWriter that verifies error propagation~~ done at `6999d76`
+7. ~~**Diff CLI output before/after refactor** to verify byte-identical formatting~~ done at `6999d76` (golden-file tests)
 8. ~~**Update CHANGELOG.md** with the `Render` signature breaking change~~ resolved — CHANGELOG.md rebuilt by docs-health audit
 9. ~~**Investigate TestScoreChurnMetricChoice status change** — why does it pass now?~~ resolved — passes consistently (42/42 tests green)
-10. **Review go-structure-linter auto-fixes** (4 changes in working tree, never reviewed)
-11. **Review gitignore-upserter auto-fixes** (7 changes in working tree, never reviewed)
+10. ~~**Review go-structure-linter auto-fixes** (4 changes in working tree, never reviewed)~~ done at `cf4ccee`
+11. ~~**Review gitignore-upserter auto-fixes** (7 changes in working tree, never reviewed)~~ done at `cf4ccee`
 
 ### High priority — infrastructure gaps
-12. **Add `.golangci.yml`** with explicit errcheck, revive, gosec, gofumpt configuration
-13. **Add `flake.nix`** for build/test/lint/devShell automation
-14. **Add GitHub Actions CI** (build, vet, test, race, lint on push/PR)
-15. **Create first git tag** (`v0.1.0`) so `go install` works
+12. ~~**Add `.golangci.yml`** with explicit errcheck, revive, gosec, gofumpt configuration~~ done at `6999d76`
+13. ~~**Add `flake.nix`** for build/test/lint/devShell automation~~ done at `6999d76`
+14. ~~**Add GitHub Actions CI** (build, vet, test, race, lint on push/PR)~~ done at `6999d76`
+15. ~~**Create first git tag** (`v0.1.0`) so `go install` works~~ done at `cf4ccee`
 16. **Add `dprint.json`** config so BuildFlow's dprint-format step passes
-17. **Add `goreleaser.yml`** for automated releases
+17. ~~**Add `goreleaser.yml`** for automated releases~~ done at `cf4ccee`
 18. **Investigate the 9 unavailable BuildFlow tools** — which tools, why health-check failed
 19. **Investigate license-check SQLite busy error** — fix or suppress
 20. **Track Go 1.26.5 race detector bug** — upgrade Go when fix is released, remove `-gcflags` workaround
 
 ### Medium priority — code quality
-21. **Replace `writeStr` with direct `io.WriteString` calls** — eliminate unnecessary wrapper
+21. ~~**Replace `writeStr` with direct `io.WriteString` calls** — eliminate unnecessary wrapper~~ done at `6999d76`
 22. **Consider `bufio.Writer` instead of `strings.Builder`** in renderers to avoid double-buffering
 23. **Simplify CSV error checking** — remove per-row `Write` error checks, rely on `cw.Error()`
-24. **Add `context.Context` to `git.Collect`** for cancellation support
-25. **Add generated-file content detection** (`// Code generated` header) alongside suffix detection
-26. **Fix `AgeDays()` zero-time contradiction** with age sort (method returns 0 = "fresh" but sort treats zero-time as oldest)
-27. **Add `--min-commits` filter** to exclude one-off noise files
-28. **Add `--author` filter** for bus-factor analysis
-29. **Add `--fail-above` threshold exit code** for CI gates
-30. **Add `--output` flag** to write report to file instead of stdout
+24. ~~**Add `context.Context` to `git.Collect`** for cancellation support~~ done at `6999d76`
+25. ~~**Add generated-file content detection** (`// Code generated` header) alongside suffix detection~~ done at `6999d76`
+26. ~~**Fix `AgeDays()` zero-time contradiction** with age sort~~ done at `6999d76`
+27. ~~**Add `--min-commits` filter** to exclude one-off noise files~~ done at `6999d76`
+28. ~~**Add `--author` filter** for bus-factor analysis~~ done at `6999d76`
+29. ~~**Add `--fail-above` threshold exit code** for CI gates~~ done at `6999d76`
+30. ~~**Add `--output` flag** to write report to file instead of stdout~~ done at `6999d76`
 31. **Add `--quiet` and `--verbose` flags**
 
 ### Medium priority — testing
-32. **Add benchmark tests** (`go test -bench=.`) — prove the "fast" claim
-33. **Add fuzz tests** for `parseNumStat`, `splitNumStat`, `normalizeRename`
-34. **Add integration test** with a fixture git repo (not just string parsing)
-35. **Add golden-file tests** for all output formats (catch formatting regressions)
-36. **Add test for `main.go`** — currently zero test coverage for filter logic, flag parsing
+32. ~~**Add benchmark tests** (`go test -bench=.`) — prove the "fast" claim~~ done at `6999d76`
+33. ~~**Add fuzz tests** for `parseNumStat`, `splitNumStat`, `normalizeRename`~~ done at `6999d76`
+34. ~~**Add integration test** with a fixture git repo (not just string parsing)~~ done at `cf4ccee`
+35. ~~**Add golden-file tests** for all output formats (catch formatting regressions)~~ done at `6999d76`
+36. ~~**Add test for `main.go`** — currently zero test coverage for filter logic, flag parsing~~ done at `6999d76`
 37. **Add property-based tests** for scoring invariants (normalization always in [0,1])
 
 ### Lower priority — features and polish
-38. **Surface author names in report** (not just count)
+38. ~~**Surface author names in report** (not just count)~~ done at `6999d76`
 39. **Add bus-factor metric** (min authors before unmaintainable)
 40. **Add function-level hotspot ranking** for Go (data exists in `FuncComplexity`, unused)
 41. **Add HTML treemap output** (CodeScene's signature visualization)

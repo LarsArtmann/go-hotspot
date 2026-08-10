@@ -1,5 +1,12 @@
 # Status Report: Typed Error System — Self-Review
 
+> ⚠️ **SUPERSEDED (2026-08-10 15:38):** The `internal/fault` package documented in this
+> report was **deleted and replaced** by `internal/errors` (built on `go-error-family`).
+> See `docs/status/2026-08-10_15-38_go-error-family-migration-status.md` for the replacement.
+> Every `fault.*` reference below is to code that **no longer exists**. Items marked
+> `~~done~~` were resolved by the go-error-family migration (`31d6acb`). Items still
+> open were carried forward to the new `internal/errors` package — see `TODO_LIST.md`.
+
 **Date:** 2026-08-10 14:53  
 **Session goal:** Create a superb typed error system for go-hotspot  
 **Trigger:** `"Create a superb typed error system for this repo!"`  
@@ -167,26 +174,26 @@ I changed `run(args, out, now)` → `run(args, out, errOut, now)`. This is an un
 
 | # | Priority | Task |
 |---|----------|------|
-| 1 | **CRITICAL** | Remove dead hint constants from `fault.go` OR wire them to `collector.go` |
-| 2 | **CRITICAL** | Add tests for `gitStderrHint()` — 4 branches, table-driven |
-| 3 | **CRITICAL** | Add tests for `gitNotFoundHint()` — `exec.ErrNotFound` case |
-| 4 | **CRITICAL** | Add tests for `wrapStderr()` — empty, non-empty, whitespace |
-| 5 | HIGH | Add end-to-end exit code test (run `main()` via `os.Exec` or test `fault.ExitCode` wiring) |
-| 6 | HIGH | Add test for stderr warning output in `run()` when `complexity.Analyze` fails |
-| 7 | HIGH | Refactor `Render()` to dispatch table to fix cyclop=17 regression |
-| 8 | HIGH | Update CHANGELOG.md with typed error system + breaking changes |
-| 9 | HIGH | Update README.md with exit code documentation (0-5 table) |
-| 10 | HIGH | Update AGENTS.md with fault package description and error patterns |
-| 11 | MED | Update FEATURES.md with typed error system entry |
-| 12 | MED | Fix `Render()` exhaustive lint (`FormatTable` in switch) |
-| 13 | MED | Consider `fault.Join()` for multi-error aggregation |
-| 14 | MED | Add fuzz test for `Error.Error()` formatting |
-| 15 | MED | Add fuzz test for `gitStderrHint()` pattern matching |
-| 16 | LOW | Consider `fault.Code() string` for stable error codes |
-| 17 | LOW | Add structured fields to Error for machine-readable output |
-| 18 | LOW | Update examples to use `fault.Print` instead of `log.Fatal` |
-| 19 | LOW | Consider `KindReport` → `KindOutput` rename (more accurate) |
-| 20 | LOW | Document the error system in `docs/DOMAIN_LANGUAGE.md` |
+| ~~1~~ | ~~**CRITICAL**~~ | ~~Remove dead hint constants from `fault.go` OR wire them to `collector.go`~~ — SUPERSEDED: `fault.go` deleted at `31d6acb` |
+| ~~2~~ | ~~**CRITICAL**~~ | ~~Add tests for `gitStderrHint()`~~ — SUPERSEDED: function deleted. Equivalent `classifyGitError()` still untested (TODO_LIST) |
+| ~~3~~ | ~~**CRITICAL**~~ | ~~Add tests for `gitNotFoundHint()`~~ — SUPERSEDED: function deleted |
+| ~~4~~ | ~~**CRITICAL**~~ | ~~Add tests for `wrapStderr()`~~ — SUPERSEDED: function deleted |
+| 5 | **HIGH** | Add end-to-end exit code test (run `main()` via `os.Exec` or test `fault.ExitCode` wiring) ← still open (TODO_LIST) |
+| 6 | **HIGH** | Add test for stderr warning output in `run()` when `complexity.Analyze` fails ← still open |
+| ~~7~~ | ~~**HIGH**~~ | ~~Refactor `Render()` to dispatch table to fix cyclop=17 regression~~ done at `31d6acb` |
+| ~~8~~ | ~~**HIGH**~~ | ~~Update CHANGELOG.md with typed error system + breaking changes~~ done — `[Unreleased]` section added |
+| ~~9~~ | ~~**HIGH**~~ | ~~Update README.md with exit code documentation (0-5 table)~~ — still open, but exit codes are now 0/1/2/65/69/70 (TODO_LIST) |
+| ~~10~~ | ~~**HIGH**~~ | ~~Update AGENTS.md with fault package description~~ done — AGENTS.md updated with `internal/errors` + go-error-family |
+| ~~11~~ | ~~**MED**~~ | ~~Update FEATURES.md with typed error system entry~~ done — Error Handling section added |
+| ~~12~~ | ~~**MED**~~ | ~~Fix `Render()` exhaustive lint~~ done at `31d6acb` |
+| ~~13~~ | ~~**MED**~~ | ~~Consider `fault.Join()` for multi-error aggregation~~ Won't implement — go-error-family provides chaining |
+| 14 | **MED** | Add fuzz test for `Error.Error()` formatting ← still open |
+| ~~15~~ | ~~**MED**~~ | ~~Add fuzz test for `gitStderrHint()` pattern matching~~ — SUPERSEDED: function deleted. `classifyGitError()` fuzz still open |
+| ~~16~~ | ~~**LOW**~~ | ~~Consider `fault.Code() string` for stable error codes~~ Won't implement — go-error-family already provides `Code()` |
+| 17 | **LOW** | Add structured fields to Error for machine-readable output ← still open (`.WithContext` in TODO_LIST) |
+| ~~18~~ | ~~**LOW**~~ | ~~Update examples to use `fault.Print` instead of `log.Fatal`~~ done — examples use `log.Printf` |
+| ~~19~~ | ~~**LOW**~~ | ~~Consider `KindReport` → `KindOutput` rename~~ Won't implement — `KindReport` doesn't exist in go-error-family |
+| 20 | **LOW** | Document the error system in `docs/DOMAIN_LANGUAGE.md` ← still open |
 
 ---
 

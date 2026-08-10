@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Typed error system via `internal/errors` package, built on `go-error-family` — 11 domain-specific error constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70) and user-facing What/Why/Fix/WayOut message templates rendered to stderr (`31d6acb`)
+- Git error classification: `classifyGitError()` inspects cause + stderr to pick the most specific error code (not-installed, not-a-repo, bad-revision, no-commits, generic failure) (`31d6acb`)
+- erraudit compliance — 0 violations in CI mode. `//nolint:erraudit` directives with documented rationale for known false positives (`bade91c`)
+- Comprehensive lint profile in `.golangci.yml` with wrapcheck, varnamelen, mnd, tagliatelle, cyclop, and exhaustive linters (`e954c95`)
+
+### Changed
+
+- **Breaking:** `complexity.Analyze` now returns `(FileComplexity, error)` instead of `FileComplexity` — parse and read errors are no longer silently swallowed (`31d6acb`)
+- **Breaking:** `run()` in `main.go` now accepts `errOut io.Writer` as its third parameter for stderr warnings during analysis (`31d6acb`)
+- `report.Render` format dispatch refactored into 4 helper functions (`renderTableReport`, `renderMarkdownReport`, `renderCSVReport`, `renderJSONReport`), reducing cyclomatic complexity from 17 to ~5 (`31d6acb`)
+- `main.go` error handling simplified — single `errors.HandleError()` call replaces manual `errors.Is` + hardcoded exit codes (`31d6acb`)
+- Removed bespoke `internal/fault` package (never released) — superseded by `internal/errors` (`31d6acb`)
+- Codebase reformatted to comply with the new lint profile (`f30cb15`)
+
+### Dependencies
+
+- Added `github.com/larsartmann/go-error-family v0.10.0` — Lars's zero-dependency typed error library providing Family classification, BSD exit codes, and message template registry (`31d6acb`). The only non-stdlib dependency.
+
+### Fixed
+
+- All 5 erraudit violations resolved: 2 real code fixes (ignored file close, context loss on version output), 3 documented `//nolint:erraudit` suppressions for false positives (`bade91c`)
+
 ## [0.1.0] - 2026-08-10
 
 Initial release — code complexity × churn hotspot analysis for Go repositories using the Tornhill methodology.
