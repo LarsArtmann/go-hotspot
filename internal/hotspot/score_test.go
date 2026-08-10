@@ -414,3 +414,89 @@ func BenchmarkScore(b *testing.B) {
 		Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
 	}
 }
+
+func TestScoreAlwaysInUnitInterval(t *testing.T) {
+	t.Parallel()
+
+	for _, fileCount := range []int{1, 5, 10, 50, 100} {
+		files := make(map[string]*git.FileChurn)
+		cx := make(map[string]complexity.FileComplexity)
+
+		for i := range fileCount {
+			path := fmt.Sprintf("file%d.go", i)
+			files[path] = &git.FileChurn{
+				Path:    path,
+				Commits: i + 1,
+				Added:   i * 10,
+				Deleted: i * 5,
+			}
+			cx[path] = complexity.FileComplexity{Cyclomatic: i%30 + 1}
+		}
+
+		results := Score(&git.History{Files: files}, cx, ScoreOptions{})
+
+		for _, r := range results {
+			if r.Hotspot < 0 || r.Hotspot > 1 {
+				t.Errorf("fileCount=%d: score %f for %s outside [0,1]", fileCount, r.Hotspot, r.Path)
+			}
+		}
+	}
+}
+
+func TestCouplingDegreeBounds(t *testing.T) {
+	t.Parallel()
+
+	files := make(map[string]*git.FileChurn)
+
+	for i := range 10 {
+		path := fmt.Sprintf("file%d.go", i)
+		files[path] = &git.FileChurn{
+			Path:    path,
+			Commits: 10,
+			CommitsWith: map[string]int{
+				fmt.Sprintf("file%d.go", (i+1)%10): 5,
+			},
+		}
+	}
+
+	pairs := Coupling(&git.History{Files: files}, CouplingOptions{
+		MinSharedCommits: 1,
+		MinDegree:        0,
+	})
+
+	for _, pair := range pairs {
+		if pair.Degree < 0 || pair.Degree > 100 {
+			t.Errorf("degree %f outside [0, 100] for %s <-> %s", pair.Degree, pair.FileA, pair.FileB)
+		}
+	}
+}
+
+func BenchmarkCoupling(b *testing.B) {
+	files := make(map[string]*git.FileChurn)
+
+	for i := range 100 {
+		path := fmt.Sprintf("file%d.go", i)
+		commitsWith := make(map[string]int)
+
+		for j := range 10 {
+			commitsWith[fmt.Sprintf("file%d.go", (i+j+1)%100)] = 5
+		}
+
+		files[path] = &git.FileChurn{
+			Path:        path,
+			Commits:     20,
+			CommitsWith: commitsWith,
+		}
+	}
+
+	history := &git.History{Files: files}
+
+	b.ResetTimer()
+
+	for range b.N {
+		Coupling(history, CouplingOptions{
+			MinSharedCommits: 3,
+			MinDegree:        30,
+		})
+	}
+}
