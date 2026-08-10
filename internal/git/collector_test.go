@@ -2,6 +2,7 @@ package git
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os/exec"
@@ -422,5 +423,30 @@ func FuzzNormalizeRename(f *testing.F) {
 	f.Add("normal.go")
 	f.Fuzz(func(t *testing.T, path string) {
 		normalizeRename(path)
+	})
+}
+
+func FuzzClassifyGitError(f *testing.F) {
+	f.Add("fatal: not a git repository")
+	f.Add("fatal: ambiguous argument 'unknown'")
+	f.Add("does not have any commits yet")
+	f.Add("")
+	f.Add("random git error output")
+	f.Fuzz(func(t *testing.T, stderr string) {
+		result := classifyGitError(errors.New("fuzz"), stderr)
+		if result == nil {
+			t.Error("classifyGitError returned nil for non-nil cause")
+		}
+	})
+}
+
+func FuzzParseCommitMarker(f *testing.F) {
+	f.Add("@@@abc123|2026-01-01T10:00:00Z|Alice")
+	f.Add("@@@def456|invalid-date|Bob")
+	f.Add("garbage")
+	f.Add("@@@only|two-parts")
+	f.Add("")
+	f.Fuzz(func(t *testing.T, line string) {
+		parseCommitMarker(line)
 	})
 }
