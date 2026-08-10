@@ -58,7 +58,19 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	failAbove := fs.Float64("fail-above", 0, "exit with code 2 if max hotspot score exceeds this (0 = disabled)")
 	minCommits := fs.Int("min-commits", 0, "exclude files with fewer commits (0 = no minimum)")
 	author := fs.String("author", "", "show only files touched by this git author")
-	showVersion := fs.Bool("version", false, "print version information and exit")
+	fs.Bool("version", false, "print version information and exit")
+	noHeader := fs.Bool("no-header", false, "suppress summary header (for script piping)")
+	failRisk := fs.String("fail-risk", "", "fail if max hotspot exceeds risk band: critical|high|medium|low")
+
+	// Handle --version before parsing so it works even with other invalid flags.
+	if hasVersionFlag(args) {
+		_, err := fmt.Fprintf(out, "go-hotspot version %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
+		if err != nil {
+			return apierrors.CLIOutput(err)
+		}
+
+		return nil
+	}
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -66,15 +78,6 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		}
 
 		return apierrors.CLIUsage(err.Error())
-	}
-
-	if *showVersion {
-		_, err := fmt.Fprintf(out, "go-hotspot version %s\ncommit: %s\nbuilt:  %s\n", version, commit, date)
-		if err != nil {
-			return apierrors.CLIOutput(err)
-		}
-
-		return nil
 	}
 
 	// 1. Collect git history.
@@ -132,13 +135,14 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		TotalFiles:   len(results),
 		HalfLifeDays: *halfLife,
 		SortLabel:    *sortOrder,
+		NoHeader:     *noHeader,
 	}
 	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top); err != nil {
 		return err
 	}
 
-	// 7. Fail-above threshold check.
-	if err := checkThreshold(results, *failAbove); err != nil {
+	// 7. Fail-above threshold check (--fail-risk overrides --fail-above if set).
+	if err := checkThreshold(results, failThreshold(*failAbove, *failRisk)); err != nil {
 		return err
 	}
 
@@ -370,6 +374,39 @@ func parseChurnMetric(s string) hotspot.ChurnMetric {
 	default:
 		return hotspot.ChurnWeighted
 	}
+}
+
+func parseFailRisk(risk string) float64 {
+	switch strings.ToLower(strings.TrimSpace(risk)) {
+	case "critical":
+		return 0.15
+	case "high":
+		return 0.08
+	case "medium":
+		return 0.03
+	case "low":
+		return 0.01
+	default:
+		return 0
+	}
+}
+
+func failThreshold(failAbove float64, failRisk string) float64 {
+	if r := parseFailRisk(failRisk); r > 0 {
+		return r
+	}
+
+	return failAbove
+}
+
+func hasVersionFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "--version" || arg == "-version" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func splitCSV(s string) []string {

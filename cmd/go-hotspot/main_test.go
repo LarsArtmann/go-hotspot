@@ -288,3 +288,65 @@ func TestExitCodeThreshold(t *testing.T) { //nolint:paralleltest // uses t.Chdir
 		t.Errorf("ExitCode = %d, want 2 (threshold)", code)
 	}
 }
+
+func TestParseFailRisk(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		input string
+		want  float64
+	}{
+		{"critical", 0.15},
+		{"high", 0.08},
+		{"medium", 0.03},
+		{"low", 0.01},
+		{"CRITICAL", 0.15},
+		{"  high  ", 0.08},
+		{"", 0},
+		{"unknown", 0},
+	}
+
+	for _, tc := range cases {
+		got := parseFailRisk(tc.input)
+		if got != tc.want {
+			t.Errorf("parseFailRisk(%q) = %v, want %v", tc.input, got, tc.want)
+		}
+	}
+}
+
+func TestHasVersionFlag(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		args []string
+		want bool
+	}{
+		{[]string{"--version"}, true},
+		{[]string{"-version"}, true},
+		{[]string{"--version", "--bad-flag"}, true},
+		{[]string{"--bad-flag", "--version"}, true},
+		{[]string{"--help"}, false},
+		{nil, false},
+	}
+
+	for _, tc := range cases {
+		if got := hasVersionFlag(tc.args); got != tc.want {
+			t.Errorf("hasVersionFlag(%v) = %v, want %v", tc.args, got, tc.want)
+		}
+	}
+}
+
+func TestVersionBeforeParse(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+
+	err := run([]string{"--version", "--bad-flag"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "go-hotspot version") {
+		t.Errorf("expected version output, got: %s", buf.String())
+	}
+}

@@ -106,6 +106,8 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--coupling-min-degree` | `30` | Minimum coupling degree (%) |
 | `--output` | | Write report to file instead of stdout |
 | `--fail-above` | `0` | Exit with code 2 if max hotspot score exceeds this (0 = disabled) |
+| `--fail-risk` | | Exit 2 if max hotspot exceeds risk band: `critical`, `high`, `medium`, `low` |
+| `--no-header` | `false` | Suppress summary header (for script piping) |
 | `--min-commits` | `0` | Exclude files with fewer commits (0 = no minimum) |
 | `--author` | | Show only files touched by this git author |
 | `--version` | | Print version information and exit |

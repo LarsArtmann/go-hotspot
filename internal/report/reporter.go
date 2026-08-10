@@ -47,6 +47,7 @@ type Summary struct {
 	TotalFiles   int
 	HalfLifeDays float64
 	SortLabel    string // human-readable sort mode label
+	NoHeader     bool   // suppress text header (table/markdown only)
 }
 
 // Render writes the full report in the specified format.
@@ -133,6 +134,10 @@ func renderTableReport(w io.Writer, results []hotspot.Result, couplings []hotspo
 }
 
 func writeHeader(w io.Writer, s Summary) error {
+	if s.NoHeader {
+		return nil
+	}
+
 	var b strings.Builder
 
 	sep := strings.Repeat("─", 60)
