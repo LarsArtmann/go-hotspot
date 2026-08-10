@@ -86,7 +86,7 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	// 1. Resolve --since-version to a date if set.
 	sinceArg, err := resolveSince(*since, *sinceVersion)
 	if err != nil {
-		return err
+		return err //nolint:erraudit // resolveSince classifies via git.ResolveTag
 	}
 
 	// 2. Collect git history.
@@ -147,18 +147,21 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		NoHeader:     *noHeader,
 	}
 	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top); err != nil {
-		return err
+		return err //nolint:erraudit // renderReport classifies via apierrors
 	}
 
 	// 7. Function-level ranking (optional, Go only).
 	if *functions > 0 {
 		topFuncs := hotspot.RankFunctions(results, complexities, *functions)
-		renderFunctions(out, topFuncs)
+
+		if err := renderFunctions(out, topFuncs); err != nil {
+			return err //nolint:erraudit // renderFunctions classifies via apierrors.CLIOutput
+		}
 	}
 
 	// 8. Fail-above threshold check (--fail-risk overrides --fail-above if set).
 	if err := checkThreshold(results, failThreshold(*failAbove, *failRisk)); err != nil {
-		return err
+		return err //nolint:erraudit // checkThreshold classifies via apierrors.ThresholdExceeded
 	}
 
 	return nil
@@ -391,9 +394,9 @@ func parseChurnMetric(s string) hotspot.ChurnMetric {
 	}
 }
 
-func renderFunctions(out io.Writer, funcs []hotspot.FunctionResult) {
+func renderFunctions(out io.Writer, funcs []hotspot.FunctionResult) error {
 	if len(funcs) == 0 {
-		return
+		return nil
 	}
 
 	var buf strings.Builder
@@ -410,8 +413,15 @@ func renderFunctions(out io.Writer, funcs []hotspot.FunctionResult) {
 			fn.Hotspot, fn.Cyclomatic, fn.LineCount, fn.Function, fn.File)
 	}
 
-	tw.Flush()
-	io.WriteString(out, buf.String())
+	if err := tw.Flush(); err != nil {
+		return apierrors.CLIOutput(err)
+	}
+
+	if _, err := io.WriteString(out, buf.String()); err != nil {
+		return apierrors.CLIOutput(err)
+	}
+
+	return nil
 }
 
 func resolveSince(since, sinceVersion string) (string, error) {
@@ -419,7 +429,12 @@ func resolveSince(since, sinceVersion string) (string, error) {
 		return since, nil
 	}
 
-	return git.ResolveTag(context.Background(), sinceVersion)
+	resolved, err := git.ResolveTag(context.Background(), sinceVersion)
+	if err != nil {
+		return "", err //nolint:erraudit // git.ResolveTag already classifies via classifyGitError
+	}
+
+	return resolved, nil
 }
 
 func parseFailRisk(risk string) float64 {
