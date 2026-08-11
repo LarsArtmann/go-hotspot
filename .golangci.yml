@@ -14,15 +14,7 @@ run:
 output:
     formats: {}
 linters:
-    # Per Pareto plan (docs/planning/2026-08-11_06-46_v0.2.0-release-pareto-plan.md):
-    # the following pre-existing violations are EXPLICITLY ACCEPTED AS-THEY-ARE
-    # rather than fix-but-make-worse. Linters in `enable:` would otherwise fire
-    # on hundreds of tiny stylistic patterns (fc, r, w short names; t.Parallel
-    # on t.Chdir-using tests; double-wrapped stdlib errors; etc.). Each is
-    # either idiomatic Go for tight scopes, half-unfixable by design
-    # (t.Chdir tests), or already correctly handled at the error boundary.
     enable:
-        # Bug-class linters — keep these strict.
         - asasalint
         - asciicheck
         - bidichk
@@ -37,24 +29,29 @@ linters:
         - dupword
         - durationcheck
         - embeddedstructfieldcheck
+        - errcheck
         - errchkjson
         - errname
         - errorlint
         - exptostd
         - fatcontext
         - forcetypeassert
+        - funlen
         - ginkgolinter
         - gocheckcompilerdirectives
         - gochecknoinits
         - gochecksumtype
         - gocognit
+        - gocritic
         - gocyclo
         - godoclint
         - godot
+        - godox
         - goheader
         - gomoddirectives
         - gomodguard_v2
         - goprintffuncname
+        - gosec
         - gosmopolitan
         - govet
         - grouper
@@ -65,8 +62,10 @@ linters:
         - interfacebloat
         - intrange
         - iotamixing
+        - ireturn
         - loggercheck
         - maintidx
+        - makezero
         - mirror
         - misspell
         - modernize
@@ -107,61 +106,22 @@ linters:
         - wastedassign
         - whitespace
         - zerologlint
-        # Style linters kept on (low false-positive rate or specific catches).
-        - gosec
-        - funlen
-        - ireturn
-        - makezero
-    # Explicitly REMOVED from default's implicit set — see plan rationale:
-    # - varnamelen:  fc/r/w/f in 3-line scopes are idiomatic Go.
-    # - paralleltest: half the tests use t.Chdir which cannot be parallel.
-    # - wrapcheck:   stdlib call errors are already classified at the boundary.
-    # - mnd:         display constants (60, 45) used once are noise as named consts.
-    # - cyclop:      Sort, detectLanguage, parseNumStat work; refactoring is risk.
-    # - exhaustive:  switches already have default cases; explicit no-ops add noise.
-    # - tagliatelle: JSON tag style is intentionally snake_case (API contract).
-    # - err113:      errors.New in test helpers is correct Go; this is style.
-    # - goconst:     "main.go" in test data is not a constant.
-    # - gochecknoglobals: generatedSuffixes is a tightly-scoped lookup table.
-    # - lll:         some test fixtures exceed 120 chars (intentional).
-    # - noctx:       integration tests use exec.Command with t.Context(), safe.
-    # - forbidigo:   too aggressive for a tool that prints output.
-    # - prealloc:    optimization, not correctness.
-    # - predeclared: generatedSuffixes shadowing is acceptable.
-    # - testpackage: project deliberately co-locates internal-test testing for
-    #               shared sample-helpers (sampleResults() etc.). Splitting is
-    #               a churn bomb with no benefit.
-    # - perfsprint:  tests construct fmt.Errorf with no verbs — the optimization
-    #               (drop fmt, use errors.New) costs readability for a startup
-    #               test that runs once.
-    # - nonamedreturns: idiomatic Go style preference, not a bug.
-    # - makezero:    lint is wrong on `results := []T{...}` intended pre-alloc.
-    # - golines:     single-line `run(ctx, [...long args...], w, w, now)` calls
-    #               are intentionally written on one line for test brevity.
-    # - gosec:       integration tests launch `git` with controlled args; not
-    #               injection. G104 in counter_test is a `_ = scanner.Err()`.
     disable:
-        - varnamelen
-        - paralleltest
-        - wrapcheck
-        - mnd
         - cyclop
-        - exhaustive
-        - tagliatelle
         - err113
-        - goconst
-        - gochecknoglobals
-        - lll
-        - noctx
+        - exhaustive
         - forbidigo
+        - gochecknoglobals
+        - goconst
+        - lll
+        - mnd
+        - noctx
+        - paralleltest
         - prealloc
-        - predeclared
+        - tagliatelle
+        - varnamelen
+        - wrapcheck
         - wsl_v5
-        - testpackage
-        - perfsprint
-        - nonamedreturns
-        - makezero
-        - gosec
     default: none
     settings:
         errcheck:
@@ -188,6 +148,9 @@ linters:
         ginkgolinter:
             forbid-focus-container: true
             forbid-spec-pollution: true
+        gocritic:
+            disabled-checks:
+                - ifElseChain
         gomoddirectives:
             replace-local: true
         gosec:
@@ -215,6 +178,33 @@ linters:
             disable:
                 - go-require
             enable-all: true
+    exclusions:
+        generated: lax
+        rules:
+            - path: _test\.go
+              linters:
+                - exhaustruct
+                - testpackage
+                - gochecknoglobals
+                - funlen
+                - cyclop
+                - goconst
+                - forcetypeassert
+                - gosec
+                - errcheck
+                - wrapcheck
+                - ireturn
+                - recvcheck
+                - contextcheck
+                - exhaustive
+            - path: _test\.go
+              text: unused
+              linters:
+                - unused
+        paths:
+            - \.gen\.go$
+            - _templ\.go$
+            - vendor/
 formatters:
     enable:
         - gci

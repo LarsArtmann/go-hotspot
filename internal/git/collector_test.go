@@ -316,31 +316,31 @@ func TestClassifyGitError(t *testing.T) {
 		},
 		{
 			name:     "not a git repository",
-			cause:    fmt.Errorf("exit status 128"),
+			cause:    errors.New("exit status 128"),
 			stderr:   "fatal: not a git repository (or any of the parent directories): .git",
 			wantCode: apierrors.CodeGitNotARepo,
 		},
 		{
 			name:     "ambiguous argument / bad revision",
-			cause:    fmt.Errorf("exit status 128"),
+			cause:    errors.New("exit status 128"),
 			stderr:   "fatal: ambiguous argument 'unknown-ref': unknown revision",
 			wantCode: apierrors.CodeGitBadRevision,
 		},
 		{
 			name:     "no commits in range",
-			cause:    fmt.Errorf("exit status 128"),
+			cause:    errors.New("exit status 128"),
 			stderr:   "fatal: your current branch 'main' does not have any commits yet",
 			wantCode: apierrors.CodeGitNoCommits,
 		},
 		{
 			name:     "no commits literal substring",
-			cause:    fmt.Errorf("exit status 128"),
+			cause:    errors.New("exit status 128"),
 			stderr:   "fatal: no commits in the specified range",
 			wantCode: apierrors.CodeGitNoCommits,
 		},
 		{
 			name:     "default fallback for unknown git error",
-			cause:    fmt.Errorf("exit status 1"),
+			cause:    errors.New("exit status 1"),
 			stderr:   "some unrecognized git error",
 			wantCode: apierrors.CodeGitCollectFailed,
 		},
@@ -348,25 +348,25 @@ func TestClassifyGitError(t *testing.T) {
 		// --- Edge cases ---
 		{
 			name:     "empty stderr falls to default",
-			cause:    fmt.Errorf("exit status 1"),
+			cause:    errors.New("exit status 1"),
 			stderr:   "",
 			wantCode: apierrors.CodeGitCollectFailed,
 		},
 		{
 			name:     "whitespace-only stderr trimmed then default",
-			cause:    fmt.Errorf("exit status 1"),
+			cause:    errors.New("exit status 1"),
 			stderr:   "   \n\t  ",
 			wantCode: apierrors.CodeGitCollectFailed,
 		},
 		{
 			name:     "multi-line stderr with not-a-repo somewhere",
-			cause:    fmt.Errorf("exit status 128"),
+			cause:    errors.New("exit status 128"),
 			stderr:   "error: something\nfatal: not a git repository\nusage: git ...",
 			wantCode: apierrors.CodeGitNotARepo,
 		},
 		{
 			name:     "no-commits takes priority over ambiguous when both present",
-			cause:    fmt.Errorf("exit status 128"),
+			cause:    errors.New("exit status 128"),
 			stderr:   "fatal: ambiguous argument and no commits",
 			wantCode: apierrors.CodeGitBadRevision, // first match wins (ambiguous checked before no-commits)
 		},
