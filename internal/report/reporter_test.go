@@ -279,6 +279,128 @@ func TestRenderCouplingWriteError(t *testing.T) {
 	}
 }
 
+func sampleFunctions() []hotspot.FunctionResult {
+	return []hotspot.FunctionResult{
+		{File: "main.go", Function: "main", Cyclomatic: 5, LineCount: 20, StartLine: 10, Hotspot: 0.085},
+		{File: "utils.go", Function: "helper", Cyclomatic: 2, LineCount: 10, StartLine: 5, Hotspot: 0.012},
+	}
+}
+
+func TestRenderFunctionsEmpty(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := RenderFunctions(&buf, nil, FormatTable); err != nil {
+		t.Fatal(err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("empty functions should produce no output, got %d bytes", buf.Len())
+	}
+}
+
+func TestRenderFunctionsTable(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := RenderFunctions(&buf, sampleFunctions(), FormatTable); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{"Top Functions", "main", "helper", "HOTSPOT"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("function table missing %q", want)
+		}
+	}
+}
+
+func TestRenderFunctionsMarkdown(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := RenderFunctions(&buf, sampleFunctions(), FormatMarkdown); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{"## Top Functions", "`main`", "`helper`", "|--:|"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("function markdown missing %q", want)
+		}
+	}
+}
+
+func TestRenderFunctionsCSV(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := RenderFunctions(&buf, sampleFunctions(), FormatCSV); err != nil {
+		t.Fatal(err)
+	}
+
+	reader := csv.NewReader(&buf)
+	rows, err := reader.ReadAll()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rows) != 3 { // header + 2 data rows
+		t.Errorf("function CSV rows = %d, want 3", len(rows))
+	}
+
+	if rows[0][0] != "file" {
+		t.Errorf("CSV header[0] = %q, want 'file'", rows[0][0])
+	}
+
+	if rows[1][1] != "main" {
+		t.Errorf("CSV row[1][1] = %q, want 'main'", rows[1][1])
+	}
+}
+
+func TestRenderFunctionsJSON(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	if err := RenderFunctions(&buf, sampleFunctions(), FormatJSON); err != nil {
+		t.Fatal(err)
+	}
+
+	var funcs []jsonFunction
+	if err := json.Unmarshal(buf.Bytes(), &funcs); err != nil {
+		t.Fatalf("invalid function JSON: %v", err)
+	}
+
+	if len(funcs) != 2 {
+		t.Fatalf("JSON functions = %d, want 2", len(funcs))
+	}
+
+	if funcs[0].Function != "main" {
+		t.Errorf("JSON funcs[0].Function = %q, want 'main'", funcs[0].Function)
+	}
+
+	if funcs[0].Cyclomatic != 5 {
+		t.Errorf("JSON funcs[0].Cyclomatic = %d, want 5", funcs[0].Cyclomatic)
+	}
+}
+
+func TestRenderFunctionsWriteError(t *testing.T) {
+	t.Parallel()
+
+	for _, format := range []Format{FormatTable, FormatMarkdown, FormatCSV, FormatJSON} {
+		var fw failingWriter
+
+		err := RenderFunctions(fw, sampleFunctions(), format)
+		if err == nil {
+			t.Errorf("RenderFunctions with failingWriter (format %d) should return error", format)
+		}
+
+		if code := errorfamily.Code(err); code != apierrors.CodeReportRenderFailed {
+			t.Errorf("Code() = %q, want %q (format %d)", code, apierrors.CodeReportRenderFailed, format)
+		}
+	}
+}
+
 func BenchmarkRenderTable(b *testing.B) {
 	results := make([]hotspot.Result, 1000)
 	for i := range results {

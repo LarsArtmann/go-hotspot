@@ -442,3 +442,53 @@ func TestFailRiskCritical(t *testing.T) { //nolint:paralleltest // uses t.Chdir 
 		t.Errorf("ExitCode = %d, want 2 (threshold via --fail-risk)", code)
 	}
 }
+
+func TestFunctionsOutput(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	var buf bytes.Buffer
+
+	err := run([]string{"--functions", "5", "--no-coupling", "--no-header"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	output := buf.String()
+	if !strings.Contains(output, "Top Functions") {
+		t.Errorf("expected function ranking section in output, got: %s", output)
+	}
+
+	if !strings.Contains(output, "main") {
+		t.Errorf("expected 'main' function in output, got: %s", output)
+	}
+}
+
+func TestSinceVersion(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	execGit(t, "tag", "-a", "v1.0.0", "-m", "test release")
+
+	var buf bytes.Buffer
+
+	err := run([]string{"--since-version", "v1.0.0", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "main.go") {
+		t.Errorf("expected main.go in output with --since-version v1.0.0, got: %s", buf.String())
+	}
+}
+
+func TestSinceVersionBadTag(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	err := run([]string{"--since-version", "nonexistent-tag"}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected error for nonexistent tag")
+	}
+
+	if code := apierrors.ExitCode(err); code != 69 {
+		t.Errorf("ExitCode = %d, want 69 (EX_UNAVAILABLE)", code)
+	}
+}

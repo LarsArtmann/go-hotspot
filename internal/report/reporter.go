@@ -76,6 +76,36 @@ func Render(
 	}
 }
 
+// RenderFunctions writes the function-level hotspot ranking in the specified
+// format. It is called after Render when the --functions flag is set. An empty
+// slice produces no output.
+func RenderFunctions(w io.Writer, funcs []hotspot.FunctionResult, format Format) error {
+	if len(funcs) == 0 {
+		return nil
+	}
+
+	switch format {
+	case FormatJSON:
+		if err := renderFunctionsJSON(w, funcs); err != nil {
+			return errors.ReportRender("render function JSON", err)
+		}
+	case FormatCSV:
+		if err := renderFunctionsCSV(w, funcs); err != nil {
+			return errors.ReportRender("render function CSV", err)
+		}
+	case FormatMarkdown:
+		if err := renderFunctionsMarkdown(w, funcs); err != nil {
+			return errors.ReportRender("render function markdown", err)
+		}
+	default:
+		if err := renderFunctionsTable(w, funcs); err != nil {
+			return errors.ReportRender("render function table", err)
+		}
+	}
+
+	return nil
+}
+
 func renderJSONReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
 	if err := renderJSON(w, results, couplings, summary); err != nil {
 		return errors.ReportRender("render JSON", err)
@@ -334,6 +364,103 @@ func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
 	return err
 }
 
+func renderFunctionsTable(w io.Writer, funcs []hotspot.FunctionResult) error {
+	var buf strings.Builder
+
+	buf.WriteString("\nTop Functions by Hotspot Score\n")
+	buf.WriteString(strings.Repeat("─", 60))
+	buf.WriteByte('\n')
+
+	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
+	if _, err := io.WriteString(tw, "HOTSPOT\tCYC\tLINES\tFUNCTION\tFILE\n"); err != nil {
+		return err
+	}
+
+	for _, fn := range funcs {
+		row := fmt.Sprintf("%s\t%d\t%d\t%s\t%s\n",
+			fmtScore(fn.Hotspot), fn.Cyclomatic, fn.LineCount, fn.Function, truncPath(fn.File, 45))
+		if _, err := io.WriteString(tw, row); err != nil {
+			return err
+		}
+	}
+
+	if err := tw.Flush(); err != nil {
+		return err
+	}
+
+	_, err := io.WriteString(w, buf.String())
+
+	return err
+}
+
+func renderFunctionsMarkdown(w io.Writer, funcs []hotspot.FunctionResult) error {
+	var b strings.Builder
+
+	b.WriteString("\n## Top Functions by Hotspot Score\n\n")
+	b.WriteString("| Hotspot | Cyc | Lines | Function | File |\n")
+	b.WriteString("|--:|--:|--:|:--|:--|\n")
+
+	for _, fn := range funcs {
+		fmt.Fprintf(&b, "| %s | %d | %d | `%s` | `%s` |\n",
+			fmtScore(fn.Hotspot), fn.Cyclomatic, fn.LineCount, fn.Function, fn.File)
+	}
+
+	_, err := io.WriteString(w, b.String())
+
+	return err
+}
+
+func renderFunctionsCSV(w io.Writer, funcs []hotspot.FunctionResult) error {
+	var buf strings.Builder
+
+	cw := csv.NewWriter(&buf)
+
+	if err := cw.Write([]string{"file", "function", "cyclomatic", "line_count", "start_line", "hotspot"}); err != nil {
+		return err
+	}
+
+	for _, fn := range funcs {
+		if err := cw.Write([]string{
+			fn.File, fn.Function,
+			strconv.Itoa(fn.Cyclomatic),
+			strconv.Itoa(fn.LineCount),
+			strconv.Itoa(fn.StartLine),
+			strconv.FormatFloat(fn.Hotspot, 'f', 6, 64),
+		}); err != nil {
+			return err
+		}
+	}
+
+	cw.Flush()
+
+	if err := cw.Error(); err != nil {
+		return err
+	}
+
+	_, err := io.WriteString(w, buf.String())
+
+	return err
+}
+
+func renderFunctionsJSON(w io.Writer, funcs []hotspot.FunctionResult) error {
+	out := make([]jsonFunction, 0, len(funcs))
+	for _, fn := range funcs {
+		out = append(out, jsonFunction{
+			File:       fn.File,
+			Function:   fn.Function,
+			Cyclomatic: fn.Cyclomatic,
+			LineCount:  fn.LineCount,
+			StartLine:  fn.StartLine,
+			Hotspot:    fn.Hotspot,
+		})
+	}
+
+	enc := json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+
+	return enc.Encode(out)
+}
+
 // jsonReport is the JSON serialization structure.
 type jsonReport struct {
 	Summary struct {
@@ -369,6 +496,15 @@ type jsonCoupling struct {
 	FileB         string  `json:"file_b"`
 	SharedCommits int     `json:"shared_commits"`
 	Degree        float64 `json:"degree"`
+}
+
+type jsonFunction struct {
+	File       string  `json:"file"`
+	Function   string  `json:"function"`
+	Cyclomatic int     `json:"cyclomatic"`
+	LineCount  int     `json:"line_count"`
+	StartLine  int     `json:"start_line"`
+	Hotspot    float64 `json:"hotspot"`
 }
 
 func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {

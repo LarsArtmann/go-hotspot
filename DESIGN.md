@@ -59,6 +59,12 @@ build tag for non-Go cyclomatic complexity.
 - Degree = sharedCommits / ceil(avg(CommitsA, CommitsB)) × 100
 - Thresholds: min 5 shared commits, min 30% degree (code-maat defaults)
 
+### FunctionResult (function-level hotspot)
+- File, Function, Cyclomatic, LineCount, StartLine
+- Hotspot = file_hotspot × (func_cyc / file_cyc) — proportional approximation
+- Go only (requires go/ast per-function breakdown)
+- Ranked by descending hotspot score via `RankFunctions()`
+
 ## Architecture
 
 ```

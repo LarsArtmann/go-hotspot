@@ -9,8 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Typed error system via `internal/errors` package, built on `go-error-family` — 11 domain-specific error constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70) and user-facing What/Why/Fix/WayOut message templates rendered to stderr (`31d6acb`)
+- Typed error system via `internal/errors` package, built on `go-error-family` — 12 domain-specific error constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70) and user-facing What/Why/Fix/WayOut message templates rendered to stderr (`31d6acb`)
 - Git error classification: `classifyGitError()` inspects cause + stderr to pick the most specific error code (not-installed, not-a-repo, bad-revision, no-commits, generic failure) (`31d6acb`)
+- `--functions N` flag for function-level hotspot ranking (Go only) — ranks individual functions by approximate hotspot score (`file_hotspot * func_cyc / file_cyc`) (`5aebbfc`)
+- `--fail-risk critical|high|medium|low` flag — fail with exit code 2 if max hotspot exceeds a named risk band threshold (`7b42638`)
+- `--no-header` flag — suppress summary header for script piping (`7b42638`)
+- `--since-version TAG` flag — resolve a git tag to a date and use it as the analysis window start (`f968d8f`)
+- `report.RenderFunctions()` — renders function-level rankings in all 4 output formats (table, markdown, CSV, JSON), eliminating the rendering split-brain
+- `hotspot.FunctionResult` type + `RankFunctions()` — function-level hotspot scoring
+- `git.ResolveTag()` — resolves a git ref to an ISO timestamp for tag-based analysis windows
+- End-to-end exit code integration tests (4 codes: 0, 1, 2, 69), CLI flag integration tests (`--output`, `--min-commits`, `--author`, `--no-header`, `--fail-risk`, `--functions`, `--since-version`)
+- Golden stderr tests for all 12 error code templates via `HandleErrorWithConfig`
+- Coupling edge-case tests (empty history, max pairs, sort order, missing file, 30-file mega-commit guard boundary)
+- Property tests: score always in [0, 1], coupling degree in [0, 100]
+- Fuzz tests: `FuzzClassifyGitError`, `FuzzParseCommitMarker`
+- `BenchmarkCoupling` — 100 files, 10 co-changes each
+- SECURITY.md and CODE_OF_CONDUCT.md community health files (`ac8cdcc`)
 - erraudit compliance — 0 violations in CI mode. `//nolint:erraudit` directives with documented rationale for known false positives (`bade91c`)
 - Comprehensive lint profile in `.golangci.yml` with wrapcheck, varnamelen, mnd, tagliatelle, cyclop, and exhaustive linters (`e954c95`)
 
@@ -18,6 +32,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - **Breaking:** `complexity.Analyze` now returns `(FileComplexity, error)` instead of `FileComplexity` — parse and read errors are no longer silently swallowed (`31d6acb`)
 - **Breaking:** `run()` in `main.go` now accepts `errOut io.Writer` as its third parameter for stderr warnings during analysis (`31d6acb`)
+- `run()` refactored — extracted `analyzeFiles`, `filterResults`, `renderReport`, `checkThreshold` sub-functions for lower cognitive complexity (`d50dea0`)
+- `--version` now works before flag parsing via `hasVersionFlag()` — succeeds even with invalid flags (`7b42638`)
+- `parseFailRisk` thresholds extracted as named constants (`failRiskCritical`, `failRiskHigh`, `failRiskMedium`, `failRiskLow`)
 - `report.Render` format dispatch refactored into 4 helper functions (`renderTableReport`, `renderMarkdownReport`, `renderCSVReport`, `renderJSONReport`), reducing cyclomatic complexity from 17 to ~5 (`31d6acb`)
 - `main.go` error handling simplified — single `errors.HandleError()` call replaces manual `errors.Is` + hardcoded exit codes (`31d6acb`)
 - Removed bespoke `internal/fault` package (never released) — superseded by `internal/errors` (`31d6acb`)
@@ -29,7 +46,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `classifyGitError` now matches `"does not have any commits yet"` for empty repos instead of falling through to generic `git.collect_failed` (`d50dea0`)
+- SLOC counting no longer includes brace-only lines (`{`, `}`, `(`, `)`, `;`, `,`) — matches competitor behavior (`34da36d`)
+- `ctx.Err()` and `sc.Err()` in `parseNumStat` now properly wrapped as Infrastructure errors instead of bare returns (`d50dea0`)
+- `--version` output failure no longer rendered as "check output path" — dedicated `CLIOutput` error code fixes the semantic lie (`d50dea0`)
 - All 5 erraudit violations resolved: 2 real code fixes (ignored file close, context loss on version output), 3 documented `//nolint:erraudit` suppressions for false positives (`bade91c`)
+
+### Infrastructure
+
+- CI `govulncheck` job in `.github/workflows/ci.yml` (`4e22f8a`)
 
 ## [0.1.0] - 2026-08-10
 

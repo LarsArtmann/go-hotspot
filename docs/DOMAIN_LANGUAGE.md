@@ -19,6 +19,7 @@
 | Coupling degree              | Percentage: how often two files change together relative to their total commit counts.               | `hotspot.CouplingPair.Degree`, code-maat formula        |
 | Shared commits               | The number of commits where both files in a coupling pair were modified.                              | `hotspot.CouplingPair.SharedCommits`                    |
 | Risk band                    | Relative classification of hotspot severity: critical, high, medium, low. Based on percentage of max. | `hotspot.RiskBand()`                                    |
+| Function-level hotspot       | Approximate per-function risk score: `file_hotspot × (func_cyc / file_cyc)`. Distributes the file's score proportionally to each function's cyclomatic share. Go only. | `hotspot.FunctionResult`, `hotspot.RankFunctions()`     |
 | Co-change                    | Files modified in the same commit. Used as the raw signal for temporal coupling.                      | `git.FileChurn.CommitsWith`                             |
 | Normalization                | Dividing each file's complexity and churn by the project-wide sum, producing relative scores in [0,1]. | `hotspot.normalizedProduct()`                           |
 | Mega-commit guard            | Commits touching more than 30 files are excluded from coupling analysis (mass renames create noise).  | `collector.go:107`, `maxCouplingFiles`                  |

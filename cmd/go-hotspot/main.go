@@ -12,7 +12,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"text/tabwriter"
 	"time"
 
 	"github.com/larsartmann/go-hotspot/internal/complexity"
@@ -154,8 +153,8 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	if *functions > 0 {
 		topFuncs := hotspot.RankFunctions(results, complexities, *functions)
 
-		if err := renderFunctions(out, topFuncs); err != nil {
-			return err //nolint:erraudit // renderFunctions classifies via apierrors.CLIOutput
+		if err := report.RenderFunctions(out, topFuncs, report.ParseFormat(*format)); err != nil {
+			return err //nolint:erraudit // report.RenderFunctions classifies via errors.ReportRender
 		}
 	}
 
@@ -394,36 +393,6 @@ func parseChurnMetric(s string) hotspot.ChurnMetric {
 	}
 }
 
-func renderFunctions(out io.Writer, funcs []hotspot.FunctionResult) error {
-	if len(funcs) == 0 {
-		return nil
-	}
-
-	var buf strings.Builder
-
-	buf.WriteString("\nTop Functions by Hotspot Score\n")
-	buf.WriteString(strings.Repeat("─", 60))
-	buf.WriteByte('\n')
-
-	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "hotspot\tcyc\tlines\tfunction\tfile")
-
-	for _, fn := range funcs {
-		fmt.Fprintf(tw, "%.4f\t%d\t%d\t%s\t%s\n",
-			fn.Hotspot, fn.Cyclomatic, fn.LineCount, fn.Function, fn.File)
-	}
-
-	if err := tw.Flush(); err != nil {
-		return apierrors.CLIOutput(err)
-	}
-
-	if _, err := io.WriteString(out, buf.String()); err != nil {
-		return apierrors.CLIOutput(err)
-	}
-
-	return nil
-}
-
 func resolveSince(since, sinceVersion string) (string, error) {
 	if sinceVersion == "" {
 		return since, nil
@@ -437,16 +406,23 @@ func resolveSince(since, sinceVersion string) (string, error) {
 	return resolved, nil
 }
 
+const (
+	failRiskCritical = 0.15
+	failRiskHigh     = 0.08
+	failRiskMedium   = 0.03
+	failRiskLow      = 0.01
+)
+
 func parseFailRisk(risk string) float64 {
 	switch strings.ToLower(strings.TrimSpace(risk)) {
 	case "critical":
-		return 0.15
+		return failRiskCritical
 	case "high":
-		return 0.08
+		return failRiskHigh
 	case "medium":
-		return 0.03
+		return failRiskMedium
 	case "low":
-		return 0.01
+		return failRiskLow
 	default:
 		return 0
 	}

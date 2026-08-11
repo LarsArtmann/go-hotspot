@@ -29,8 +29,8 @@
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
 | Go cyclomatic complexity         | 🟢 `FULLY_FUNCTIONAL`     | True McCabe via `go/ast` (`counter.go`). Handles if/for/range/switch/select/case/&&/\|\|. Per-function breakdown. 9 tests. |
 | Indentation-based complexity     | 🟡 `PARTIALLY_FUNCTIONAL` | Language-neutral fallback for non-Go (`counter.go:56`). Formula: `indentation/4 + 1`. Crude heuristic, unvalidated against known-complex files. |
-| SLOC counting                    | 🟡 `PARTIALLY_FUNCTIONAL` | Non-blank, non-comment lines (`counter.go:62`). Includes closing braces, inflating SLOC vs competitors. |
-| Per-function complexity (Go)     | 🟡 `PARTIALLY_FUNCTIONAL` | `FuncComplexity` struct with name, cyclomatic, line range (`counter.go:30`). Data collected but **unused** — no function-level ranking. |
+| SLOC counting                    | 🟢 `FULLY_FUNCTIONAL`     | Non-blank, non-comment, non-brace-only lines (`counter.go`). Excludes lines with only `{`, `}`, `(`, `)`, `;`, `,`. |
+| Per-function complexity (Go)     | 🟢 `FULLY_FUNCTIONAL`     | `FuncComplexity` struct with name, cyclomatic, line range (`counter.go:30`). Used by `hotspot.RankFunctions()` for function-level hotspot ranking via `--functions N` flag. |
 | Multi-language detection         | 🟢 `FULLY_FUNCTIONAL`     | 20+ language extensions recognized (`detectLanguage`). Only Go gets true cyclomatic.   |
 
 ## Hotspot Scoring
@@ -65,7 +65,7 @@
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 24 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 20 tests (12 unit + 8 integration with real git repos). |
+| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 25 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 23 tests (unit + integration with real git repos). |
 | File filtering                   | 🟢 `FULLY_FUNCTIONAL`     | Extension, test toggle, generated detection (suffix + content-based `// Code generated` header), path prefix, vendor exclusion, `--min-commits`, `--author` (`main.go`). |
 | Six sort modes                   | 🟢 `FULLY_FUNCTIONAL`     | hotspot, stable, churn, commits, complexity, age (`--sort` flag, `score.go:75`).      |
 | Coupling thresholds              | 🟢 `FULLY_FUNCTIONAL`     | `--coupling-min-shared`, `--coupling-min-degree` flags. Code-maat defaults (5, 30%).   |
@@ -73,14 +73,15 @@
 | Risk-band gate (`--fail-risk`)   | 🟢 `FULLY_FUNCTIONAL`     | Named risk bands (critical/high/medium/low) as convenient aliases for `--fail-above`.  |
 | Tag-based window (`--since-version`) | 🟢 `FULLY_FUNCTIONAL` | Analyze commits since a git tag (e.g., `--since-version v1.0.0`).                       |
 | Header suppression (`--no-header`) | 🟢 `FULLY_FUNCTIONAL`   | Suppress summary header for clean script piping.                                        |
+| Function-level ranking (`--functions`) | 🟢 `FULLY_FUNCTIONAL` | Rank individual Go functions by approximate hotspot score (`file_hotspot * func_cyc / file_cyc`). Output in all 4 formats. |
 | File output (`--output`)         | 🟢 `FULLY_FUNCTIONAL`     | Write report to file instead of stdout.                                                 |
-| Version reporting (`--version`)  | 🟢 `FULLY_FUNCTIONAL`     | Prints version, commit, and build date (injected via goreleaser ldflags).              |
+| Version reporting (`--version`)  | 🟢 `FULLY_FUNCTIONAL`     | Prints version, commit, and build date (injected via goreleaser ldflags). Works before flag parsing.  |
 
 ## Library API
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 24 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
+| CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 25 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
 | Public importable packages       | ⚪ `PLANNED`              | All packages under `internal/` — CLI-only for now. Public library API is a ROADMAP item. |
 | Minimal external dependencies   | 🟢 `FULLY_FUNCTIONAL`     | One dependency: `go-error-family v0.10.0` (Lars's zero-dep typed error library). No CGo. All other code is stdlib. |
 
@@ -88,8 +89,8 @@
 
 | Feature                          | Status                    | Notes                                                                                  |
 | -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 106 tests (62 top-level + 44 subtests) across 6 packages (unit + integration + golden + fuzz). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 4 benchmarks, 2 fuzz targets. |
+| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 100 test/benchmark/fuzz functions across 6 packages (unit + integration + golden + fuzz + property). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 5 benchmarks, 4 fuzz targets. |
 | flake.nix                        | 🟢 `FULLY_FUNCTIONAL`     | build/test/lint/format/vet apps + devShell with go, golangci-lint, gofumpt, goreleaser. |
 | GitHub Actions CI                | 🟢 `FULLY_FUNCTIONAL`     | `.github/workflows/ci.yml` — build, test (race), vet, lint on push and PR.            |
 | Git tags / releases              | 🟢 `FULLY_FUNCTIONAL`     | Tag `v0.1.0` exists. `.goreleaser.yml` configured (6 OS/arch targets, CGO_ENABLED=0). |
-| Linting config                   | 🟢 `FULLY_FUNCTIONAL`     | `.golangci.yml` (errcheck, gosec, govet, ineffassign, misspell, revive, staticcheck, unused). 0 issues. |
+| Linting config                   | 🟡 `PARTIALLY_FUNCTIONAL` | `.golangci.yml` with strict profile (wrapcheck, varnamelen, mnd, cyclop, exhaustive, etc.). ~200 pre-existing stylistic warnings across all packages. Build, vet, and erraudit all pass clean. |

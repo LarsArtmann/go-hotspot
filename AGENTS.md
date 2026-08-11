@@ -13,7 +13,7 @@ go build ./...                      # build (must pass — LSP caches lie, build
 go test ./...                       # run tests (all pass)
 go test ./... -race -gcflags=all=-l # race tests (needs -l due to Go 1.26.5 linker bug)
 go vet ./...                        # vet (passes clean)
-golangci-lint run ./...             # lint (.golangci.yml config present, 0 issues)
+golangci-lint run ./...             # lint (.golangci.yml config present, ~200 warnings — see Known issues)
 gofumpt -w .                        # format
 go run ./cmd/go-hotspot             # run locally
 go install ./cmd/go-hotspot         # install binary
@@ -38,12 +38,12 @@ Go 1.26.5. Module: `github.com/larsartmann/go-hotspot`.
 Data flows one direction through five packages; `main.go` orchestrates:
 
 ```
-git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspot.Coupling  →  report.Render
+git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspot.Coupling  →  report.Render (+ report.RenderFunctions if --functions)
 ```
 
 | Package | Responsibility |
 |---|---|
-| `cmd/go-hotspot/main.go` | Flag parsing, filter logic, pipeline orchestration. 8 tests + 3 integration tests. |
+| `cmd/go-hotspot/main.go` | Flag parsing, filter logic, pipeline orchestration. 23 tests (including integration tests with real git repos). |
 | `internal/git` | Runs `git log --numstat`, parses into `FileChurn` + coupling data. Context-cancelable. |
 | `internal/complexity` | SLOC, indentation, and go/ast cyclomatic complexity. |
 | `internal/hotspot` | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`). |
@@ -104,6 +104,10 @@ filtering happens by deleting from `history.Files` before scoring.
   `inlined function cmp.Compare[go.shape.int64] missing func info`. The `cmp.Compare`
   comes from the stdlib (not our code). Workaround: add `-gcflags=all=-l` to disable
   inlining during race builds. This is a Go toolchain bug, not a code issue.
+- **~200 golangci-lint warnings** (varnamelen, paralleltest, wrapcheck, mnd, cyclop).
+  These are pre-existing stylistic warnings across all packages. The lint profile is
+  intentionally strict; these violations do not affect correctness. New code should
+  not add to the count.
 
 ## Conventions
 
@@ -112,14 +116,20 @@ filtering happens by deleting from `history.Files` before scoring.
   or similar are rejected; this constraint is deliberate.
 - **iota enums + `Parse*` functions** for all flag-driven choices (`Format`,
   `ComplexityMetric`, `ChurnMetric`, `SortOrder`). Follow this pattern for new
-  flag-selectable options.
+  flag-selectable options. Named constant thresholds for flag values
+  (`failRiskCritical`, `failRiskHigh`, etc.) — no magic numbers in flag parsers.
+- **`--functions N` triggers a separate `report.RenderFunctions` call** after
+  `report.Render`. Both respect the `--format` flag (table, markdown, csv, json).
+  Function results use `hotspot.FunctionResult` + `hotspot.RankFunctions()`, which
+  approximates per-function hotspot as `file_hotspot * (func_cyc / file_cyc)`.
 - **Table-driven tests** throughout. Test helpers use `t.Helper()`.
 - **Package doc comments** explain the methodology and "why," not just "what."
-- **`report.Render` returns `error`** — all write errors propagate to the caller.
+- **`report.Render` and `report.RenderFunctions` return `error`** — all write errors propagate to the caller.
   Renderers use `strings.Builder` + `fmt.Sprintf` for batched output (Builder writes
   cannot fail), then a single `io.WriteString` to the real writer with error check.
   Tabwriter functions use a `strings.Builder`-backed tabwriter, check `Flush`, then
-  write the aligned output.
+  write the aligned output. Function rendering uses a `jsonFunction` DTO (mirrors
+  `hotspot.FunctionResult`) following the same DTO pattern as `jsonHotspot`.
 - **Errors use `go-error-family` typed errors** (`internal/errors` package) — every
   error site wraps via a domain constructor (`errors.GitNotARepo`, `errors.AnalysisRead`,
   etc.) that assigns a Family (Rejection, Infrastructure, Corruption) and BSD exit code.
