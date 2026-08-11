@@ -8,6 +8,8 @@ github.com/larsartmann/go-error-family v0.10.0 h1:xGPT8WzPr9EJ+SHCasLtZ2mJ7drVxm
 github.com/larsartmann/go-error-family v0.10.0/go.mod h1:c5ZKAqG/2xJmF7ZjShNAenbxHzWqut90ARS0lPuyUaY=
 github.com/larsartmann/go-output v0.37.0 h1:VoF2EIReGaR+SdW9Ei2B3FBLziLMKySwFU2V23yK930=
 github.com/larsartmann/go-output v0.37.0/go.mod h1:8GIUSrgDfEPN6H6Faz93tatgrliRiMVr+Iu/M9pv9Zg=
+github.com/larsartmann/go-output/d2 v0.37.0 h1:W0vgOXzqX/9ZB5whMvMs30H5qp8+tVZS3hfH2DhpYoo=
+github.com/larsartmann/go-output/d2 v0.37.0/go.mod h1:D0P2M4da7TbZkUX4OrWE4gwBucBT36EDZXgPjS3Yyow=
 github.com/larsartmann/go-output/escape v0.37.0 h1:o6NVGcHCjKnH8q2RNx7zYVFpl8luvsuYgLuXNGOKeDs=
 github.com/larsartmann/go-output/escape v0.37.0/go.mod h1:+OyBVtTYhrq9UYitUa2EawsCu3IIXy5EBHK5DXEwuGQ=
 github.com/larsartmann/go-output/graph v0.37.0 h1:dbeF/lz+lfPyWtU0YQceWz8BS/uGkwl4CST0efRz8u0=

@@ -5,6 +5,7 @@ go 1.26.5
 require (
 	github.com/larsartmann/go-error-family v0.10.0
 	github.com/larsartmann/go-output v0.37.0
+	github.com/larsartmann/go-output/d2 v0.37.0
 	github.com/larsartmann/go-output/graph v0.37.0
 )
 

@@ -12,12 +12,14 @@
         pkgs = import nixpkgs { inherit system; };
         go-hotspot = pkgs.buildGoModule {
           pname = "go-hotspot";
-          version = "0.1.0";
+          version = "0.2.0";
           src = ./.;
           subPackages = [ "cmd/go-hotspot" ];
-          vendorHash = null;
-          CGO_ENABLED = 0;
-          GOEXPERIMENT = "jsonv2";
+          vendorHash = "sha256-p/sUFZTQXgA32HgsV1udsTO3J3PDC7iGsDeKm+/nLe8=";
+          env = {
+            CGO_ENABLED = 0;
+            GOEXPERIMENT = "jsonv2";
+          };
         };
       in
       {

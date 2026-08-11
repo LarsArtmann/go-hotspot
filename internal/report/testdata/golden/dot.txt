@@ -1,4 +1,4 @@
-digraph coupling {
+graph coupling {
   // Graph attributes
   rankdir=LR;
   splines=ortho;
@@ -23,7 +23,7 @@ digraph coupling {
   ];
 
   // Edges
-  "a.go" -> "b.go" [
+  "a.go" -- "b.go" [
     label="80% (15)"
   ];
 }

@@ -12,6 +12,7 @@ builds:
     binary: go-hotspot
     env:
       - CGO_ENABLED=0
+      - GOEXPERIMENT=jsonv2
     targets:
       - linux_amd64
       - linux_arm64

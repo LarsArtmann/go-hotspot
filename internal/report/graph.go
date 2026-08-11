@@ -7,6 +7,7 @@ import (
 	"github.com/larsartmann/go-hotspot/internal/errors"
 	"github.com/larsartmann/go-hotspot/internal/hotspot"
 	"github.com/larsartmann/go-output"
+	"github.com/larsartmann/go-output/d2"
 	"github.com/larsartmann/go-output/graph"
 )
 
@@ -52,6 +53,7 @@ func renderCouplingDOT(w io.Writer, pairs []hotspot.CouplingPair) error {
 
 	g := couplingGraph(pairs)
 	if err := graph.WriteDOT(w, g,
+		graph.WithDirected(false),
 		graph.WithGraphID("coupling"),
 		graph.WithDOTRankDir(graph.RankDirLR),
 	); err != nil {
@@ -69,6 +71,19 @@ func renderCouplingMermaid(w io.Writer, pairs []hotspot.CouplingPair) error {
 	g := couplingGraph(pairs)
 	if err := graph.WriteMermaid(w, g, graph.WithCodeFence(false)); err != nil {
 		return errors.ReportRender("render Mermaid coupling graph", err)
+	}
+
+	return nil
+}
+
+func renderCouplingD2(w io.Writer, pairs []hotspot.CouplingPair) error {
+	if len(pairs) == 0 {
+		return nil
+	}
+
+	g := couplingGraph(pairs)
+	if err := d2.WriteGraph(w, g, d2.WithDirection(d2.DirRight)); err != nil {
+		return errors.ReportRender("render D2 coupling graph", err)
 	}
 
 	return nil

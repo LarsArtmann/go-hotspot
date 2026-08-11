@@ -1,0 +1,5 @@
+direction: right
+
+a.go: a.go
+b.go: b.go
+a.go -> b.go: "80% (15)"

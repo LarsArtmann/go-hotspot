@@ -50,7 +50,7 @@ git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspo
 | `internal/git` | Runs `git log --numstat`, parses into `FileChurn` + coupling data. Context-cancelable. |
 | `internal/complexity` | SLOC, indentation, and go/ast cyclomatic complexity. |
 | `internal/hotspot` | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`). |
-| `internal/report` | Output rendering: table, markdown, csv, json, dot, mermaid. DOT/Mermaid use go-output for coupling graph visualization. Golden-file tested. |
+| `internal/report` | Output rendering: table, markdown, csv, json, dot, mermaid, d2. Graph formats (DOT/Mermaid/D2) use go-output for coupling visualization. Golden-file tested. |
 | `internal/errors` | Domain-specific typed errors built on `go-error-family`. BSD exit codes + What/Why/Fix/WayOut message templates. |
 
 All packages are `internal/` — go-hotspot is a CLI tool, not an importable library.
@@ -107,15 +107,13 @@ filtering happens by deleting from `history.Files` before scoring.
   `inlined function cmp.Compare[go.shape.int64] missing func info`. The `cmp.Compare`
   comes from the stdlib (not our code). Workaround: add `-gcflags=all=-l` to disable
   inlining during race builds. This is a Go toolchain bug, not a code issue.
-- **~200 golangci-lint warnings** (varnamelen, paralleltest, wrapcheck, mnd, cyclop).
-  These are pre-existing stylistic warnings across all packages. The lint profile is
-  intentionally strict; these violations do not affect correctness. New code should
-  not add to the count.
+- **Lint passes clean** — `golangci-lint run ./...` reports 0 issues. The
+  `.golangci.yml` profile is intentionally strict. New code must maintain this.
 
 ## Conventions
 
 - **Two external deps: `go-error-family` + `go-output`** — `go-error-family` provides
-  typed errors; `go-output` (root + graph sub-module) provides Graph types and DOT/Mermaid
+  typed errors; `go-output` (root + graph + d2 sub-modules) provides Graph types and DOT/Mermaid/D2
   rendering for coupling visualization. Both are Lars's libraries. `go-output` requires
   `GOEXPERIMENT=jsonv2` (set in flake.nix devShell and CI workflow).
 - **iota enums + `Parse*` functions** for all flag-driven choices (`Format`,
@@ -126,10 +124,11 @@ filtering happens by deleting from `history.Files` before scoring.
   `report.Render`. Both respect the `--format` flag (table, markdown, csv, json).
   Function results use `hotspot.FunctionResult` + `hotspot.RankFunctions()`, which
   approximates per-function hotspot as `file_hotspot * (func_cyc / file_cyc)`.
-- **`--format dot` and `--format mermaid` render ONLY the coupling graph** (no hotspot
+- **`--format dot`, `--format mermaid`, and `--format d2` render ONLY the coupling graph** (no hotspot
   table, no header). These formats use go-output's `Graph` type + `graph.WriteDOT` /
   `graph.WriteMermaid` dispatchers. Empty coupling pairs produce no output. The DOT
-  graph uses left-to-right layout (`rankdir=LR`); Mermaid uses `flowchart TD`.
+  graph renders as undirected (`graph`, not `digraph`) with left-to-right layout
+  (`rankdir=LR`); Mermaid uses `flowchart TD`; D2 uses `direction: right`.
 - **Table-driven tests** throughout. Test helpers use `t.Helper()`.
 - **Package doc comments** explain the methodology and "why," not just "what."
 - **`report.Render` and `report.RenderFunctions` return `error`** — all write errors propagate to the caller.

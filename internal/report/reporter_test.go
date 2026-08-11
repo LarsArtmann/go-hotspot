@@ -421,8 +421,8 @@ func TestRenderCouplingDOT(t *testing.T) {
 
 	out := buf.String()
 
-	if !strings.HasPrefix(out, "digraph coupling") {
-		t.Errorf("DOT output should start with 'digraph coupling', got: %s", out[:min(40, len(out))])
+	if !strings.HasPrefix(out, "graph coupling") {
+		t.Errorf("DOT output should start with 'graph coupling' (undirected), got: %s", out[:min(40, len(out))])
 	}
 
 	if !strings.Contains(out, `"a.go"`) || !strings.Contains(out, `"b.go"`) {
@@ -460,6 +460,32 @@ func TestRenderCouplingMermaid(t *testing.T) {
 	}
 }
 
+func TestRenderCouplingD2(t *testing.T) {
+	pairs := []hotspot.CouplingPair{
+		{FileA: "a.go", FileB: "b.go", SharedCommits: 15, Degree: 80},
+		{FileA: "a.go", FileB: "c.go", SharedCommits: 8, Degree: 45},
+	}
+
+	var buf bytes.Buffer
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatD2, 0, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+
+	if !strings.Contains(out, "a.go") || !strings.Contains(out, "b.go") {
+		t.Error("D2 output missing node declarations for coupling files")
+	}
+
+	if !strings.Contains(out, "80% (15)") {
+		t.Error("D2 output missing edge label with degree and shared commits")
+	}
+
+	if !strings.Contains(out, "direction: right") {
+		t.Error("D2 output should use right (left-to-right) direction")
+	}
+}
+
 func TestRenderGraphEmptyPairs(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
@@ -467,6 +493,7 @@ func TestRenderGraphEmptyPairs(t *testing.T) {
 	}{
 		{"dot", FormatDOT},
 		{"mermaid", FormatMermaid},
+		{"d2", FormatD2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
@@ -488,8 +515,10 @@ func TestParseFormatGraph(t *testing.T) {
 		{"dot", FormatDOT},
 		{"graphviz", FormatDOT},
 		{"mermaid", FormatMermaid},
+		{"d2", FormatD2},
 		{"DOT", FormatDOT},
 		{"Mermaid", FormatMermaid},
+		{"D2", FormatD2},
 	}
 	for _, tc := range tests {
 		if got := ParseFormat(tc.input); got != tc.want {

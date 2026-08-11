@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Graph output formats for temporal coupling**: `--format dot`, `--format mermaid`, and `--format d2` render the coupling graph using `go-output` (DOT/Mermaid/D2 renderers). DOT renders as an undirected graph with left-to-right layout; Mermaid uses `flowchart TD`; D2 uses `direction: right`. Graph formats render only the coupling graph (no hotspot table or header).
+- `go-output` dependency (root + graph + d2 sub-modules) for Graph types, builders, and DOT/Mermaid/D2 rendering
+- `FormatDOT`, `FormatMermaid`, `FormatD2` enum values + `ParseFormat` support for `"dot"`, `"graphviz"`, `"mermaid"`, `"d2"`
+- Golden-file tests for all three graph formats + unit tests for `RenderCouplingD2`, `RenderGraphEmptyPairs`, `ParseFormatGraph`
+- `GOEXPERIMENT=jsonv2` set in `.goreleaser.yml` env, `flake.nix` buildGoModule + devShell + all apps, and CI workflow (required by `go-output`'s `encoding/json/v2` import)
+- README install instructions: pre-built binary, `go install` (with GOEXPERIMENT note), and Nix options
+
+### Fixed
+
+- `flake.nix` buildGoModule: `CGO_ENABLED` and `GOEXPERIMENT` moved from direct derivation attributes to `env` attrset (fixes `nix build .`)
+- `flake.nix` vendorHash updated from `null` to real SRI hash (was stale since adding `go-output` dependency)
+- `flake.nix` version bumped from `0.1.0` to `0.2.0` to match latest git tag
+- `.goreleaser.yml`: added `GOEXPERIMENT=jsonv2` to build env (release builds failed without it)
+- AGENTS.md: corrected stale "~200 golangci-lint warnings" to "0 issues" (was fixed in a prior session)
+
+### Changed
+
+- DOT coupling graph changed from directed (`digraph`) to undirected (`graph`) — temporal coupling is symmetric
+
 - Typed error system via `internal/errors` package, built on `go-error-family` — 12 domain-specific error constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70) and user-facing What/Why/Fix/WayOut message templates rendered to stderr (`31d6acb`)
 - Git error classification: `classifyGitError()` inspects cause + stderr to pick the most specific error code (not-installed, not-a-repo, bad-revision, no-commits, generic failure) (`31d6acb`)
 - `--functions N` flag for function-level hotspot ranking (Go only) — ranks individual functions by approximate hotspot score (`file_hotspot * func_cyc / file_cyc`) (`5aebbfc`)

@@ -45,7 +45,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	until := fs.String("until", "", "analyze commits until this git date")
 	branch := fs.String("branch", "", "git revision to analyze (default: HEAD)")
 	halfLife := fs.Float64("recency", 180, "recency half-life in days (0 = no decay)")
-	format := fs.String("format", "table", "output format: table|markdown|csv|json|dot|mermaid")
+	format := fs.String("format", "table", "output format: table|markdown|csv|json|dot|mermaid|d2")
 	top := fs.Int("top", 25, "rows to show (0 = all)")
 	complexityMetric := fs.String("complexity", "cyclomatic", "complexity metric: cyclomatic|indentation|sloc")
 	churnMetric := fs.String("churn", "weighted", "churn metric: weighted|commits|lines")

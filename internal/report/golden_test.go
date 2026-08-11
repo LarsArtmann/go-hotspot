@@ -30,6 +30,7 @@ func TestGoldenAllFormats(t *testing.T) {
 		{"json", FormatJSON, couplings},
 		{"dot", FormatDOT, couplings},
 		{"mermaid", FormatMermaid, couplings},
+		{"d2", FormatD2, couplings},
 	}
 
 	for _, tc := range cases {

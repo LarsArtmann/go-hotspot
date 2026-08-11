@@ -55,8 +55,25 @@ RANK  PATH                          LANG  COMMITS  CHURN  AUTHORS  CYC  SLOC  HO
 
 ## Install
 
+**Option 1: Pre-built binary** (no prerequisites)
+
+Download the latest archive for your platform from
+[GitHub Releases](https://github.com/larsartmann/go-hotspot/releases).
+
+**Option 2: `go install`** (requires Go 1.26+ with `GOEXPERIMENT=jsonv2`)
+
 ```bash
-go install github.com/larsartmann/go-hotspot/cmd/go-hotspot@latest
+GOEXPERIMENT=jsonv2 go install github.com/larsartmann/go-hotspot/cmd/go-hotspot@latest
+```
+
+> **Why `GOEXPERIMENT=jsonv2`?** The graph rendering dependency uses Go's
+> `encoding/json/v2`, which requires this experiment flag until it stabilizes
+> in a future Go release. Nix users get this automatically via `nix run .`.
+
+**Option 3: Nix**
+
+```bash
+nix run github:larsartmann/go-hotspot
 ```
 
 ## Usage
@@ -92,7 +109,7 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--until` | | Git date spec for analysis window end |
 | `--branch` | `HEAD` | Git revision to analyze |
 | `--recency` | `180` | Recency half-life in days (0 = no decay) |
-| `--format` | `table` | Output: `table`, `markdown`, `csv`, `json`, `dot`, `mermaid` |
+| `--format` | `table` | Output: `table`, `markdown`, `csv`, `json`, `dot`, `mermaid`, `d2` |
 | `--top` | `25` | Rows to show (0 = all) |
 | `--complexity` | `cyclomatic` | Metric: `cyclomatic`, `indentation`, `sloc` |
 | `--churn` | `weighted` | Metric: `weighted`, `commits`, `lines` |
