@@ -51,6 +51,11 @@ type Summary struct {
 }
 
 // Render writes the full report in the specified format.
+//
+// funcs is the function-level ranking produced by --functions. It is only
+// embedded in the JSON output (as a "functions" array); the other formats
+// append a separate Top Functions section via RenderFunctions. Passing nil or
+// an empty slice emits nothing.
 func Render(
 	w io.Writer,
 	results []hotspot.Result,
@@ -58,6 +63,7 @@ func Render(
 	summary Summary,
 	format Format,
 	topN int,
+	funcs []hotspot.FunctionResult,
 ) error {
 	limited := results
 	if topN > 0 && topN < len(results) {
@@ -66,7 +72,7 @@ func Render(
 
 	switch format {
 	case FormatJSON:
-		return renderJSONReport(w, limited, couplings, summary)
+		return renderJSONReport(w, limited, couplings, summary, funcs)
 	case FormatCSV:
 		return renderCSVReport(w, limited)
 	case FormatMarkdown:
@@ -77,18 +83,18 @@ func Render(
 }
 
 // RenderFunctions writes the function-level hotspot ranking in the specified
-// format. It is called after Render when the --functions flag is set. An empty
-// slice produces no output.
+// format. It is called after Render when the --functions flag is set and the
+// output format is non-JSON.
+//
+// JSON output embeds functions inside the main report via Render's funcs
+// parameter — calling RenderFunctions with FormatJSON is a no-op. An empty
+// slice produces no output in all formats.
 func RenderFunctions(w io.Writer, funcs []hotspot.FunctionResult, format Format) error {
-	if len(funcs) == 0 {
+	if len(funcs) == 0 || format == FormatJSON {
 		return nil
 	}
 
 	switch format {
-	case FormatJSON:
-		if err := renderFunctionsJSON(w, funcs); err != nil {
-			return errors.ReportRender("render function JSON", err)
-		}
 	case FormatCSV:
 		if err := renderFunctionsCSV(w, funcs); err != nil {
 			return errors.ReportRender("render function CSV", err)
@@ -106,8 +112,14 @@ func RenderFunctions(w io.Writer, funcs []hotspot.FunctionResult, format Format)
 	return nil
 }
 
-func renderJSONReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
-	if err := renderJSON(w, results, couplings, summary); err != nil {
+func renderJSONReport(
+	w io.Writer,
+	results []hotspot.Result,
+	couplings []hotspot.CouplingPair,
+	summary Summary,
+	funcs []hotspot.FunctionResult,
+) error {
+	if err := renderJSON(w, results, couplings, summary, funcs); err != nil {
 		return errors.ReportRender("render JSON", err)
 	}
 
@@ -442,26 +454,6 @@ func renderFunctionsCSV(w io.Writer, funcs []hotspot.FunctionResult) error {
 	return err
 }
 
-func renderFunctionsJSON(w io.Writer, funcs []hotspot.FunctionResult) error {
-	out := make([]jsonFunction, 0, len(funcs))
-	for _, fn := range funcs {
-		out = append(out, jsonFunction{
-			File:       fn.File,
-			Function:   fn.Function,
-			Cyclomatic: fn.Cyclomatic,
-			LineCount:  fn.LineCount,
-			StartLine:  fn.StartLine,
-			Hotspot:    fn.Hotspot,
-		})
-	}
-
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
-
-	return enc.Encode(out)
-}
-
-// jsonReport is the JSON serialization structure.
 type jsonReport struct {
 	Summary struct {
 		FirstCommit  string  `json:"first_commit"`
@@ -472,6 +464,7 @@ type jsonReport struct {
 	} `json:"summary"`
 	Hotspots  []jsonHotspot  `json:"hotspots"`
 	Couplings []jsonCoupling `json:"couplings,omitempty"`
+	Functions []jsonFunction `json:"functions,omitempty"`
 }
 
 type jsonHotspot struct {
@@ -498,6 +491,10 @@ type jsonCoupling struct {
 	Degree        float64 `json:"degree"`
 }
 
+// jsonFunction is the function-level hotspot DTO emitted under the
+// "functions" key of the JSON report. It mirrors hotspot.FunctionResult so
+// downstream consumers can sort and filter without depending on the internal
+// type's field order or names.
 type jsonFunction struct {
 	File       string  `json:"file"`
 	Function   string  `json:"function"`
@@ -507,7 +504,13 @@ type jsonFunction struct {
 	Hotspot    float64 `json:"hotspot"`
 }
 
-func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
+func renderJSON(
+	w io.Writer,
+	results []hotspot.Result,
+	couplings []hotspot.CouplingPair,
+	summary Summary,
+	funcs []hotspot.FunctionResult,
+) error {
 	var rep jsonReport
 	if !summary.FirstCommit.IsZero() {
 		rep.Summary.FirstCommit = summary.FirstCommit.Format("2006-01-02")
@@ -537,6 +540,20 @@ func renderJSON(w io.Writer, results []hotspot.Result, couplings []hotspot.Coupl
 			FileA: p.FileA, FileB: p.FileB,
 			SharedCommits: p.SharedCommits, Degree: p.Degree,
 		})
+	}
+
+	if len(funcs) > 0 {
+		rep.Functions = make([]jsonFunction, 0, len(funcs))
+		for _, fn := range funcs {
+			rep.Functions = append(rep.Functions, jsonFunction{
+				File:       fn.File,
+				Function:   fn.Function,
+				Cyclomatic: fn.Cyclomatic,
+				LineCount:  fn.LineCount,
+				StartLine:  fn.StartLine,
+				Hotspot:    fn.Hotspot,
+			})
+		}
 	}
 
 	enc := json.NewEncoder(w)

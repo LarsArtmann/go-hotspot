@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -12,6 +14,7 @@ import (
 
 	apierrors "github.com/larsartmann/go-hotspot/internal/errors"
 	"github.com/larsartmann/go-hotspot/internal/hotspot"
+	"github.com/larsartmann/go-hotspot/internal/report"
 )
 
 func TestFileFilter(t *testing.T) {
@@ -175,7 +178,7 @@ func TestHasAuthor(t *testing.T) {
 func TestRunVersion(t *testing.T) {
 	var buf bytes.Buffer
 
-	err := run([]string{"--version"}, &buf, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--version"}, &buf, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("run --version returned error: %v", err)
 	}
@@ -235,7 +238,7 @@ func TestExitCodeSuccess(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := run([]string{"--version"}, &buf, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--version"}, &buf, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -248,7 +251,7 @@ func TestExitCodeSuccess(t *testing.T) {
 func TestExitCodeUsage(t *testing.T) {
 	t.Parallel()
 
-	err := run([]string{"--bad-flag"}, io.Discard, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--bad-flag"}, io.Discard, io.Discard, time.Now())
 	if err == nil {
 		t.Fatal("expected error for invalid flag")
 	}
@@ -266,7 +269,7 @@ func TestExitCodeGitFailure(t *testing.T) { //nolint:paralleltest // uses t.Chdi
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	err := run(nil, io.Discard, io.Discard, time.Now())
+	err := run(context.Background(), nil, io.Discard, io.Discard, time.Now())
 	if err == nil {
 		t.Fatal("expected error in non-git directory")
 	}
@@ -279,7 +282,7 @@ func TestExitCodeGitFailure(t *testing.T) { //nolint:paralleltest // uses t.Chdi
 func TestExitCodeThreshold(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
 	setupMiniRepo(t)
 
-	err := run([]string{"--fail-above", "0.000001"}, io.Discard, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--fail-above", "0.000001"}, io.Discard, io.Discard, time.Now())
 	if err == nil {
 		t.Fatal("expected threshold-exceeded error")
 	}
@@ -341,7 +344,7 @@ func TestVersionBeforeParse(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err := run([]string{"--version", "--bad-flag"}, &buf, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--version", "--bad-flag"}, &buf, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -356,7 +359,7 @@ func TestOutputToFile(t *testing.T) { //nolint:paralleltest // uses t.Chdir via 
 
 	reportPath := filepath.Join(t.TempDir(), "report.txt")
 
-	err := run([]string{"--output", reportPath}, io.Discard, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--output", reportPath}, io.Discard, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -377,7 +380,9 @@ func TestMinCommitsFilter(t *testing.T) { //nolint:paralleltest // uses t.Chdir 
 	// Mini repo has 1 commit. --min-commits 2 should produce no results.
 	var buf bytes.Buffer
 
-	err := run([]string{"--min-commits", "2", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	err := run(context.Background(),
+		[]string{"--min-commits", "2", "--format", "csv", "--no-coupling"},
+		&buf, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -394,7 +399,13 @@ func TestAuthorFilter(t *testing.T) { //nolint:paralleltest // uses t.Chdir via 
 	// Author "Test" should include main.go; "Nobody" should exclude it.
 	var buf bytes.Buffer
 
-	err := run([]string{"--author", "Test", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	err := run(
+		context.Background(),
+		[]string{"--author", "Test", "--format", "csv", "--no-coupling"},
+		&buf,
+		io.Discard,
+		time.Now(),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -405,7 +416,13 @@ func TestAuthorFilter(t *testing.T) { //nolint:paralleltest // uses t.Chdir via 
 
 	// --author Nobody should produce empty results.
 	buf.Reset()
-	err = run([]string{"--author", "Nobody", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	err = run(
+		context.Background(),
+		[]string{"--author", "Nobody", "--format", "csv", "--no-coupling"},
+		&buf,
+		io.Discard,
+		time.Now(),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -420,7 +437,7 @@ func TestNoHeader(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setu
 
 	var buf bytes.Buffer
 
-	err := run([]string{"--no-header", "--no-coupling"}, &buf, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--no-header", "--no-coupling"}, &buf, io.Discard, time.Now())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -433,7 +450,7 @@ func TestNoHeader(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setu
 func TestFailRiskCritical(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
 	setupMiniRepo(t)
 
-	err := run([]string{"--fail-risk", "critical"}, io.Discard, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--fail-risk", "critical"}, io.Discard, io.Discard, time.Now())
 	if err == nil {
 		t.Fatal("expected threshold-exceeded error")
 	}
@@ -448,7 +465,13 @@ func TestFunctionsOutput(t *testing.T) { //nolint:paralleltest // uses t.Chdir v
 
 	var buf bytes.Buffer
 
-	err := run([]string{"--functions", "5", "--no-coupling", "--no-header"}, &buf, io.Discard, time.Now())
+	err := run(
+		context.Background(),
+		[]string{"--functions", "5", "--no-coupling", "--no-header"},
+		&buf,
+		io.Discard,
+		time.Now(),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -470,7 +493,13 @@ func TestSinceVersion(t *testing.T) { //nolint:paralleltest // uses t.Chdir via 
 
 	var buf bytes.Buffer
 
-	err := run([]string{"--since-version", "v1.0.0", "--format", "csv", "--no-coupling"}, &buf, io.Discard, time.Now())
+	err := run(
+		context.Background(),
+		[]string{"--since-version", "v1.0.0", "--format", "csv", "--no-coupling"},
+		&buf,
+		io.Discard,
+		time.Now(),
+	)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -483,12 +512,141 @@ func TestSinceVersion(t *testing.T) { //nolint:paralleltest // uses t.Chdir via 
 func TestSinceVersionBadTag(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
 	setupMiniRepo(t)
 
-	err := run([]string{"--since-version", "nonexistent-tag"}, io.Discard, io.Discard, time.Now())
+	err := run(context.Background(), []string{"--since-version", "nonexistent-tag"}, io.Discard, io.Discard, time.Now())
 	if err == nil {
 		t.Fatal("expected error for nonexistent tag")
 	}
 
 	if code := apierrors.ExitCode(err); code != 69 {
 		t.Errorf("ExitCode = %d, want 69 (EX_UNAVAILABLE)", code)
+	}
+}
+
+// TestFunctionsJSONOutput verifies that --format json --functions N produces
+// a SINGLE valid JSON document with an embedded "functions" array. This is a
+// regression test for the v0.2.0 bug where two JSON documents were emitted
+// to stdout (one from Render, one from RenderFunctions), breaking jq.
+func TestFunctionsJSONOutput(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	var buf bytes.Buffer
+
+	err := run(context.Background(),
+		[]string{"--functions", "5", "--no-coupling", "--no-header", "--format", "json"},
+		&buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Must parse as a single JSON document.
+	var doc map[string]any
+
+	dec := json.NewDecoder(&buf)
+	if err := dec.Decode(&doc); err != nil {
+		t.Fatalf("output is not a single valid JSON document: %v\noutput: %s", err, buf.String())
+	}
+
+	// Confirm no second document follows.
+	if dec.More() {
+		t.Errorf("expected a single JSON document, got multiple")
+	}
+
+	// The "functions" array must be present (only when --functions > 0).
+	raw, ok := doc["functions"]
+	if !ok {
+		t.Fatalf("missing 'functions' key in JSON output: %s", buf.String())
+	}
+
+	funcs, ok := raw.([]any)
+	if !ok {
+		t.Fatalf("'functions' is not an array: %T", raw)
+	}
+
+	if len(funcs) == 0 {
+		t.Errorf("expected non-empty 'functions' array, got empty")
+	}
+}
+
+// TestFunctionsDisabled verifies --functions 0 produces no function section,
+// for any format. Embeds nothing in JSON, appends nothing in other formats.
+func TestFunctionsDisabled(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	t.Run("table", func(t *testing.T) { //nolint:paralleltest
+		var buf bytes.Buffer
+
+		err := run(context.Background(),
+			[]string{"--functions", "0", "--no-coupling", "--no-header"},
+			&buf, io.Discard, time.Now())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if strings.Contains(buf.String(), "Top Functions") {
+			t.Errorf("--functions 0 should produce no function section, got: %s", buf.String())
+		}
+	})
+
+	t.Run("json", func(t *testing.T) { //nolint:paralleltest
+		var buf bytes.Buffer
+
+		err := run(context.Background(),
+			[]string{"--functions", "0", "--no-coupling", "--no-header", "--format", "json"},
+			&buf, io.Discard, time.Now())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var doc map[string]any
+		if err := json.Unmarshal(buf.Bytes(), &doc); err != nil {
+			t.Fatalf("invalid JSON: %v", err)
+		}
+
+		if _, has := doc["functions"]; has {
+			t.Errorf("--functions 0 should omit 'functions' from JSON, got key present")
+		}
+	})
+}
+
+// FuzzParseFailRisk verifies parseFailRisk never panics on arbitrary input
+// and always returns a value within [0, max-band]. 0 means "unrecognized".
+func FuzzParseFailRisk(f *testing.F) {
+	f.Add("critical")
+	f.Add("high")
+	f.Add("")
+	f.Add("   ")
+	f.Add("CRITICAL")
+	f.Add("\n\tmedium ")
+
+	f.Fuzz(func(t *testing.T, risk string) {
+		v := parseFailRisk(risk)
+		if v < 0 || v > failRiskCritical {
+			t.Errorf("parseFailRisk(%q) = %v, want in [0, %v]", risk, v, failRiskCritical)
+		}
+	})
+}
+
+// BenchmarkRenderFunctions measures the cost of rendering 1000 functions
+// in table format. Useful for catching regressions in render hot paths.
+func BenchmarkRenderFunctions(b *testing.B) {
+	funcs := make([]hotspot.FunctionResult, 1000)
+	for i := range funcs {
+		funcs[i] = hotspot.FunctionResult{
+			File:       "internal/foo/bar.go",
+			Function:   "SomeFunction",
+			Cyclomatic: 5 + i%20,
+			LineCount:  20 + i%30,
+			StartLine:  i * 10,
+			Hotspot:    float64(1000-i) / 1000.0,
+		}
+	}
+
+	b.ReportAllocs()
+
+	for range b.N {
+		var buf bytes.Buffer
+		if err := report.RenderFunctions(&buf, funcs, report.FormatTable); err != nil {
+			b.Fatal(err)
+		}
 	}
 }

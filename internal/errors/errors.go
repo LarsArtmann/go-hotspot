@@ -17,6 +17,9 @@
 package errors
 
 import (
+	"log/slog"
+	"sync/atomic"
+
 	errorfamily "github.com/larsartmann/go-error-family"
 )
 
@@ -40,10 +43,36 @@ const (
 // exitThreshold is the CI/CD signal exit code for --fail-above.
 const exitThreshold = 2
 
+// defaultLogger holds the optional slog handler for structured logging.
+// nil (the default zero value) means no structured logging — preserves
+// the original HandleError behavior. Set via SetLogger.
+var defaultLogger atomic.Pointer[slog.Logger]
+
 // HandleError renders a user-friendly message (What/Why/Fix/WayOut) to stderr
 // and returns the BSD sysexits.h exit code. Call this exactly once in main().
+//
+// If a structured logger was installed via SetLogger, every call also emits
+// a self-contained record with family, code, exit-code, and any
+// per-error context k=v pairs, so downstream log aggregators can correlate
+// without re-classifying.
 func HandleError(err error) int {
+	if logger := defaultLogger.Load(); logger != nil {
+		return errorfamily.HandleErrorWithConfig(err, errorfamily.HandleConfig{
+			Logger: logger,
+		})
+	}
+
 	return errorfamily.HandleError(err)
+}
+
+// SetLogger installs a slog handler that receives a structured log entry
+// for every subsequent HandleError call. Pass nil to disable structured
+// logging (the default zero-value behavior).
+//
+// Prefer passing slog.Default() in main(); tests can pass slog.New(slog.NewTextHandler(...))
+// with a bytes.Buffer to capture records.
+func SetLogger(logger *slog.Logger) {
+	defaultLogger.Store(logger)
 }
 
 // ExitCode returns the BSD sysexits.h exit code for an error without rendering.
@@ -94,12 +123,14 @@ func CLIOutput(cause error) error {
 
 // AnalysisRead wraps a failure to read a source file.
 func AnalysisRead(path string, cause error) error {
-	return errorfamily.WrapCorruptionf(cause, CodeAnalysisReadFailed, "read %s", path)
+	return errorfamily.WrapCorruptionf(cause, CodeAnalysisReadFailed, "read %s", path).
+		WithContext("path", path)
 }
 
 // AnalysisParse wraps a failure to parse a Go source file.
 func AnalysisParse(path string, cause error) error {
-	return errorfamily.WrapCorruptionf(cause, CodeAnalysisParseFailed, "parse %s", path)
+	return errorfamily.WrapCorruptionf(cause, CodeAnalysisParseFailed, "parse %s", path).
+		WithContext("path", path)
 }
 
 // --- Report errors (Infrastructure, exit 69 EX_UNAVAILABLE) ----------------

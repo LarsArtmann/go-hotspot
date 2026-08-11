@@ -243,7 +243,12 @@ func TestCouplingEmptyHistory(t *testing.T) {
 
 func TestCouplingMaxPairs(t *testing.T) {
 	history := makeHistory(map[string]*git.FileChurn{
-		"a.go": {Path: "a.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"b.go": 10, "c.go": 8, "d.go": 6}},
+		"a.go": {
+			Path:        "a.go",
+			Commits:     10,
+			Authors:     map[string]struct{}{},
+			CommitsWith: map[string]int{"b.go": 10, "c.go": 8, "d.go": 6},
+		},
 		"b.go": {Path: "b.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 10}},
 		"c.go": {Path: "c.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 8}},
 		"d.go": {Path: "d.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 6}},
@@ -262,7 +267,12 @@ func TestCouplingMaxPairs(t *testing.T) {
 
 func TestCouplingSortOrder(t *testing.T) {
 	history := makeHistory(map[string]*git.FileChurn{
-		"a.go": {Path: "a.go", Commits: 20, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"b.go": 10, "c.go": 8}},
+		"a.go": {
+			Path:        "a.go",
+			Commits:     20,
+			Authors:     map[string]struct{}{},
+			CommitsWith: map[string]int{"b.go": 10, "c.go": 8},
+		},
 		"b.go": {Path: "b.go", Commits: 20, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 10}},
 		"c.go": {Path: "c.go", Commits: 20, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"a.go": 8}},
 	})
@@ -282,7 +292,12 @@ func TestCouplingSortOrder(t *testing.T) {
 func TestCouplingMissingFileInHistory(t *testing.T) {
 	// CommitsWith references a file not in history.Files — should skip gracefully.
 	history := makeHistory(map[string]*git.FileChurn{
-		"a.go": {Path: "a.go", Commits: 10, Authors: map[string]struct{}{}, CommitsWith: map[string]int{"ghost.go": 10}},
+		"a.go": {
+			Path:        "a.go",
+			Commits:     10,
+			Authors:     map[string]struct{}{},
+			CommitsWith: map[string]int{"ghost.go": 10},
+		},
 	})
 
 	pairs := Coupling(history, CouplingOptions{MinSharedCommits: 1, MinDegree: 0})

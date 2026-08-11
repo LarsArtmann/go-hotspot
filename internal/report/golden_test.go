@@ -33,7 +33,7 @@ func TestGoldenAllFormats(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if err := Render(&buf, results, tc.couplings, summary, tc.format, 0); err != nil {
+			if err := Render(&buf, results, tc.couplings, summary, tc.format, 0, nil); err != nil {
 				t.Fatal(err)
 			}
 

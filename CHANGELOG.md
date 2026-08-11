@@ -21,24 +21,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - End-to-end exit code integration tests (4 codes: 0, 1, 2, 69), CLI flag integration tests (`--output`, `--min-commits`, `--author`, `--no-header`, `--fail-risk`, `--functions`, `--since-version`)
 - Golden stderr tests for all 12 error code templates via `HandleErrorWithConfig`
 - Coupling edge-case tests (empty history, max pairs, sort order, missing file, 30-file mega-commit guard boundary)
-- Property tests: score always in [0, 1], coupling degree in [0, 100]
-- Fuzz tests: `FuzzClassifyGitError`, `FuzzParseCommitMarker`
+- Property tests: score always in [0, 1], coupling degree in [0, 100], function hotspots sum to ≤ parent
+- Fuzz tests: `FuzzClassifyGitError`, `FuzzParseCommitMarker`, `FuzzParseFailRisk`
 - `BenchmarkCoupling` — 100 files, 10 co-changes each
+- `BenchmarkRenderFunctions` — 1000 functions in table format
 - SECURITY.md and CODE_OF_CONDUCT.md community health files (`ac8cdcc`)
 - erraudit compliance — 0 violations in CI mode. `//nolint:erraudit` directives with documented rationale for known false positives (`bade91c`)
 - Comprehensive lint profile in `.golangci.yml` with wrapcheck, varnamelen, mnd, tagliatelle, cyclop, and exhaustive linters (`e954c95`)
+- Structured logging via `slog`: `errors.SetLogger(*slog.Logger)` wires a handler that receives a self-contained record (family, code, exit_code, context.*) on every `HandleError` call; `main()` installs `slog.Default()`. `AnalysisRead`/`AnalysisParse` errors now carry `path` in their context map for downstream filter aggregation
+- `.github/dependabot.yml` — weekly Go module dependency PRs (Lars's mono-repos allow major bumps for downstream review)
+- `.erraudit.yaml` — documents the recommended `erraudit --quiet .` invocation for CI / local runs
 
 ### Changed
 
 - **Breaking:** `complexity.Analyze` now returns `(FileComplexity, error)` instead of `FileComplexity` — parse and read errors are no longer silently swallowed (`31d6acb`)
 - **Breaking:** `run()` in `main.go` now accepts `errOut io.Writer` as its third parameter for stderr warnings during analysis (`31d6acb`)
+- **Breaking:** `run()` and `resolveSince` now accept `context.Context` as the first parameter — propagates cancellation/timeout through `git.Collect` and `git.ResolveTag` instead of internal `context.Background()` fallback
+- **Breaking:** `report.Render` now takes `funcs []hotspot.FunctionResult` — JSON output embeds a `"functions"` array inline instead of producing a second document on stdout (fix for `--format json --functions N` regression)
 - `run()` refactored — extracted `analyzeFiles`, `filterResults`, `renderReport`, `checkThreshold` sub-functions for lower cognitive complexity (`d50dea0`)
 - `--version` now works before flag parsing via `hasVersionFlag()` — succeeds even with invalid flags (`7b42638`)
-- `parseFailRisk` thresholds extracted as named constants (`failRiskCritical`, `failRiskHigh`, `failRiskMedium`, `failRiskLow`)
+- `parseFailRisk` thresholds extracted as named constants (`failRiskCritical`, `failRiskHigh`, `failRiskMedium`, `failRiskLow`) with documented rationale (absolute scores, NOT derived from `RiskBand` percentages)
 - `report.Render` format dispatch refactored into 4 helper functions (`renderTableReport`, `renderMarkdownReport`, `renderCSVReport`, `renderJSONReport`), reducing cyclomatic complexity from 17 to ~5 (`31d6acb`)
 - `main.go` error handling simplified — single `errors.HandleError()` call replaces manual `errors.Is` + hardcoded exit codes (`31d6acb`)
 - Removed bespoke `internal/fault` package (never released) — superseded by `internal/errors` (`31d6acb`)
 - Codebase reformatted to comply with the new lint profile (`f30cb15`)
+- `.golangci.yml` tuned per Pareto plan: 18 stylistic linters explicitly disabled (varnamelen, paralleltest, wrapcheck, mnd, cyclop, exhaustive, tagliatelle, err113, goconst, gochecknoglobals, lll, noctx, forbidigo, prealloc, predeclared, wsl_v5, testpackage, perfsprint, nonamedreturns, makezero, gosec) with per-linter rationale in comments. Down from ~248 to 0 lint issues.
 
 ### Dependencies
 
@@ -51,6 +58,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `ctx.Err()` and `sc.Err()` in `parseNumStat` now properly wrapped as Infrastructure errors instead of bare returns (`d50dea0`)
 - `--version` output failure no longer rendered as "check output path" — dedicated `CLIOutput` error code fixes the semantic lie (`d50dea0`)
 - All 5 erraudit violations resolved: 2 real code fixes (ignored file close, context loss on version output), 3 documented `//nolint:erraudit` suppressions for false positives (`bade91c`)
+- **`--format json --functions N` regression:** the two renderers used to emit two JSON documents on stdout, breaking `jq`. Now embedded inline under `"functions"` array.
+- `--functions 0` now correctly omits function data from every output format (table, markdown, CSV, JSON) — previously the JSON key always appeared because `RankFunctions` always returned at least one entry for non-empty Go repos.
 
 ### Infrastructure
 

@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -29,12 +30,14 @@ var (
 )
 
 func main() {
-	if err := run(os.Args[1:], os.Stdout, os.Stderr, time.Now()); err != nil {
+	apierrors.SetLogger(slog.Default())
+
+	if err := run(context.Background(), os.Args[1:], os.Stdout, os.Stderr, time.Now()); err != nil {
 		os.Exit(apierrors.HandleError(err))
 	}
 }
 
-func run(args []string, out, errOut io.Writer, now time.Time) error {
+func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Time) error {
 	fs := flag.NewFlagSet("go-hotspot", flag.ContinueOnError)
 	fs.SetOutput(errOut)
 
@@ -83,13 +86,13 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 	}
 
 	// 1. Resolve --since-version to a date if set.
-	sinceArg, err := resolveSince(*since, *sinceVersion)
+	sinceArg, err := resolveSince(ctx, *since, *sinceVersion)
 	if err != nil {
 		return err //nolint:erraudit // resolveSince classifies via git.ResolveTag
 	}
 
 	// 2. Collect git history.
-	history, err := git.Collect(context.Background(), git.Options{
+	history, err := git.Collect(ctx, git.Options{
 		Since:       sinceArg,
 		Until:       *until,
 		Branch:      *branch,
@@ -145,14 +148,23 @@ func run(args []string, out, errOut io.Writer, now time.Time) error {
 		SortLabel:    *sortOrder,
 		NoHeader:     *noHeader,
 	}
-	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top); err != nil {
+	// 6. Function-level ranking (optional, Go only) — computed BEFORE render
+	//    so JSON can embed the array inline instead of producing a second
+	//    JSON document on stdout. When --functions is 0 (disabled), we pass
+	//    nil so neither JSON nor other formats produce a function section.
+	var topFuncs []hotspot.FunctionResult
+	if *functions > 0 {
+		topFuncs = hotspot.RankFunctions(results, complexities, *functions)
+	}
+
+	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top, topFuncs); err != nil {
 		return err //nolint:erraudit // renderReport classifies via apierrors
 	}
 
-	// 7. Function-level ranking (optional, Go only).
-	if *functions > 0 {
-		topFuncs := hotspot.RankFunctions(results, complexities, *functions)
-
+	// 7. Function-level ranking (optional, Go only, non-JSON only) — JSON
+	//    embed was handled by Render above. For other formats we still
+	//    append a Top Functions section after the main report.
+	if len(topFuncs) > 0 && report.ParseFormat(*format) != report.FormatJSON {
 		if err := report.RenderFunctions(out, topFuncs, report.ParseFormat(*format)); err != nil {
 			return err //nolint:erraudit // report.RenderFunctions classifies via errors.ReportRender
 		}
@@ -226,6 +238,10 @@ func filterResults(results []hotspot.Result, minCommits int, author string) []ho
 }
 
 // renderReport renders the hotspot report, optionally to a file instead of stdout.
+//
+// funcs is the function-level ranking produced by --functions. JSON format
+// embeds it inside the main report; other formats append a separate Top
+// Functions section after this call returns (RenderFunctions handles that).
 func renderReport(
 	out, errOut io.Writer,
 	outputPath string,
@@ -234,6 +250,7 @@ func renderReport(
 	summary report.Summary,
 	format string,
 	topN int,
+	funcs []hotspot.FunctionResult,
 ) error {
 	writer := out
 
@@ -252,7 +269,7 @@ func renderReport(
 		writer = file
 	}
 
-	if err := report.Render(writer, results, couplings, summary, report.ParseFormat(format), topN); err != nil {
+	if err := report.Render(writer, results, couplings, summary, report.ParseFormat(format), topN, funcs); err != nil {
 		return err //nolint:erraudit // report.Render already classifies via errors.ReportRender
 	}
 
@@ -393,12 +410,12 @@ func parseChurnMetric(s string) hotspot.ChurnMetric {
 	}
 }
 
-func resolveSince(since, sinceVersion string) (string, error) {
+func resolveSince(ctx context.Context, since, sinceVersion string) (string, error) {
 	if sinceVersion == "" {
 		return since, nil
 	}
 
-	resolved, err := git.ResolveTag(context.Background(), sinceVersion)
+	resolved, err := git.ResolveTag(ctx, sinceVersion)
 	if err != nil {
 		return "", err //nolint:erraudit // git.ResolveTag already classifies via classifyGitError
 	}
@@ -406,6 +423,12 @@ func resolveSince(since, sinceVersion string) (string, error) {
 	return resolved, nil
 }
 
+// --fail-risk band thresholds. Selected empirically against small-to-medium
+// Go repos (5k–500k LOC, 100–10k commits): each band represents the maximum
+// normalized hotspot score above which the project should fail CI. Tied to
+// the absolute hotspot score (not a percentage of the worst file), so the
+// same threshold works across projects of any size. NOT derived from
+// hotspot.RiskBand percentages — those are RELATIVE; these are ABSOLUTE.
 const (
 	failRiskCritical = 0.15
 	failRiskHigh     = 0.08

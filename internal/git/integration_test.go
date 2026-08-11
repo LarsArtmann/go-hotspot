@@ -252,7 +252,7 @@ func TestIntegrationFullPipeline(t *testing.T) {
 
 	for _, name := range []string{"table", "markdown", "csv", "json"} {
 		var buf bytes.Buffer
-		if err := report.Render(&buf, results, nil, summary, report.ParseFormat(name), 0); err != nil {
+		if err := report.Render(&buf, results, nil, summary, report.ParseFormat(name), 0, nil); err != nil {
 			t.Errorf("Render(%s): %v", name, err)
 		}
 

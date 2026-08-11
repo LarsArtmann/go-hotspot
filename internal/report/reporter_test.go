@@ -78,7 +78,7 @@ func TestParseFormat(t *testing.T) {
 
 func TestRenderTable(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -93,7 +93,7 @@ func TestRenderTable(t *testing.T) {
 
 func TestRenderMarkdown(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -108,7 +108,7 @@ func TestRenderMarkdown(t *testing.T) {
 
 func TestRenderCSV(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -138,7 +138,7 @@ func TestRenderCSV(t *testing.T) {
 
 func TestRenderJSON(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -166,7 +166,7 @@ func TestRenderCoupling(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatTable, 0); err != nil {
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatTable, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -187,7 +187,7 @@ func TestRenderCoupling(t *testing.T) {
 
 func TestRenderEmptyResults(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, nil, nil, sampleSummary(), FormatTable, 0); err != nil {
+	if err := Render(&buf, nil, nil, sampleSummary(), FormatTable, 0, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -199,7 +199,7 @@ func TestRenderEmptyResults(t *testing.T) {
 
 func TestRenderTopN(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 1); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 1, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -247,7 +247,7 @@ func TestRenderWriteError(t *testing.T) {
 	for _, format := range []Format{FormatTable, FormatMarkdown, FormatCSV, FormatJSON} {
 		var fw failingWriter
 
-		err := Render(fw, results, nil, summary, format, 0)
+		err := Render(fw, results, nil, summary, format, 0, nil)
 		if err == nil {
 			t.Errorf("Render with failingWriter (format %d) should return error", format)
 		}
@@ -272,7 +272,7 @@ func TestRenderCouplingWriteError(t *testing.T) {
 	for _, format := range []Format{FormatTable, FormatMarkdown} {
 		var fw failingWriter
 
-		err := Render(fw, results, pairs, summary, format, 0)
+		err := Render(fw, results, pairs, summary, format, 0, nil)
 		if err == nil {
 			t.Errorf("Render with couplings + failingWriter (format %d) should return error", format)
 		}
@@ -361,33 +361,40 @@ func TestRenderFunctionsCSV(t *testing.T) {
 func TestRenderFunctionsJSON(t *testing.T) {
 	t.Parallel()
 
+	// JSON output lives inside Render's jsonReport.Functions, NOT
+	// RenderFunctions (which is a no-op for JSON). This test verifies the
+	// full report path so downstream JSON consumers get a single document.
+	results := sampleResults()
+	summary := sampleSummary()
+	funcs := sampleFunctions()
+
 	var buf bytes.Buffer
-	if err := RenderFunctions(&buf, sampleFunctions(), FormatJSON); err != nil {
+	if err := Render(&buf, results, nil, summary, FormatJSON, 0, funcs); err != nil {
 		t.Fatal(err)
 	}
 
-	var funcs []jsonFunction
-	if err := json.Unmarshal(buf.Bytes(), &funcs); err != nil {
-		t.Fatalf("invalid function JSON: %v", err)
+	var rep jsonReport
+	if err := json.Unmarshal(buf.Bytes(), &rep); err != nil {
+		t.Fatalf("invalid JSON report: %v", err)
 	}
 
-	if len(funcs) != 2 {
-		t.Fatalf("JSON functions = %d, want 2", len(funcs))
+	if len(rep.Functions) != 2 {
+		t.Fatalf("JSON report Functions = %d, want 2", len(rep.Functions))
 	}
 
-	if funcs[0].Function != "main" {
-		t.Errorf("JSON funcs[0].Function = %q, want 'main'", funcs[0].Function)
+	if rep.Functions[0].Function != "main" {
+		t.Errorf("JSON rep.Functions[0].Function = %q, want 'main'", rep.Functions[0].Function)
 	}
 
-	if funcs[0].Cyclomatic != 5 {
-		t.Errorf("JSON funcs[0].Cyclomatic = %d, want 5", funcs[0].Cyclomatic)
+	if rep.Functions[0].Cyclomatic != 5 {
+		t.Errorf("JSON rep.Functions[0].Cyclomatic = %d, want 5", rep.Functions[0].Cyclomatic)
 	}
 }
 
 func TestRenderFunctionsWriteError(t *testing.T) {
 	t.Parallel()
 
-	for _, format := range []Format{FormatTable, FormatMarkdown, FormatCSV, FormatJSON} {
+	for _, format := range []Format{FormatTable, FormatMarkdown, FormatCSV} {
 		var fw failingWriter
 
 		err := RenderFunctions(fw, sampleFunctions(), format)
@@ -422,7 +429,7 @@ func BenchmarkRenderTable(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		if err := Render(io.Discard, results, nil, summary, FormatTable, 0); err != nil {
+		if err := Render(io.Discard, results, nil, summary, FormatTable, 0, nil); err != nil {
 			b.Fatal(err)
 		}
 	}

@@ -1,0 +1,15 @@
+# erraudit default flags for go-hotspot.
+#
+# `erraudit .` is zero-config friendly; this file exists to document the
+# conventions our CI and local runs follow.
+#
+# Recommended invocation:
+#   erraudit --quiet .
+#
+# Flags:
+#   --quiet  Suppresses extension log output ("[feature:logger]" lines) that
+#            are useful for debugging but noisy in CI logs.
+#   --format agent
+#            Compact key=value output designed for AI agent consumption.
+#
+# Future: convert this to a real .erraudit.yaml once upstream supports it.

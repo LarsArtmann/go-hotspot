@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    ignore:
+      # Major bumps of go-error-family may break the typed-error contract;
+      # require manual review.
+      - dependency-name: "github.com/larsartmann/go-error-family"
+        update-types: ["version-update:semver-major"]
