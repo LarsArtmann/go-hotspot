@@ -45,7 +45,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	until := fs.String("until", "", "analyze commits until this git date")
 	branch := fs.String("branch", "", "git revision to analyze (default: HEAD)")
 	halfLife := fs.Float64("recency", 180, "recency half-life in days (0 = no decay)")
-	format := fs.String("format", "table", "output format: table|markdown|csv|json")
+	format := fs.String("format", "table", "output format: table|markdown|csv|json|dot|mermaid")
 	top := fs.Int("top", 25, "rows to show (0 = all)")
 	complexityMetric := fs.String("complexity", "cyclomatic", "complexity metric: cyclomatic|indentation|sloc")
 	churnMetric := fs.String("churn", "weighted", "churn metric: weighted|commits|lines")
@@ -63,7 +63,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	author := fs.String("author", "", "show only files touched by this git author")
 	fs.Bool("version", false, "print version information and exit")
 	noHeader := fs.Bool("no-header", false, "suppress summary header (for script piping)")
-	failRisk := fs.String("fail-risk", "", "fail if max hotspot exceeds risk band: critical|high|medium|low")
+	failRisk := fs.String("fail-risk", "", "exit 2 if max score exceeds absolute band: low|medium|high|critical")
 	sinceVersion := fs.String("since-version", "", "analyze commits since this git tag (e.g., v1.0.0)")
 	functions := fs.Int("functions", 0, "show top N functions by hotspot score (0 = disabled, Go only)")
 

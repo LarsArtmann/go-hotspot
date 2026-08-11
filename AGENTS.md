@@ -1,22 +1,25 @@
 # go-hotspot — Agent Guide
 
 Go CLI that ranks source files by **complexity × git churn** (Tornhill "Your
-Code as a Crime Scene" methodology). Zero external dependencies — pure standard
-library, zero CGo.
+Code as a Crime Scene" methodology). Zero CGo.
+
+**Build requirement:** `GOEXPERIMENT=jsonv2` must be set (required by go-output
+dependency). The Nix devShell and CI workflow set this automatically; for manual
+builds use `GOEXPERIMENT=jsonv2 go build ./...`.
 
 ## Commands
 
 A `flake.nix` provides reproducible builds. Raw `go` commands also work.
 
 ```bash
-go build ./...                      # build (must pass — LSP caches lie, builds don't)
-go test ./...                       # run tests (all pass)
-go test ./... -race -gcflags=all=-l # race tests (needs -l due to Go 1.26.5 linker bug)
-go vet ./...                        # vet (passes clean)
-golangci-lint run ./...             # lint (.golangci.yml config present, ~200 warnings — see Known issues)
-gofumpt -w .                        # format
-go run ./cmd/go-hotspot             # run locally
-go install ./cmd/go-hotspot         # install binary
+GOEXPERIMENT=jsonv2 go build ./...    # build (must pass — LSP caches lie, builds don't)
+GOEXPERIMENT=jsonv2 go test ./...     # run tests (all pass)
+go test ./... -race -gcflags=all=-l   # race tests (needs -l due to Go 1.26.5 linker bug)
+GOEXPERIMENT=jsonv2 go vet ./...      # vet (passes clean)
+golangci-lint run ./...               # lint (.golangci.yml config present, 0 issues)
+gofumpt -w .                          # format
+GOEXPERIMENT=jsonv2 go run ./cmd/go-hotspot  # run locally
+go install ./cmd/go-hotspot           # install binary
 goreleaser release --snapshot --clean # test release build locally
 ```
 
@@ -47,7 +50,7 @@ git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspo
 | `internal/git` | Runs `git log --numstat`, parses into `FileChurn` + coupling data. Context-cancelable. |
 | `internal/complexity` | SLOC, indentation, and go/ast cyclomatic complexity. |
 | `internal/hotspot` | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`). |
-| `internal/report` | Output rendering: table, markdown, csv, json. Golden-file tested. |
+| `internal/report` | Output rendering: table, markdown, csv, json, dot, mermaid. DOT/Mermaid use go-output for coupling graph visualization. Golden-file tested. |
 | `internal/errors` | Domain-specific typed errors built on `go-error-family`. BSD exit codes + What/Why/Fix/WayOut message templates. |
 
 All packages are `internal/` — go-hotspot is a CLI tool, not an importable library.
@@ -111,9 +114,10 @@ filtering happens by deleting from `history.Files` before scoring.
 
 ## Conventions
 
-- **One external dep: `go-error-family`** — stdlib plus Lars's zero-dependency typed error
-  library (`github.com/larsartmann/go-error-family`). Lint tools suggesting `lo.SliceToMap`
-  or similar are rejected; this constraint is deliberate.
+- **Two external deps: `go-error-family` + `go-output`** — `go-error-family` provides
+  typed errors; `go-output` (root + graph sub-module) provides Graph types and DOT/Mermaid
+  rendering for coupling visualization. Both are Lars's libraries. `go-output` requires
+  `GOEXPERIMENT=jsonv2` (set in flake.nix devShell and CI workflow).
 - **iota enums + `Parse*` functions** for all flag-driven choices (`Format`,
   `ComplexityMetric`, `ChurnMetric`, `SortOrder`). Follow this pattern for new
   flag-selectable options. Named constant thresholds for flag values
@@ -122,6 +126,10 @@ filtering happens by deleting from `history.Files` before scoring.
   `report.Render`. Both respect the `--format` flag (table, markdown, csv, json).
   Function results use `hotspot.FunctionResult` + `hotspot.RankFunctions()`, which
   approximates per-function hotspot as `file_hotspot * (func_cyc / file_cyc)`.
+- **`--format dot` and `--format mermaid` render ONLY the coupling graph** (no hotspot
+  table, no header). These formats use go-output's `Graph` type + `graph.WriteDOT` /
+  `graph.WriteMermaid` dispatchers. Empty coupling pairs produce no output. The DOT
+  graph uses left-to-right layout (`rankdir=LR`); Mermaid uses `flowchart TD`.
 - **Table-driven tests** throughout. Test helpers use `t.Helper()`.
 - **Package doc comments** explain the methodology and "why," not just "what."
 - **`report.Render` and `report.RenderFunctions` return `error`** — all write errors propagate to the caller.

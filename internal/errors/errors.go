@@ -148,11 +148,11 @@ func ReportCreate(path string, cause error) error {
 // --- Threshold (Rejection with WithExitCode(2) for CI/CD) ------------------
 
 // ThresholdExceeded signals that the max hotspot score exceeded the configured
-// --fail-above limit. Uses exit code 2 to preserve the CI/CD contract.
+// threshold (set via --fail-above or --fail-risk). Uses exit code 2 for CI/CD.
 func ThresholdExceeded(score, limit float64) error {
 	return errorfamily.Newf(
 		errorfamily.Rejection, CodeThresholdExceeded,
-		"max hotspot score %.6f exceeds --fail-above threshold %.6f",
+		"max hotspot score %.6f exceeds threshold %.6f",
 		score, limit,
 	).WithExitCode(exitThreshold)
 }

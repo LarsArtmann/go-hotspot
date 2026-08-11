@@ -244,7 +244,7 @@ func (h *History) extendWindow(t time.Time) {
 }
 
 // parseCommitMarker extracts date from a "@@@hash|date|author" line.
-func parseCommitMarker(line string) (author string, date time.Time) {
+func parseCommitMarker(line string) (string, time.Time) {
 	body := strings.TrimPrefix(line, commitPrefix)
 
 	parts := strings.SplitN(body, "|", 3)
@@ -320,7 +320,7 @@ func recencyWeight(raw float64, date time.Time, halfLifeDays float64, now time.T
 }
 
 // splitNumStat parses an "added\tdeleted\tpath" line.
-func splitNumStat(line string) (add, del int, file string, ok bool) {
+func splitNumStat(line string) (int, int, string, bool) {
 	parts := strings.Split(line, "\t")
 	if len(parts) != 3 {
 		return 0, 0, "", false

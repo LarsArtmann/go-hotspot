@@ -408,10 +408,100 @@ func TestRenderFunctionsWriteError(t *testing.T) {
 	}
 }
 
+func TestRenderCouplingDOT(t *testing.T) {
+	pairs := []hotspot.CouplingPair{
+		{FileA: "a.go", FileB: "b.go", SharedCommits: 15, Degree: 80},
+		{FileA: "a.go", FileB: "c.go", SharedCommits: 8, Degree: 45},
+	}
+
+	var buf bytes.Buffer
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatDOT, 0, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+
+	if !strings.HasPrefix(out, "digraph coupling") {
+		t.Errorf("DOT output should start with 'digraph coupling', got: %s", out[:min(40, len(out))])
+	}
+
+	if !strings.Contains(out, `"a.go"`) || !strings.Contains(out, `"b.go"`) {
+		t.Error("DOT output missing node declarations for coupling files")
+	}
+
+	if !strings.Contains(out, `label="80% (15)"`) {
+		t.Error("DOT output missing edge label with degree and shared commits")
+	}
+
+	if !strings.Contains(out, "rankdir=LR") {
+		t.Error("DOT output should use left-to-right layout")
+	}
+}
+
+func TestRenderCouplingMermaid(t *testing.T) {
+	pairs := []hotspot.CouplingPair{
+		{FileA: "a.go", FileB: "b.go", SharedCommits: 15, Degree: 80},
+		{FileA: "a.go", FileB: "c.go", SharedCommits: 8, Degree: 45},
+	}
+
+	var buf bytes.Buffer
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatMermaid, 0, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+
+	if !strings.HasPrefix(out, "flowchart") {
+		t.Errorf("Mermaid output should start with 'flowchart', got: %s", out[:min(40, len(out))])
+	}
+
+	if !strings.Contains(out, "80% (15)") {
+		t.Error("Mermaid output missing edge label with degree and shared commits")
+	}
+}
+
+func TestRenderGraphEmptyPairs(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		format Format
+	}{
+		{"dot", FormatDOT},
+		{"mermaid", FormatMermaid},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := Render(&buf, sampleResults(), nil, sampleSummary(), tc.format, 0, nil); err != nil {
+				t.Fatal(err)
+			}
+			if buf.Len() > 0 {
+				t.Errorf("expected empty output for %s with no coupling pairs, got: %q", tc.name, buf.String())
+			}
+		})
+	}
+}
+
+func TestParseFormatGraph(t *testing.T) {
+	tests := []struct {
+		input string
+		want  Format
+	}{
+		{"dot", FormatDOT},
+		{"graphviz", FormatDOT},
+		{"mermaid", FormatMermaid},
+		{"DOT", FormatDOT},
+		{"Mermaid", FormatMermaid},
+	}
+	for _, tc := range tests {
+		if got := ParseFormat(tc.input); got != tc.want {
+			t.Errorf("ParseFormat(%q) = %d, want %d", tc.input, got, tc.want)
+		}
+	}
+}
+
 func BenchmarkRenderTable(b *testing.B) {
-	results := make([]hotspot.Result, 1000)
-	for i := range results {
-		results[i] = hotspot.Result{
+	results := make([]hotspot.Result, 0, 1000)
+	for i := range 1000 {
+		results = append(results, hotspot.Result{
 			Path:        fmt.Sprintf("file%d.go", i),
 			Language:    "Go",
 			Commits:     i + 1,
@@ -421,7 +511,7 @@ func BenchmarkRenderTable(b *testing.B) {
 			Cyclomatic:  i%20 + 1,
 			SLOC:        i*5 + 10,
 			Hotspot:     float64(i) / 1000,
-		}
+		})
 	}
 
 	summary := Summary{TotalCommits: 5000, TotalFiles: 1000}

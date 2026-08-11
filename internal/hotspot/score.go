@@ -279,18 +279,18 @@ func MaxHotspot(results []Result) float64 {
 		return 0
 	}
 
-	max := math.Inf(-1)
+	highest := math.Inf(-1)
 	for _, r := range results {
-		if r.Hotspot > max {
-			max = r.Hotspot
+		if r.Hotspot > highest {
+			highest = r.Hotspot
 		}
 	}
 
-	if max < 0 {
+	if highest < 0 {
 		return 0
 	}
 
-	return max
+	return highest
 }
 
 // FunctionResult is a function-level hotspot ranking entry. The hotspot

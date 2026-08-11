@@ -126,7 +126,7 @@ func TestScoreEmptyHistory(t *testing.T) {
 }
 
 func TestRiskBand(t *testing.T) {
-	max := 0.5
+	maxScore := 0.5
 
 	cases := map[float64]string{
 		0.50:  "critical", // 100%
@@ -136,8 +136,8 @@ func TestRiskBand(t *testing.T) {
 		0.00:  "low",
 	}
 	for score, want := range cases {
-		if got := RiskBand(score, max); got != want {
-			t.Errorf("RiskBand(%.2f, %.2f) = %q, want %q", score, max, got, want)
+		if got := RiskBand(score, maxScore); got != want {
+			t.Errorf("RiskBand(%.2f, %.2f) = %q, want %q", score, maxScore, got, want)
 		}
 	}
 }
@@ -425,7 +425,7 @@ func BenchmarkScore(b *testing.B) {
 
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
 	}
 }
@@ -555,7 +555,7 @@ func BenchmarkCoupling(b *testing.B) {
 
 	b.ResetTimer()
 
-	for range b.N {
+	for b.Loop() {
 		Coupling(history, CouplingOptions{
 			MinSharedCommits: 3,
 			MinDegree:        30,

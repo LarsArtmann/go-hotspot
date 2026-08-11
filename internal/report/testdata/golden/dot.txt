@@ -1,0 +1,29 @@
+digraph coupling {
+  // Graph attributes
+  rankdir=LR;
+  splines=ortho;
+  nodesep=0.5;
+  ranksep=0.5;
+
+  // Default node attributes
+  node [
+    shape=box
+    fontname="Helvetica"
+    fontsize=12
+  ];
+
+  // Nodes
+  "a.go" [
+    label="a.go"
+    shape="box"
+  ];
+  "b.go" [
+    label="b.go"
+    shape="box"
+  ];
+
+  // Edges
+  "a.go" -> "b.go" [
+    label="80% (15)"
+  ];
+}

@@ -1,0 +1,4 @@
+flowchart TD
+    ago[a.go]
+    bgo[b.go]
+    ago -->|80% (15)| bgo

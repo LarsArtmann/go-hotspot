@@ -13,7 +13,9 @@ scripts and CI, but interactive exploration needs richer output.
 Raw ideas:
 
 - HTML treemap output (CodeScene's signature visualization)
-- D2/Mermaid diagram output for the temporal coupling graph
+- ~~D2/Mermaid diagram output for the temporal coupling graph~~ **DONE (v0.3.0):**
+  `--format dot` and `--format mermaid` now render the coupling graph via go-output.
+  D2 format is a future addition (requires the d2 sub-module).
 - Bubble Tea TUI with interactive heatmap exploration
 - Terminal heatmap rendering (color-coded complexity x churn matrix)
 - Color-coded risk bands in terminal output (red/orange/yellow when stdout is a TTY)

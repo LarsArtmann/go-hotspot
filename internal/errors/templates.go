@@ -80,10 +80,10 @@ func init() {
 			WayOut: "Redirect to a file instead: go-hotspot --output report.txt",
 		},
 		CodeThresholdExceeded: {
-			What:   "The maximum hotspot score exceeds the --fail-above threshold.",
+			What:   "The maximum hotspot score exceeds the configured threshold.",
 			Why:    "One or more files have high complexity and churn, indicating technical debt hotspots.",
 			Fix:    "Refactor the top-ranked files to reduce complexity or churn.",
-			WayOut: "Raise --fail-above if the threshold is too strict for your project.",
+			WayOut: "Raise the threshold (--fail-above or --fail-risk) if it is too strict for your project.",
 		},
 	})
 }

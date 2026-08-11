@@ -157,6 +157,7 @@ linters:
             excludes:
                 - G304
                 - G115
+                - G204
         ireturn:
             allow:
                 - error

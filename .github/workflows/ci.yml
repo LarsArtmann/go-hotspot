@@ -5,6 +5,9 @@ on:
     branches: [master]
   pull_request:
 
+env:
+  GOEXPERIMENT: jsonv2
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -55,3 +58,20 @@ jobs:
       - run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck ./...
+
+  # Dogfooding: run go-hotspot on itself. Full history is required for
+  # churn/coupling analysis, so fetch-depth must be 0. --fail-risk high
+  # (absolute threshold 0.08) gates on regressions without being overly
+  # strict. --recency 0 disables time decay so the gate stays stable over
+  # time instead of weakening as commits age.
+  hotspot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go install ./cmd/go-hotspot
+      - run: go-hotspot --include-tests=false --top 10 --recency 0 --fail-risk high

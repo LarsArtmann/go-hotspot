@@ -23,6 +23,8 @@ const (
 	FormatMarkdown
 	FormatCSV
 	FormatJSON
+	FormatDOT
+	FormatMermaid
 )
 
 // ParseFormat maps a flag string to a Format.
@@ -34,6 +36,10 @@ func ParseFormat(s string) Format {
 		return FormatCSV
 	case "json":
 		return FormatJSON
+	case "dot", "graphviz":
+		return FormatDOT
+	case "mermaid":
+		return FormatMermaid
 	default:
 		return FormatTable
 	}
@@ -75,6 +81,10 @@ func Render(
 		return renderJSONReport(w, limited, couplings, summary, funcs)
 	case FormatCSV:
 		return renderCSVReport(w, limited)
+	case FormatDOT:
+		return renderCouplingDOT(w, couplings)
+	case FormatMermaid:
+		return renderCouplingMermaid(w, couplings)
 	case FormatMarkdown:
 		return renderMarkdownReport(w, limited, couplings, summary)
 	default:
@@ -87,10 +97,11 @@ func Render(
 // output format is non-JSON.
 //
 // JSON output embeds functions inside the main report via Render's funcs
-// parameter — calling RenderFunctions with FormatJSON is a no-op. An empty
-// slice produces no output in all formats.
+// parameter — calling RenderFunctions with FormatJSON is a no-op.
+// DOT and Mermaid are graph formats with no function representation — they
+// also no-op. An empty slice produces no output in all formats.
 func RenderFunctions(w io.Writer, funcs []hotspot.FunctionResult, format Format) error {
-	if len(funcs) == 0 || format == FormatJSON {
+	if len(funcs) == 0 || format == FormatJSON || format == FormatDOT || format == FormatMermaid {
 		return nil
 	}
 

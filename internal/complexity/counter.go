@@ -71,7 +71,9 @@ func Analyze(path string) (FileComplexity, error) {
 }
 
 // countLines returns SLOC, total indentation, and max nesting depth.
-func countLines(lines []string) (sloc, totalIndent, maxDepth int) {
+func countLines(lines []string) (int, int, int) {
+	var sloc, totalIndent, maxDepth int
+
 	for _, raw := range lines {
 		trimmed := strings.TrimSpace(raw)
 		if trimmed == "" {

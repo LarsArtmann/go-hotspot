@@ -629,21 +629,21 @@ func FuzzParseFailRisk(f *testing.F) {
 // BenchmarkRenderFunctions measures the cost of rendering 1000 functions
 // in table format. Useful for catching regressions in render hot paths.
 func BenchmarkRenderFunctions(b *testing.B) {
-	funcs := make([]hotspot.FunctionResult, 1000)
-	for i := range funcs {
-		funcs[i] = hotspot.FunctionResult{
+	funcs := make([]hotspot.FunctionResult, 0, 1000)
+	for i := range 1000 {
+		funcs = append(funcs, hotspot.FunctionResult{
 			File:       "internal/foo/bar.go",
 			Function:   "SomeFunction",
 			Cyclomatic: 5 + i%20,
 			LineCount:  20 + i%30,
 			StartLine:  i * 10,
 			Hotspot:    float64(1000-i) / 1000.0,
-		}
+		})
 	}
 
 	b.ReportAllocs()
 
-	for range b.N {
+	for b.Loop() {
 		var buf bytes.Buffer
 		if err := report.RenderFunctions(&buf, funcs, report.FormatTable); err != nil {
 			b.Fatal(err)

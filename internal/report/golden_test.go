@@ -28,6 +28,8 @@ func TestGoldenAllFormats(t *testing.T) {
 		{"markdown", FormatMarkdown, couplings},
 		{"csv", FormatCSV, nil},
 		{"json", FormatJSON, couplings},
+		{"dot", FormatDOT, couplings},
+		{"mermaid", FormatMermaid, couplings},
 	}
 
 	for _, tc := range cases {

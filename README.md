@@ -92,7 +92,7 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--until` | | Git date spec for analysis window end |
 | `--branch` | `HEAD` | Git revision to analyze |
 | `--recency` | `180` | Recency half-life in days (0 = no decay) |
-| `--format` | `table` | Output: `table`, `markdown`, `csv`, `json` |
+| `--format` | `table` | Output: `table`, `markdown`, `csv`, `json`, `dot`, `mermaid` |
 | `--top` | `25` | Rows to show (0 = all) |
 | `--complexity` | `cyclomatic` | Metric: `cyclomatic`, `indentation`, `sloc` |
 | `--churn` | `weighted` | Metric: `weighted`, `commits`, `lines` |
@@ -107,7 +107,7 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--coupling-min-degree` | `30` | Minimum coupling degree (%) |
 | `--output` | | Write report to file instead of stdout |
 | `--fail-above` | `0` | Exit with code 2 if max hotspot score exceeds this (0 = disabled) |
-| `--fail-risk` | | Exit 2 if max hotspot exceeds risk band: `critical`, `high`, `medium`, `low` |
+| `--fail-risk` | | Exit 2 if max score exceeds absolute band: `low=0.01`, `medium=0.03`, `high=0.08`, `critical=0.15` (the RISK column is relative; these are not) |
 | `--no-header` | `false` | Suppress summary header (for script piping) |
 | `--functions` | `0` | Show top N functions by hotspot score (Go only, 0 = disabled) |
 | `--min-commits` | `0` | Exclude files with fewer commits (0 = no minimum) |
@@ -122,7 +122,7 @@ go-hotspot follows BSD `sysexits.h` conventions for CI/CD integration:
 |------|----------|---------|------|
 | 0 | — | Success | Analysis completed without errors |
 | 1 | EX_USAGE | Invalid input | Bad flag value or missing argument |
-| 2 | — | Threshold exceeded | `--fail-above` limit triggered |
+| 2 | — | Threshold exceeded | `--fail-above` or `--fail-risk` limit triggered |
 | 65 | EX_DATAERR | Source corrupt | Unparseable Go file or read failure |
 | 69 | EX_UNAVAILABLE | Infrastructure | Git not installed, not a repo, or output write failed |
 | 70 | EX_SOFTWARE | Internal bug | Unexpected error (please report) |
