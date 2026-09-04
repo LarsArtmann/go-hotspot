@@ -221,7 +221,7 @@ func TestIntegrationFullPipeline(t *testing.T) {
 	results := hotspot.Score(history, complexities, hotspot.ScoreOptions{
 		Complexity: hotspot.MetricCyclomatic,
 		Churn:      hotspot.ChurnWeighted,
-	})
+	}, fixedNow)
 	hotspot.Sort(results, hotspot.SortHotspot, fixedNow)
 
 	if len(results) != 3 {

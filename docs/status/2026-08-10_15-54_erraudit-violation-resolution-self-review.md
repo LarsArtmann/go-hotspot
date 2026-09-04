@@ -25,13 +25,13 @@ side-effect formatting changes by running `gofumpt -w .` globally.
 
 ### 1. erraudit violations resolved (5 → 0 in CI mode)
 
-| # | Type | Location | Action | Result |
-|---|------|----------|--------|--------|
-| 1 | `ignored` | main.go:245 | Replaced `_ = f.Close()` closure with `defer f.Close()` + `//nolint:erraudit` | Fixed + suppressed |
-| 2 | `context_loss` | main.go:74 | Wrapped bare `return err` through `apierrors.ReportRender("version output", err)` | Fixed (but **semantically wrong** — see section d) |
-| 3 | `context_loss` | main.go:87 | `//nolint:erraudit` with reason | Suppressed (false positive: `showVersion` is irrelevant; `git.Collect` already classifies) |
-| 4 | `context_loss` | main.go:190 | `//nolint:erraudit` with reason | Suppressed (false positive: `showVersion` is irrelevant; `report.Render` already classifies) |
-| 5 | `silent_swallow` | examples/basic:29 | `//nolint:erraudit` with reason | Suppressed (false positive: error IS handled via `log.Printf` + `continue`) |
+| # | Type             | Location          | Action                                                                            | Result                                                                                       |
+| - | ---------------- | ----------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 1 | `ignored`        | main.go:245       | Replaced `_ = f.Close()` closure with `defer f.Close()` + `//nolint:erraudit`     | Fixed + suppressed                                                                           |
+| 2 | `context_loss`   | main.go:74        | Wrapped bare `return err` through `apierrors.ReportRender("version output", err)` | Fixed (but **semantically wrong** — see section d)                                           |
+| 3 | `context_loss`   | main.go:87        | `//nolint:erraudit` with reason                                                   | Suppressed (false positive: `showVersion` is irrelevant; `git.Collect` already classifies)   |
+| 4 | `context_loss`   | main.go:190       | `//nolint:erraudit` with reason                                                   | Suppressed (false positive: `showVersion` is irrelevant; `report.Render` already classifies) |
+| 5 | `silent_swallow` | examples/basic:29 | `//nolint:erraudit` with reason                                                   | Suppressed (false positive: error IS handled via `log.Printf` + `continue`)                  |
 
 ### 2. Full verification passed
 
@@ -46,6 +46,7 @@ side-effect formatting changes by running `gofumpt -w .` globally.
 ### 3. Researched erraudit suppression system
 
 Dispatched a sub-agent to read the erraudit codebase and documented:
+
 - `//nolint:erraudit` syntax and block-start detection algorithm
 - `--no-suppress` flag dual behavior (disables nolint + AST heuristics)
 - `.erraudit.yaml` config file format (no per-violation suppression — only inline nolint)
@@ -101,6 +102,7 @@ would be rendered. I saw `ReportRender` takes `(operation, cause)` and thought "
 I did not ask: "What will the user SEE when this fires?"
 
 **Correct fix:** Either:
+
 - (a) Create a new `CodeCLIOutput` / `CLIOutput()` constructor + template for CLI write failures,
 - (b) Use `errorfamily.WrapInfrastructure(err, "some_better_code", "write version output")`
   directly with a new code, or
@@ -126,6 +128,7 @@ what I actually changed. I should have run `gofumpt -w` only on the files I edit
 ### 3. golines regression caught in second pass, not first
 
 When I first wrote the version output fix, I inlined the `if` check:
+
 ```go
 if _, err := fmt.Fprintf(...); err != nil {
     return apierrors.ReportRender("version output", err)
@@ -263,7 +266,7 @@ this rare and this disconnected from user action feels like over-engineering. Sh
 - (c) Use `os.Exit(1)` directly and skip the error system entirely?
 
 I lean toward (b) because the error is near-impossible in practice and the existing
-`HandleError` pipeline will still render *something* reasonable via the stdlib fallback.
+`HandleError` pipeline will still render _something_ reasonable via the stdlib fallback.
 
 ### 2. Should the gofumpt side-effect changes be kept or reverted?
 
@@ -286,16 +289,16 @@ standard erraudit invocation for this project include `--enforce-samber-oops` or
 
 ## Session Metrics
 
-| Metric | Before | After |
-|--------|--------|-------|
-| erraudit violations (CI mode) | 5 | **0** |
-| erraudit violations (audit mode) | 5 | 3 (all documented) |
-| Files changed this session | — | 4 (2 intentional, 2 gofumpt side-effect) |
-| Tests | 106 pass | 106 pass |
-| Real code fixes | — | 2 |
-| Suppressions added | — | 4 `//nolint:erraudit` directives |
-| Semantic errors introduced | — | 1 (ReportRender for version output) |
-| Lint regressions introduced and fixed | — | 1 (golines, caught in second pass) |
+| Metric                                | Before   | After                                    |
+| ------------------------------------- | -------- | ---------------------------------------- |
+| erraudit violations (CI mode)         | 5        | **0**                                    |
+| erraudit violations (audit mode)      | 5        | 3 (all documented)                       |
+| Files changed this session            | —        | 4 (2 intentional, 2 gofumpt side-effect) |
+| Tests                                 | 106 pass | 106 pass                                 |
+| Real code fixes                       | —        | 2                                        |
+| Suppressions added                    | —        | 4 `//nolint:erraudit` directives         |
+| Semantic errors introduced            | —        | 1 (ReportRender for version output)      |
+| Lint regressions introduced and fixed | —        | 1 (golines, caught in second pass)       |
 
 ---
 

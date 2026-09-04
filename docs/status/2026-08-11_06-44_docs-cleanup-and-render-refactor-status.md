@@ -12,59 +12,59 @@ All work builds clean, all tests pass, erraudit 0 violations, go vet clean.
 
 ### Code refactor: eliminated the rendering split-brain
 
-| What | Files | Details |
-|------|-------|---------|
+| What                                                    | Files                    | Details                                                                                                                                                                                                                                                                                                             |
+| ------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Moved `renderFunctions` into `report.RenderFunctions()` | `main.go`, `reporter.go` | Function-level ranking now lives in the report package with full format support (table, markdown, CSV, JSON). Previously `renderFunctions` was in main.go and only rendered table format — `--format json` silently dropped function data. Now all 4 formats are supported via `RenderFunctions(w, funcs, format)`. |
-| Added 4 format helpers + `jsonFunction` DTO | `reporter.go` | `renderFunctionsTable`, `renderFunctionsMarkdown`, `renderFunctionsCSV`, `renderFunctionsJSON` following the exact same patterns as the file-level renderers. `jsonFunction` mirrors `hotspot.FunctionResult` (same DTO pattern as `jsonHotspot`/`jsonCoupling`). |
-| Extracted `parseFailRisk` magic numbers | `main.go` | `failRiskCritical` (0.15), `failRiskHigh` (0.08), `failRiskMedium` (0.03), `failRiskLow` (0.01) named constants. No more magic numbers in the flag parser. |
-| Removed `text/tabwriter` import from main.go | `main.go` | No longer needed — rendering moved to report package. |
+| Added 4 format helpers + `jsonFunction` DTO             | `reporter.go`            | `renderFunctionsTable`, `renderFunctionsMarkdown`, `renderFunctionsCSV`, `renderFunctionsJSON` following the exact same patterns as the file-level renderers. `jsonFunction` mirrors `hotspot.FunctionResult` (same DTO pattern as `jsonHotspot`/`jsonCoupling`).                                                   |
+| Extracted `parseFailRisk` magic numbers                 | `main.go`                | `failRiskCritical` (0.15), `failRiskHigh` (0.08), `failRiskMedium` (0.03), `failRiskLow` (0.01) named constants. No more magic numbers in the flag parser.                                                                                                                                                          |
+| Removed `text/tabwriter` import from main.go            | `main.go`                | No longer needed — rendering moved to report package.                                                                                                                                                                                                                                                               |
 
 ### Tests added (9 new test functions)
 
-| Test | File | What it covers |
-|------|------|----------------|
-| `TestRenderFunctionsEmpty` | `reporter_test.go` | Empty slice produces no output |
-| `TestRenderFunctionsTable` | `reporter_test.go` | Table format contains expected headers and data |
-| `TestRenderFunctionsMarkdown` | `reporter_test.go` | Markdown format with backtick-wrapped names |
-| `TestRenderFunctionsCSV` | `reporter_test.go` | CSV parseable, correct headers and rows |
-| `TestRenderFunctionsJSON` | `reporter_test.go` | JSON deserializes into `jsonFunction` slice |
-| `TestRenderFunctionsWriteError` | `reporter_test.go` | All 4 formats propagate write errors as `CodeReportRenderFailed` |
-| `TestFunctionsOutput` | `main_test.go` | `--functions 5` end-to-end with real git repo, verifies "Top Functions" section |
-| `TestSinceVersion` | `main_test.go` | `--since-version v1.0.0` resolves annotated tag, analysis includes expected file |
-| `TestSinceVersionBadTag` | `main_test.go` | Nonexistent tag returns exit code 69 (EX_UNAVAILABLE) |
+| Test                            | File               | What it covers                                                                   |
+| ------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
+| `TestRenderFunctionsEmpty`      | `reporter_test.go` | Empty slice produces no output                                                   |
+| `TestRenderFunctionsTable`      | `reporter_test.go` | Table format contains expected headers and data                                  |
+| `TestRenderFunctionsMarkdown`   | `reporter_test.go` | Markdown format with backtick-wrapped names                                      |
+| `TestRenderFunctionsCSV`        | `reporter_test.go` | CSV parseable, correct headers and rows                                          |
+| `TestRenderFunctionsJSON`       | `reporter_test.go` | JSON deserializes into `jsonFunction` slice                                      |
+| `TestRenderFunctionsWriteError` | `reporter_test.go` | All 4 formats propagate write errors as `CodeReportRenderFailed`                 |
+| `TestFunctionsOutput`           | `main_test.go`     | `--functions 5` end-to-end with real git repo, verifies "Top Functions" section  |
+| `TestSinceVersion`              | `main_test.go`     | `--since-version v1.0.0` resolves annotated tag, analysis includes expected file |
+| `TestSinceVersionBadTag`        | `main_test.go`     | Nonexistent tag returns exit code 69 (EX_UNAVAILABLE)                            |
 
 ### Documentation updates (7 files)
 
-| File | What changed |
-|------|--------------|
-| `TODO_LIST.md` | Rewritten from 15+ items to 4. All completed items removed (they're in CHANGELOG now). Only genuine open work remains: structured logging, dprint config, SPDX headers, Go race bug tracking. |
-| `CHANGELOG.md` | [Unreleased] section expanded with all features, fixes, and infrastructure from both the error-family migration session and the Pareto execution session. Constructor count corrected (11→12). |
-| `AGENTS.md` | Fixed stale "0 lint issues" claim → now honestly documents ~200 stylistic warnings. Added `RenderFunctions`/`RankFunctions` conventions. Updated test count (8→23 in main). Added `--functions` pipeline docs. Added lint to Known Issues. |
-| `DESIGN.md` | Added `FunctionResult` data model section with formula documentation. |
-| `docs/DOMAIN_LANGUAGE.md` | Added "Function-level hotspot" term with formula and code references. |
-| `FEATURES.md` | SLOC: PARTIALLY→FULLY_FUNCTIONAL. Per-function complexity: PARTIALLY→FULLY_FUNCTIONAL. Flag count 24→25. Test count updated. Lint status: now honest (PARTIALLY_FUNCTIONAL with explanation). Added `--functions` feature row. |
-| `README.md` | No changes needed — flags table already had all new entries from prior session. |
+| File                      | What changed                                                                                                                                                                                                                               |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TODO_LIST.md`            | Rewritten from 15+ items to 4. All completed items removed (they're in CHANGELOG now). Only genuine open work remains: structured logging, dprint config, SPDX headers, Go race bug tracking.                                              |
+| `CHANGELOG.md`            | [Unreleased] section expanded with all features, fixes, and infrastructure from both the error-family migration session and the Pareto execution session. Constructor count corrected (11→12).                                             |
+| `AGENTS.md`               | Fixed stale "0 lint issues" claim → now honestly documents ~200 stylistic warnings. Added `RenderFunctions`/`RankFunctions` conventions. Updated test count (8→23 in main). Added `--functions` pipeline docs. Added lint to Known Issues. |
+| `DESIGN.md`               | Added `FunctionResult` data model section with formula documentation.                                                                                                                                                                      |
+| `docs/DOMAIN_LANGUAGE.md` | Added "Function-level hotspot" term with formula and code references.                                                                                                                                                                      |
+| `FEATURES.md`             | SLOC: PARTIALLY→FULLY_FUNCTIONAL. Per-function complexity: PARTIALLY→FULLY_FUNCTIONAL. Flag count 24→25. Test count updated. Lint status: now honest (PARTIALLY_FUNCTIONAL with explanation). Added `--functions` feature row.             |
+| `README.md`               | No changes needed — flags table already had all new entries from prior session.                                                                                                                                                            |
 
 ### Verification state
 
-| Check | Result |
-|-------|--------|
-| `go build ./...` | Clean |
-| `go vet ./...` | Clean |
+| Check                    | Result                                            |
+| ------------------------ | ------------------------------------------------- |
+| `go build ./...`         | Clean                                             |
+| `go vet ./...`           | Clean                                             |
 | `go test ./... -count=1` | All pass (91 test functions, ~250+ with subtests) |
-| `erraudit ./...` | 0 violations |
-| `gofumpt` | Applied to all changed files |
+| `erraudit ./...`         | 0 violations                                      |
+| `gofumpt`                | Applied to all changed files                      |
 
 ### Current codebase metrics
 
-| Metric | Value |
-|--------|-------|
-| Test functions | 91 |
-| Benchmarks | 5 |
-| Fuzz targets | 4 |
-| CLI flags | 25 |
-| Error constructors | 12 (+2 helper constructors = 14 exported funcs in errors.go) |
-| External dependencies | 1 (`go-error-family v0.10.0`) |
+| Metric                | Value                                                        |
+| --------------------- | ------------------------------------------------------------ |
+| Test functions        | 91                                                           |
+| Benchmarks            | 5                                                            |
+| Fuzz targets          | 4                                                            |
+| CLI flags             | 25                                                           |
+| Error constructors    | 12 (+2 helper constructors = 14 exported funcs in errors.go) |
+| External dependencies | 1 (`go-error-family v0.10.0`)                                |
 
 ---
 
@@ -73,6 +73,7 @@ All work builds clean, all tests pass, erraudit 0 violations, go vet clean.
 ### renderFunctions refactor — JSON output gap fixed, but format-specific testing is shallow
 
 The rendering split-brain is eliminated. `RenderFunctions` now supports all 4 formats. However:
+
 - The JSON output is a bare `[]jsonFunction` array, NOT integrated into the main `jsonReport` structure. This means `--format json --functions 5` produces two separate JSON documents on stdout (the report, then the functions array), which is not valid as a single JSON document.
 - The CSV output is a separate CSV table appended after the main CSV, with its own header row.
 - These are the same patterns the file-level report uses (coupling is also a separate section), so it's consistent — but a consumer expecting a single JSON object would need to handle the split.
@@ -87,15 +88,15 @@ The thresholds (0.15, 0.08, 0.03, 0.01) are now named constants but are NOT deri
 
 These were identified in the prior session's status report and remain untouched:
 
-| Item | Why not started |
-|------|-----------------|
-| Wire `slog` structured logging into `HandleError` | ROADMAP item. Needs product decision about log format and verbosity. |
-| Fix ~200 pre-existing golangci-lint violations | Multi-hour effort, no functional benefit. Documented honestly in AGENTS.md. |
-| Refactor `detectLanguage` (cyclop 20) | Pre-existing, not touched this session. |
-| Refactor `Sort()` in score.go (cyclop 17) | Pre-existing, not touched this session. |
-| Refactor `parseNumStat` (cyclop 16) | Pre-existing, not touched this session. |
-| `.github/dependabot.yml` | Infrastructure convenience, not blocking. |
-| Tag `v0.2.0` | Needs explicit user approval (release action). |
+| Item                                              | Why not started                                                             |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| Wire `slog` structured logging into `HandleError` | ROADMAP item. Needs product decision about log format and verbosity.        |
+| Fix ~200 pre-existing golangci-lint violations    | Multi-hour effort, no functional benefit. Documented honestly in AGENTS.md. |
+| Refactor `detectLanguage` (cyclop 20)             | Pre-existing, not touched this session.                                     |
+| Refactor `Sort()` in score.go (cyclop 17)         | Pre-existing, not touched this session.                                     |
+| Refactor `parseNumStat` (cyclop 16)               | Pre-existing, not touched this session.                                     |
+| `.github/dependabot.yml`                          | Infrastructure convenience, not blocking.                                   |
+| Tag `v0.2.0`                                      | Needs explicit user approval (release action).                              |
 
 ---
 

@@ -36,16 +36,16 @@ gofumpt -w .
 
 ## Commands Reference
 
-| Command | Description |
-|---|---|
-| `go build ./...` | Build all packages |
-| `go test ./...` | Run all tests |
-| `go test ./... -race -gcflags=all=-l` | Run tests with race detector |
-| `go test -bench=. ./...` | Run benchmarks |
-| `go test -fuzz=FuzzParseNumStat ./internal/git/` | Run fuzz tests |
-| `golangci-lint run ./...` | Lint |
-| `gofumpt -w .` | Format |
-| `go vet ./...` | Go vet |
+| Command                                          | Description                  |
+| ------------------------------------------------ | ---------------------------- |
+| `go build ./...`                                 | Build all packages           |
+| `go test ./...`                                  | Run all tests                |
+| `go test ./... -race -gcflags=all=-l`            | Run tests with race detector |
+| `go test -bench=. ./...`                         | Run benchmarks               |
+| `go test -fuzz=FuzzParseNumStat ./internal/git/` | Run fuzz tests               |
+| `golangci-lint run ./...`                        | Lint                         |
+| `gofumpt -w .`                                   | Format                       |
+| `go vet ./...`                                   | Go vet                       |
 
 ## Code Style
 

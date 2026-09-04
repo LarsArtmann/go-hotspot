@@ -10,17 +10,17 @@
 
 ### Lint cleanup: 9 issues → 0
 
-| # | Issue | File:Line | Fix Applied |
-|---|-------|-----------|-------------|
-| 1 | golines (line too long) | `cmd/go-hotspot/main.go:66` | Shortened `--fail-risk` help string from 175 chars to 72 chars |
-| 2 | gosec G204 (subprocess with variable) | `internal/git/collector.go:218` | Added G204 to gosec excludes in `.golangci.yml` |
-| 3 | nonamedreturns (`author`) | `internal/git/collector.go:247` | Removed named return from `parseCommitMarker` signature |
-| 4 | nonamedreturns (`add`) | `internal/git/collector.go:323` | Removed named returns from `splitNumStat` signature |
-| 5 | nonamedreturns (`sloc`) | `internal/complexity/counter.go:74` | Removed named returns, added explicit `var` declaration |
-| 6 | predeclared (`max`) | `internal/hotspot/score.go:282` | Renamed `max` → `highest` in `MaxHotspot()` |
-| 7 | predeclared (`max`) | `internal/hotspot/score_test.go:129` | Renamed `max` → `maxScore` in `TestRiskBand` |
-| 8 | makezero (`funcs` slice) | `cmd/go-hotspot/main_test.go:632` | `make([]T, N)` → `make([]T, 0, N)` + append pattern |
-| 9 | makezero (`results` slice) | `internal/report/reporter_test.go:412` | Same pattern |
+| # | Issue                                 | File:Line                              | Fix Applied                                                    |
+| - | ------------------------------------- | -------------------------------------- | -------------------------------------------------------------- |
+| 1 | golines (line too long)               | `cmd/go-hotspot/main.go:66`            | Shortened `--fail-risk` help string from 175 chars to 72 chars |
+| 2 | gosec G204 (subprocess with variable) | `internal/git/collector.go:218`        | Added G204 to gosec excludes in `.golangci.yml`                |
+| 3 | nonamedreturns (`author`)             | `internal/git/collector.go:247`        | Removed named return from `parseCommitMarker` signature        |
+| 4 | nonamedreturns (`add`)                | `internal/git/collector.go:323`        | Removed named returns from `splitNumStat` signature            |
+| 5 | nonamedreturns (`sloc`)               | `internal/complexity/counter.go:74`    | Removed named returns, added explicit `var` declaration        |
+| 6 | predeclared (`max`)                   | `internal/hotspot/score.go:282`        | Renamed `max` → `highest` in `MaxHotspot()`                    |
+| 7 | predeclared (`max`)                   | `internal/hotspot/score_test.go:129`   | Renamed `max` → `maxScore` in `TestRiskBand`                   |
+| 8 | makezero (`funcs` slice)              | `cmd/go-hotspot/main_test.go:632`      | `make([]T, N)` → `make([]T, 0, N)` + append pattern            |
+| 9 | makezero (`results` slice)            | `internal/report/reporter_test.go:412` | Same pattern                                                   |
 
 ### CI dogfooding job corrected
 
@@ -92,6 +92,7 @@ I patched the symptom (help text, error messages) but not the disease. A user lo
 **What I did:** Added `- G204` to the global gosec excludes in `.golangci.yml`. This disables G204 (subprocess with variable) for the entire codebase.
 
 **Why it's wrong:** G204 is a legitimate security check. It fires on `exec.CommandContext(ctx, "git", "log", "-1", "--format=%aI", ref)` because `ref` comes from user input (`--since-version`). The correct fix is either:
+
 - A targeted `//nolint:gosec // ref is a git ref, not arbitrary command injection` on the specific line, OR
 - Validate/sanitize `ref` before passing it to exec (best option)
 
@@ -165,7 +166,7 @@ After changing 12 files, I never re-ran `go-hotspot` on itself to see how the ho
 ### Medium impact / Medium effort
 
 21. **Rename `RiskBand` bands or `fail-risk` bands to eliminate collision** — The most permanent fix for the split-brain.
-22. **Add a `--fail-trend` flag** — Gate on score *direction* (is the project getting worse?) rather than absolute level. More useful for long-lived CI.
+22. **Add a `--fail-trend` flag** — Gate on score _direction_ (is the project getting worse?) rather than absolute level. More useful for long-lived CI.
 23. **Add JSON output for `--fail-risk` failures** — Currently the threshold error goes to stderr via the error template; a `--output json` mode should include the failure in structured output.
 24. **Write a dogfooding README section** — Document how go-hotspot uses itself in CI, what thresholds it uses, and why.
 25. **Add `internal/errors` test for template rendering** — Verify all templates have non-empty What/Why/Fix/WayOut fields.

@@ -15,6 +15,7 @@ func makeHistory(files map[string]*git.FileChurn) *git.History {
 }
 
 func TestScoreBasicRanking(t *testing.T) {
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
 	history := makeHistory(map[string]*git.FileChurn{
 		"big.go": {
 			Path:     "big.go",
@@ -38,8 +39,8 @@ func TestScoreBasicRanking(t *testing.T) {
 		"small.go": {Path: "small.go", Cyclomatic: 2, SLOC: 20, Indentation: 10},
 	}
 
-	results := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
-	Sort(results, SortHotspot, time.Now())
+	results := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted}, now)
+	Sort(results, SortHotspot, now)
 
 	if len(results) != 2 {
 		t.Fatalf("got %d results, want 2", len(results))
@@ -79,7 +80,8 @@ func TestScoreNormalization(t *testing.T) {
 		"churny.go":  {Path: "churny.go", Cyclomatic: 1, SLOC: 10},
 	}
 
-	results := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+	results := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted}, now)
 
 	// Both hotspot scores should be between 0 and 1 (product of two normalized fractions).
 	for _, r := range results {
@@ -99,17 +101,19 @@ func TestScoreChurnMetricChoice(t *testing.T) {
 		"b.go": {Path: "b.go", Cyclomatic: 10, SLOC: 100},
 	}
 
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+
 	// With commit-count churn: a.go (50 commits) should rank higher.
-	byCommits := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnCommits})
-	Sort(byCommits, SortHotspot, time.Now())
+	byCommits := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnCommits}, now)
+	Sort(byCommits, SortHotspot, now)
 
 	if byCommits[0].Path != "a.go" {
 		t.Errorf("by commits, top = %s, want a.go", byCommits[0].Path)
 	}
 
 	// With weighted churn: b.go (1500 weighted) should rank higher.
-	byWeighted := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
-	Sort(byWeighted, SortHotspot, time.Now())
+	byWeighted := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted}, now)
+	Sort(byWeighted, SortHotspot, now)
 
 	if byWeighted[0].Path != "b.go" {
 		t.Errorf("by weighted, top = %s, want b.go", byWeighted[0].Path)
@@ -119,7 +123,7 @@ func TestScoreChurnMetricChoice(t *testing.T) {
 func TestScoreEmptyHistory(t *testing.T) {
 	history := makeHistory(map[string]*git.FileChurn{})
 
-	results := Score(history, nil, ScoreOptions{})
+	results := Score(history, nil, ScoreOptions{}, time.Now())
 	if len(results) != 0 {
 		t.Errorf("empty history should yield 0 results, got %d", len(results))
 	}
@@ -128,6 +132,7 @@ func TestScoreEmptyHistory(t *testing.T) {
 func TestRiskBand(t *testing.T) {
 	maxScore := 0.5
 
+	// With trendFactor = 1.0 (actively maintained), normal relative bands apply.
 	cases := map[float64]string{
 		0.50:  "critical", // 100%
 		0.20:  "high",     // 40%
@@ -136,9 +141,27 @@ func TestRiskBand(t *testing.T) {
 		0.00:  "low",
 	}
 	for score, want := range cases {
-		if got := RiskBand(score, maxScore); got != want {
-			t.Errorf("RiskBand(%.2f, %.2f) = %q, want %q", score, maxScore, got, want)
+		if got := RiskBand(score, maxScore, 1.0); got != want {
+			t.Errorf("RiskBand(%.2f, %.2f, 1.0) = %q, want %q", score, maxScore, got, want)
 		}
+	}
+
+	// Low trend factor caps risk level regardless of relative position.
+	if got := RiskBand(0.50, maxScore, 0.1); got != "stable" {
+		t.Errorf("RiskBand(0.50, %.2f, 0.1) = %q, want stable", maxScore, got)
+	}
+
+	if got := RiskBand(0.50, maxScore, 0.25); got != "low" {
+		t.Errorf("RiskBand(0.50, %.2f, 0.25) = %q, want low", maxScore, got)
+	}
+
+	// Settled file (trendFactor < 0.5) caps at medium.
+	if got := RiskBand(0.50, maxScore, 0.4); got != "medium" {
+		t.Errorf("RiskBand(0.50, %.2f, 0.4) = %q, want medium", maxScore, got)
+	}
+
+	if got := RiskBand(0.01, maxScore, 0.4); got != "low" {
+		t.Errorf("RiskBand(0.01, %.2f, 0.4) = %q, want low", maxScore, got)
 	}
 }
 
@@ -389,6 +412,105 @@ func TestSortChurnAndCommits(t *testing.T) {
 	}
 }
 
+func TestChurnTrendFactor(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+
+	cases := []struct {
+		name    string
+		first   time.Time
+		last    time.Time
+		minWant float64
+		maxWant float64
+	}{
+		{"burst_then_stop", now.AddDate(0, 0, -4), now.AddDate(0, 0, -3), 0.24, 0.26},
+		{"actively_maintained", now.AddDate(0, -2, 0), now, 0.99, 1.01},
+		{"recently_active", now.AddDate(0, -2, 0), now.AddDate(0, 0, -7), 0.85, 0.95},
+		{"long_settled", now.AddDate(-1, 0, 0), now.AddDate(0, -6, 0), 0.45, 0.55},
+		{"unknown_history", time.Time{}, time.Time{}, 0.99, 1.01},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := churnTrendFactor(tc.first, tc.last, now)
+			if got < 0 || got > 1.0 {
+				t.Errorf("trendFactor = %f, should be in [0,1]", got)
+			}
+			if got < tc.minWant || got > tc.maxWant {
+				t.Errorf("got %.4f, want in [%.4f, %.4f]", got, tc.minWant, tc.maxWant)
+			}
+		})
+	}
+}
+
+func TestScoreBurstPenalized(t *testing.T) {
+	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
+
+	// Two files with identical complexity and churn, but different development patterns.
+	// burst.go: created in 1 day, 3 days ago, never touched since.
+	// active.go: developed over 60 days, touched today.
+	burst := time.Date(2026, 8, 7, 12, 0, 0, 0, time.UTC)
+	activeStart := time.Date(2026, 6, 12, 0, 0, 0, 0, time.UTC)
+
+	history := makeHistory(map[string]*git.FileChurn{
+		"burst.go": {
+			Path:       "burst.go",
+			Commits:    8,
+			Added:      200,
+			Deleted:    100,
+			Weighted:   300,
+			Authors:    map[string]struct{}{"A": {}},
+			FirstTouch: burst,
+			LastTouch:  burst,
+		},
+		"active.go": {
+			Path:       "active.go",
+			Commits:    8,
+			Added:      200,
+			Deleted:    100,
+			Weighted:   300,
+			Authors:    map[string]struct{}{"A": {}},
+			FirstTouch: activeStart,
+			LastTouch:  now,
+		},
+	})
+	cx := map[string]complexity.FileComplexity{
+		"burst.go":  {Path: "burst.go", Cyclomatic: 20, SLOC: 200},
+		"active.go": {Path: "active.go", Cyclomatic: 20, SLOC: 200},
+	}
+
+	results := Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted}, now)
+	Sort(results, SortHotspot, now)
+
+	// active.go should rank higher — its hotspot is not penalized by trend factor.
+	if results[0].Path != "active.go" {
+		t.Errorf("top = %s, want active.go (burst.go should be penalized)", results[0].Path)
+	}
+
+	// burst.go's hotspot should be significantly lower than active.go's.
+	var burstScore, activeScore float64
+	for _, r := range results {
+		if r.Path == "burst.go" {
+			burstScore = r.Hotspot
+		}
+		if r.Path == "active.go" {
+			activeScore = r.Hotspot
+		}
+	}
+	if burstScore >= activeScore {
+		t.Errorf("burst.go hotspot (%.6f) should be < active.go (%.6f)", burstScore, activeScore)
+	}
+
+	// burst.go risk band should be "stable" or "low", not "critical".
+	maxScore := MaxHotspot(results)
+	if got := RiskBand(burstScore, maxScore, churnTrendFactor(burst, burst, now)); got == "critical" || got == "high" {
+		t.Errorf("burst.go risk = %q, should not be critical/high for a burst-then-stop file", got)
+	}
+}
+
 func TestResultAgeDays(t *testing.T) {
 	now := time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC)
 
@@ -426,7 +548,7 @@ func BenchmarkScore(b *testing.B) {
 	b.ResetTimer()
 
 	for b.Loop() {
-		Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted})
+		Score(history, cx, ScoreOptions{Complexity: MetricCyclomatic, Churn: ChurnWeighted}, time.Now())
 	}
 }
 
@@ -448,7 +570,7 @@ func TestScoreAlwaysInUnitInterval(t *testing.T) {
 			cx[path] = complexity.FileComplexity{Cyclomatic: i%30 + 1}
 		}
 
-		results := Score(&git.History{Files: files}, cx, ScoreOptions{})
+		results := Score(&git.History{Files: files}, cx, ScoreOptions{}, time.Now())
 
 		for _, r := range results {
 			if r.Hotspot < 0 || r.Hotspot > 1 {

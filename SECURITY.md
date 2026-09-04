@@ -23,5 +23,6 @@ It does not:
 - Require elevated privileges
 
 The attack surface is limited to:
+
 - Malicious git repositories with crafted commit metadata (parsed as strings)
 - Symlink attacks via `--paths` pointing to sensitive files (read-only)

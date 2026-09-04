@@ -23,11 +23,11 @@
 
 ### Files changed
 
-| File | Change |
-|------|--------|
-| `cmd/go-hotspot/main.go:66` | `--fail-risk` help string now exposes absolute thresholds |
-| `README.md:110` | Matching description update for `--fail-risk` row |
-| `.github/workflows/ci.yml` | New `hotspot` job: `go install ./cmd/go-hotspot` + `go-hotspot --include-tests=false --top 10 --fail-above 0.07` |
+| File                        | Change                                                                                                           |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `cmd/go-hotspot/main.go:66` | `--fail-risk` help string now exposes absolute thresholds                                                        |
+| `README.md:110`             | Matching description update for `--fail-risk` row                                                                |
+| `.github/workflows/ci.yml`  | New `hotspot` job: `go install ./cmd/go-hotspot` + `go-hotspot --include-tests=false --top 10 --fail-above 0.07` |
 
 ---
 
@@ -90,6 +90,7 @@ Three possible fixes, in order of ambition:
 The `--recency 180` default (180-day half-life) means all scores decay over time. A file that scores 0.061 today will score lower in 6 months even with no code changes — simply because the commits are older. The `--fail-above 0.07` threshold will become progressively easier to pass, making the CI gate useless within ~6 months.
 
 Fixes:
+
 - Use `--recency 0` in CI (disable decay for stable thresholds)
 - Or document that the CI threshold needs periodic re-tuning
 - Or add a `--fail-relative` mode that gates on percentage of max (immune to decay)

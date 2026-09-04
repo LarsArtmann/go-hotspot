@@ -15,82 +15,82 @@
 
 ## Git Churn Analysis
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Git churn collection             | 🟢 `FULLY_FUNCTIONAL`     | `internal/git/collector.go` — parses `git log --numstat`, tracks commits, lines, churn. 9 tests. |
-| Recency-weighted churn           | 🟢 `FULLY_FUNCTIONAL`     | Exponential decay with configurable half-life (`recencyWeight`). Default 180-day. The key differentiator. |
-| Author attribution               | 🟢 `FULLY_FUNCTIONAL`     | `Authors` set collected per file (`collector.go:28`). Count and names shown in all output formats (table, md, csv `author_names`, json `author_names`). No bus-factor metric yet. |
-| Temporal coupling (code-maat)    | 🟢 `FULLY_FUNCTIONAL`     | `internal/hotspot/coupling.go` — degree = sharedCommits / ceil(avg(totalCommits)) x 100. Mega-commit guard (30 files). 5 tests. |
-| First/last touch tracking        | 🟢 `FULLY_FUNCTIONAL`     | Temporal span collected and displayed. No complexity-trend-over-time yet.              |
+| Feature                       | Status                | Notes                                                                                                                                                                             |
+| ----------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Git churn collection          | 🟢 `FULLY_FUNCTIONAL` | `internal/git/collector.go` — parses `git log --numstat`, tracks commits, lines, churn. 9 tests.                                                                                  |
+| Recency-weighted churn        | 🟢 `FULLY_FUNCTIONAL` | Exponential decay with configurable half-life (`recencyWeight`). Default 180-day. The key differentiator.                                                                         |
+| Author attribution            | 🟢 `FULLY_FUNCTIONAL` | `Authors` set collected per file (`collector.go:28`). Count and names shown in all output formats (table, md, csv `author_names`, json `author_names`). No bus-factor metric yet. |
+| Temporal coupling (code-maat) | 🟢 `FULLY_FUNCTIONAL` | `internal/hotspot/coupling.go` — degree = sharedCommits / ceil(avg(totalCommits)) x 100. Mega-commit guard (30 files). 5 tests.                                                   |
+| First/last touch tracking     | 🟢 `FULLY_FUNCTIONAL` | Temporal span collected and displayed. No complexity-trend-over-time yet.                                                                                                         |
 
 ## Complexity Analysis
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Go cyclomatic complexity         | 🟢 `FULLY_FUNCTIONAL`     | True McCabe via `go/ast` (`counter.go`). Handles if/for/range/switch/select/case/&&/\|\|. Per-function breakdown. 9 tests. |
-| Indentation-based complexity     | 🟡 `PARTIALLY_FUNCTIONAL` | Language-neutral fallback for non-Go (`counter.go:56`). Formula: `indentation/4 + 1`. Crude heuristic, unvalidated against known-complex files. |
-| SLOC counting                    | 🟢 `FULLY_FUNCTIONAL`     | Non-blank, non-comment, non-brace-only lines (`counter.go`). Excludes lines with only `{`, `}`, `(`, `)`, `;`, `,`. |
-| Per-function complexity (Go)     | 🟢 `FULLY_FUNCTIONAL`     | `FuncComplexity` struct with name, cyclomatic, line range (`counter.go:30`). Used by `hotspot.RankFunctions()` for function-level hotspot ranking via `--functions N` flag. |
-| Multi-language detection         | 🟢 `FULLY_FUNCTIONAL`     | 20+ language extensions recognized (`detectLanguage`). Only Go gets true cyclomatic.   |
+| Feature                      | Status                    | Notes                                                                                                                                                                       |
+| ---------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Go cyclomatic complexity     | 🟢 `FULLY_FUNCTIONAL`     | True McCabe via `go/ast` (`counter.go`). Handles if/for/range/switch/select/case/&&/\|\|. Per-function breakdown. 9 tests.                                                  |
+| Indentation-based complexity | 🟡 `PARTIALLY_FUNCTIONAL` | Language-neutral fallback for non-Go (`counter.go:56`). Formula: `indentation/4 + 1`. Crude heuristic, unvalidated against known-complex files.                             |
+| SLOC counting                | 🟢 `FULLY_FUNCTIONAL`     | Non-blank, non-comment, non-brace-only lines (`counter.go`). Excludes lines with only `{`, `}`, `(`, `)`, `;`, `,`.                                                         |
+| Per-function complexity (Go) | 🟢 `FULLY_FUNCTIONAL`     | `FuncComplexity` struct with name, cyclomatic, line range (`counter.go:30`). Used by `hotspot.RankFunctions()` for function-level hotspot ranking via `--functions N` flag. |
+| Multi-language detection     | 🟢 `FULLY_FUNCTIONAL`     | 20+ language extensions recognized (`detectLanguage`). Only Go gets true cyclomatic.                                                                                        |
 
 ## Hotspot Scoring
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Normalized complexity x churn    | 🟢 `FULLY_FUNCTIONAL`     | Tornhill methodology: both dimensions normalized project-wide, then multiplied (`score.go`). Score always in [0, 1]. |
-| Risk banding                     | 🟢 `FULLY_FUNCTIONAL`     | Relative to max score in result set: critical >= 66%, high >= 33%, medium >= 10%, low < 10% (`score.go:237`). |
-| Configurable complexity metric   | 🟢 `FULLY_FUNCTIONAL`     | Cyclomatic, indentation, or SLOC selectable via `--complexity` flag.                   |
-| Configurable churn metric        | 🟢 `FULLY_FUNCTIONAL`     | Weighted (recency-decayed), commits, or lines selectable via `--churn` flag.           |
+| Feature                        | Status                | Notes                                                                                                                |
+| ------------------------------ | --------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Normalized complexity x churn  | 🟢 `FULLY_FUNCTIONAL` | Tornhill methodology: both dimensions normalized project-wide, then multiplied (`score.go`). Score always in [0, 1]. |
+| Risk banding                   | 🟢 `FULLY_FUNCTIONAL` | Relative to max score in result set: critical >= 66%, high >= 33%, medium >= 10%, low < 10% (`score.go:237`).        |
+| Configurable complexity metric | 🟢 `FULLY_FUNCTIONAL` | Cyclomatic, indentation, or SLOC selectable via `--complexity` flag.                                                 |
+| Configurable churn metric      | 🟢 `FULLY_FUNCTIONAL` | Weighted (recency-decayed), commits, or lines selectable via `--churn` flag.                                         |
 
 ## Output
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Table output                     | 🟢 `FULLY_FUNCTIONAL`     | Default format. Tabwriter-aligned with risk bands. Tested.                             |
-| Markdown output                  | 🟢 `FULLY_FUNCTIONAL`     | `--format markdown`. Pipe-table with backtick-wrapped paths.                           |
-| CSV output                       | 🟢 `FULLY_FUNCTIONAL`     | `--format csv`. Full metrics for programmatic use.                                     |
-| JSON output                      | 🟢 `FULLY_FUNCTIONAL`     | `--format json`. Includes summary metadata + hotspots + couplings.                     |
-| Error propagation                | 🟢 `FULLY_FUNCTIONAL`     | `report.Render` returns `error`; all renderers use `strings.Builder` + single write. Errors wrapped at boundary via `internal/errors.ReportRender()`. Tested happy path AND error path (failingWriter asserts `*errorfamily.Error` + Code). Golden-file tests for all 4 formats. |
+| Feature           | Status                | Notes                                                                                                                                                                                                                                                                            |
+| ----------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Table output      | 🟢 `FULLY_FUNCTIONAL` | Default format. Tabwriter-aligned with risk bands. Tested.                                                                                                                                                                                                                       |
+| Markdown output   | 🟢 `FULLY_FUNCTIONAL` | `--format markdown`. Pipe-table with backtick-wrapped paths.                                                                                                                                                                                                                     |
+| CSV output        | 🟢 `FULLY_FUNCTIONAL` | `--format csv`. Full metrics for programmatic use.                                                                                                                                                                                                                               |
+| JSON output       | 🟢 `FULLY_FUNCTIONAL` | `--format json`. Includes summary metadata + hotspots + couplings.                                                                                                                                                                                                               |
+| Error propagation | 🟢 `FULLY_FUNCTIONAL` | `report.Render` returns `error`; all renderers use `strings.Builder` + single write. Errors wrapped at boundary via `internal/errors.ReportRender()`. Tested happy path AND error path (failingWriter asserts `*errorfamily.Error` + Code). Golden-file tests for all 4 formats. |
 
 ## Error Handling
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Typed error system               | 🟢 `FULLY_FUNCTIONAL`     | `internal/errors` package built on `go-error-family`. 12 domain-specific constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70). 5 tests including golden stderr assertions. |
-| User-facing error messages       | 🟢 `FULLY_FUNCTIONAL`     | What/Why/Fix/WayOut message templates registered in `templates.go`. `HandleError()` renders to stderr with actionable guidance. 12 templates covering git, CLI, analysis, report, and threshold errors. |
-| Git error classification         | 🟢 `FULLY_FUNCTIONAL`     | `classifyGitError()` inspects cause + stderr to pick the most specific code: not-installed, not-a-repo, bad-revision, no-commits, generic failure. |
-| erraudit compliance              | 🟢 `FULLY_FUNCTIONAL`     | 0 violations in CI mode. 3 `//nolint:erraudit` directives with documented rationale for known false positives. |
+| Feature                    | Status                | Notes                                                                                                                                                                                                   |
+| -------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Typed error system         | 🟢 `FULLY_FUNCTIONAL` | `internal/errors` package built on `go-error-family`. 12 domain-specific constructors with BSD sysexits.h exit codes (0, 1, 2, 65, 69, 70). 5 tests including golden stderr assertions.                 |
+| User-facing error messages | 🟢 `FULLY_FUNCTIONAL` | What/Why/Fix/WayOut message templates registered in `templates.go`. `HandleError()` renders to stderr with actionable guidance. 12 templates covering git, CLI, analysis, report, and threshold errors. |
+| Git error classification   | 🟢 `FULLY_FUNCTIONAL` | `classifyGitError()` inspects cause + stderr to pick the most specific code: not-installed, not-a-repo, bad-revision, no-commits, generic failure.                                                      |
+| erraudit compliance        | 🟢 `FULLY_FUNCTIONAL` | 0 violations in CI mode. 3 `//nolint:erraudit` directives with documented rationale for known false positives.                                                                                          |
 
 ## CLI
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Flag-driven analysis             | 🟢 `FULLY_FUNCTIONAL`     | 25 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 23 tests (unit + integration with real git repos). |
-| File filtering                   | 🟢 `FULLY_FUNCTIONAL`     | Extension, test toggle, generated detection (suffix + content-based `// Code generated` header), path prefix, vendor exclusion, `--min-commits`, `--author` (`main.go`). |
-| Six sort modes                   | 🟢 `FULLY_FUNCTIONAL`     | hotspot, stable, churn, commits, complexity, age (`--sort` flag, `score.go:75`).      |
-| Coupling thresholds              | 🟢 `FULLY_FUNCTIONAL`     | `--coupling-min-shared`, `--coupling-min-degree` flags. Code-maat defaults (5, 30%).   |
-| CI gate (`--fail-above`)         | 🟢 `FULLY_FUNCTIONAL`     | Exits with code 2 when max hotspot exceeds threshold. For CI/CD pipelines.             |
-| Risk-band gate (`--fail-risk`)   | 🟢 `FULLY_FUNCTIONAL`     | Named risk bands (critical/high/medium/low) as convenient aliases for `--fail-above`.  |
-| Tag-based window (`--since-version`) | 🟢 `FULLY_FUNCTIONAL` | Analyze commits since a git tag (e.g., `--since-version v1.0.0`).                       |
-| Header suppression (`--no-header`) | 🟢 `FULLY_FUNCTIONAL`   | Suppress summary header for clean script piping.                                        |
-| Function-level ranking (`--functions`) | 🟢 `FULLY_FUNCTIONAL` | Rank individual Go functions by approximate hotspot score (`file_hotspot * func_cyc / file_cyc`). Output in all 4 formats. |
-| File output (`--output`)         | 🟢 `FULLY_FUNCTIONAL`     | Write report to file instead of stdout.                                                 |
-| Version reporting (`--version`)  | 🟢 `FULLY_FUNCTIONAL`     | Prints version, commit, and build date (injected via goreleaser ldflags). Works before flag parsing.  |
+| Feature                                | Status                | Notes                                                                                                                                                                    |
+| -------------------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Flag-driven analysis                   | 🟢 `FULLY_FUNCTIONAL` | 25 flags for window, metrics, filtering, output, CI gates. `cmd/go-hotspot/main.go`. 23 tests (unit + integration with real git repos).                                  |
+| File filtering                         | 🟢 `FULLY_FUNCTIONAL` | Extension, test toggle, generated detection (suffix + content-based `// Code generated` header), path prefix, vendor exclusion, `--min-commits`, `--author` (`main.go`). |
+| Six sort modes                         | 🟢 `FULLY_FUNCTIONAL` | hotspot, stable, churn, commits, complexity, age (`--sort` flag, `score.go:75`).                                                                                         |
+| Coupling thresholds                    | 🟢 `FULLY_FUNCTIONAL` | `--coupling-min-shared`, `--coupling-min-degree` flags. Code-maat defaults (5, 30%).                                                                                     |
+| CI gate (`--fail-above`)               | 🟢 `FULLY_FUNCTIONAL` | Exits with code 2 when max hotspot exceeds threshold. For CI/CD pipelines.                                                                                               |
+| Risk-band gate (`--fail-risk`)         | 🟢 `FULLY_FUNCTIONAL` | Named risk bands (critical/high/medium/low) as convenient aliases for `--fail-above`.                                                                                    |
+| Tag-based window (`--since-version`)   | 🟢 `FULLY_FUNCTIONAL` | Analyze commits since a git tag (e.g., `--since-version v1.0.0`).                                                                                                        |
+| Header suppression (`--no-header`)     | 🟢 `FULLY_FUNCTIONAL` | Suppress summary header for clean script piping.                                                                                                                         |
+| Function-level ranking (`--functions`) | 🟢 `FULLY_FUNCTIONAL` | Rank individual Go functions by approximate hotspot score (`file_hotspot * func_cyc / file_cyc`). Output in all 4 formats.                                               |
+| File output (`--output`)               | 🟢 `FULLY_FUNCTIONAL` | Write report to file instead of stdout.                                                                                                                                  |
+| Version reporting (`--version`)        | 🟢 `FULLY_FUNCTIONAL` | Prints version, commit, and build date (injected via goreleaser ldflags). Works before flag parsing.                                                                     |
 
 ## Library API
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| CLI tool                         | 🟢 `FULLY_FUNCTIONAL`     | Full CLI with 25 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.   |
-| Public importable packages       | ⚪ `PLANNED`              | All packages under `internal/` — CLI-only for now. Public library API is a ROADMAP item. |
-| Minimal external dependencies   | 🟢 `FULLY_FUNCTIONAL`     | One dependency: `go-error-family v0.10.0` (Lars's zero-dep typed error library). No CGo. All other code is stdlib. |
+| Feature                       | Status                | Notes                                                                                                              |
+| ----------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| CLI tool                      | 🟢 `FULLY_FUNCTIONAL` | Full CLI with 25 flags. Tagged `v0.1.0`. `examples/` directory shows usage patterns.                               |
+| Public importable packages    | ⚪ `PLANNED`          | All packages under `internal/` — CLI-only for now. Public library API is a ROADMAP item.                           |
+| Minimal external dependencies | 🟢 `FULLY_FUNCTIONAL` | One dependency: `go-error-family v0.10.0` (Lars's zero-dep typed error library). No CGo. All other code is stdlib. |
 
 ## Infrastructure
 
-| Feature                          | Status                    | Notes                                                                                  |
-| -------------------------------- | ------------------------- | -------------------------------------------------------------------------------------- |
-| Test suite                       | 🟢 `FULLY_FUNCTIONAL`     | 100 test/benchmark/fuzz functions across 6 packages (unit + integration + golden + fuzz + property). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 5 benchmarks, 4 fuzz targets. |
-| flake.nix                        | 🟢 `FULLY_FUNCTIONAL`     | build/test/lint/format/vet apps + devShell with go, golangci-lint, gofumpt, goreleaser. |
-| GitHub Actions CI                | 🟢 `FULLY_FUNCTIONAL`     | `.github/workflows/ci.yml` — build, test (race), vet, lint on push and PR.            |
-| Git tags / releases              | 🟢 `FULLY_FUNCTIONAL`     | Tag `v0.1.0` exists. `.goreleaser.yml` configured (6 OS/arch targets, CGO_ENABLED=0). |
-| Linting config                   | 🟡 `PARTIALLY_FUNCTIONAL` | `.golangci.yml` with strict profile (wrapcheck, varnamelen, mnd, cyclop, exhaustive, etc.). ~200 pre-existing stylistic warnings across all packages. Build, vet, and erraudit all pass clean. |
+| Feature             | Status                    | Notes                                                                                                                                                                                                                             |
+| ------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Test suite          | 🟢 `FULLY_FUNCTIONAL`     | 100 test/benchmark/fuzz functions across 6 packages (unit + integration + golden + fuzz + property). All pass including race detector (with `-gcflags=all=-l` workaround for Go 1.26.5 linker bug). 5 benchmarks, 4 fuzz targets. |
+| flake.nix           | 🟢 `FULLY_FUNCTIONAL`     | build/test/lint/format/vet apps + devShell with go, golangci-lint, gofumpt, goreleaser.                                                                                                                                           |
+| GitHub Actions CI   | 🟢 `FULLY_FUNCTIONAL`     | `.github/workflows/ci.yml` — build, test (race), vet, lint on push and PR.                                                                                                                                                        |
+| Git tags / releases | 🟢 `FULLY_FUNCTIONAL`     | Tag `v0.1.0` exists. `.goreleaser.yml` configured (6 OS/arch targets, CGO_ENABLED=0).                                                                                                                                             |
+| Linting config      | 🟡 `PARTIALLY_FUNCTIONAL` | `.golangci.yml` with strict profile (wrapcheck, varnamelen, mnd, cyclop, exhaustive, etc.). ~200 pre-existing stylistic warnings across all packages. Build, vet, and erraudit all pass clean.                                    |

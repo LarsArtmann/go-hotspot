@@ -215,9 +215,10 @@ func setupMiniRepo(t *testing.T) {
 
 	cmd := exec.CommandContext(t.Context(), "git", "commit", "-m", "init")
 
+	now := time.Now().Format(time.RFC3339)
 	cmd.Env = append(os.Environ(),
-		"GIT_AUTHOR_DATE=2026-01-01T10:00:00Z",
-		"GIT_COMMITTER_DATE=2026-01-01T10:00:00Z",
+		"GIT_AUTHOR_DATE="+now,
+		"GIT_COMMITTER_DATE="+now,
 	)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("git commit: %v\n%s", err, out)

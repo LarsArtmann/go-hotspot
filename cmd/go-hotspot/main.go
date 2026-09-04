@@ -121,7 +121,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		Complexity: parseComplexityMetric(*complexityMetric),
 		Churn:      parseChurnMetric(*churnMetric),
 	}
-	results := hotspot.Score(history, complexities, scoreOpts)
+	results := hotspot.Score(history, complexities, scoreOpts, now)
 
 	// 4. Sort results by the selected order.
 	hotspot.Sort(results, hotspot.ParseSortOrder(*sortOrder), now)

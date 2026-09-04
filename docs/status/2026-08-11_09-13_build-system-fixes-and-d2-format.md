@@ -76,20 +76,20 @@
 
 ### 8. Full verification suite — all green
 
-| Check | Command | Result |
-|-------|---------|--------|
-| Build | `GOEXPERIMENT=jsonv2 go build ./...` | PASS |
-| Vet | `GOEXPERIMENT=jsonv2 go vet ./...` | PASS |
-| Tests | `GOEXPERIMENT=jsonv2 go test ./... -gcflags=all=-l` | PASS (all packages) |
-| Race tests | `GOEXPERIMENT=jsonv2 go test ./... -race -gcflags=all=-l` | PASS |
-| Lint | `GOEXPERIMENT=jsonv2 golangci-lint run ./...` | 0 issues |
-| Format | `gofumpt -l .` | Clean (no files need formatting) |
-| Goreleaser (clean env) | `env -u GOEXPERIMENT goreleaser release --snapshot --clean` | exit 0, 6/6 targets |
-| Nix build | `nix build .` | exit 0, binary runs |
-| Dogfood gate | `go run ./cmd/go-hotspot --include-tests=false --top 10 --recency 0 --fail-risk high` | exit 0 |
-| DOT CLI | `--format dot --top 3 --no-header` | `graph coupling {` (undirected) |
-| Mermaid CLI | `--format mermaid --top 5 --no-header` | `flowchart TD` |
-| D2 CLI | `--format d2 --top 5 --no-header` | `direction: right` with labeled edges |
+| Check                  | Command                                                                               | Result                                |
+| ---------------------- | ------------------------------------------------------------------------------------- | ------------------------------------- |
+| Build                  | `GOEXPERIMENT=jsonv2 go build ./...`                                                  | PASS                                  |
+| Vet                    | `GOEXPERIMENT=jsonv2 go vet ./...`                                                    | PASS                                  |
+| Tests                  | `GOEXPERIMENT=jsonv2 go test ./... -gcflags=all=-l`                                   | PASS (all packages)                   |
+| Race tests             | `GOEXPERIMENT=jsonv2 go test ./... -race -gcflags=all=-l`                             | PASS                                  |
+| Lint                   | `GOEXPERIMENT=jsonv2 golangci-lint run ./...`                                         | 0 issues                              |
+| Format                 | `gofumpt -l .`                                                                        | Clean (no files need formatting)      |
+| Goreleaser (clean env) | `env -u GOEXPERIMENT goreleaser release --snapshot --clean`                           | exit 0, 6/6 targets                   |
+| Nix build              | `nix build .`                                                                         | exit 0, binary runs                   |
+| Dogfood gate           | `go run ./cmd/go-hotspot --include-tests=false --top 10 --recency 0 --fail-risk high` | exit 0                                |
+| DOT CLI                | `--format dot --top 3 --no-header`                                                    | `graph coupling {` (undirected)       |
+| Mermaid CLI            | `--format mermaid --top 5 --no-header`                                                | `flowchart TD`                        |
+| D2 CLI                 | `--format d2 --top 5 --no-header`                                                     | `direction: right` with labeled edges |
 
 ---
 

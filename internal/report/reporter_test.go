@@ -32,6 +32,7 @@ func sampleResults() []hotspot.Result {
 			SLOC:        200,
 			Indentation: 120,
 			Hotspot:     0.085,
+			TrendFactor: 1.0,
 		},
 		{
 			Path:        "utils.go",
@@ -47,6 +48,7 @@ func sampleResults() []hotspot.Result {
 			SLOC:        50,
 			Indentation: 20,
 			Hotspot:     0.012,
+			TrendFactor: 0.5,
 		},
 	}
 }

@@ -227,6 +227,7 @@ func writeHeader(w io.Writer, s Summary) error {
 }
 
 func renderTable(w io.Writer, results []hotspot.Result) error {
+	// art-dupl:accept empty-input guards intentionally parallel one per output format with format-specific wording
 	if len(results) == 0 {
 		_, err := io.WriteString(w, "(no files match the current filters)\n")
 
@@ -246,7 +247,7 @@ func renderTable(w io.Writer, results []hotspot.Result) error {
 	}
 
 	for i, r := range results {
-		risk := hotspot.RiskBand(r.Hotspot, maxScore)
+		risk := hotspot.RiskBand(r.Hotspot, maxScore, r.TrendFactor)
 
 		row := fmt.Sprintf("%d\t%s\t%s\t%d\t%d\t%s\t%d\t%d\t%s\t%s\t%s\n",
 			i+1, truncPath(r.Path, 45), r.Language,
@@ -267,6 +268,7 @@ func renderTable(w io.Writer, results []hotspot.Result) error {
 }
 
 func renderMarkdown(w io.Writer, results []hotspot.Result) error {
+	// art-dupl:accept empty-input guards intentionally parallel one per output format with format-specific wording
 	if len(results) == 0 {
 		_, err := io.WriteString(w, "_(no files match the current filters)_\n")
 
@@ -280,7 +282,7 @@ func renderMarkdown(w io.Writer, results []hotspot.Result) error {
 	b.WriteString("|--:|:--|:--|--:|--:|--:|--:|--:|--:|:--|\n")
 
 	for i, r := range results {
-		risk := hotspot.RiskBand(r.Hotspot, maxScore)
+		risk := hotspot.RiskBand(r.Hotspot, maxScore, r.TrendFactor)
 		fmt.Fprintf(&b, "| %d | `%s` | %s | %d | %d | %s | %d | %d | %s | %s |\n",
 			i+1, r.Path, r.Language, r.Commits, r.Churn, fmtAuthors(r.AuthorNames),
 			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk)
@@ -336,15 +338,7 @@ func renderCSV(w io.Writer, results []hotspot.Result) error {
 		}
 	}
 
-	cw.Flush()
-
-	if err := cw.Error(); err != nil {
-		return err
-	}
-
-	_, err := io.WriteString(w, buf.String())
-
-	return err
+	return flushCSV(w, cw, &buf)
 }
 
 func renderCouplingTable(w io.Writer, pairs []hotspot.CouplingPair) error {
@@ -438,6 +432,20 @@ func renderFunctionsMarkdown(w io.Writer, funcs []hotspot.FunctionResult) error 
 	return err
 }
 
+// flushCSV flushes the CSV writer and writes the buffered output to w,
+// surfacing flush and write errors.
+func flushCSV(w io.Writer, cw *csv.Writer, buf *strings.Builder) error {
+	cw.Flush()
+
+	if err := cw.Error(); err != nil {
+		return err
+	}
+
+	_, err := io.WriteString(w, buf.String())
+
+	return err
+}
+
 func renderFunctionsCSV(w io.Writer, funcs []hotspot.FunctionResult) error {
 	var buf strings.Builder
 
@@ -459,15 +467,7 @@ func renderFunctionsCSV(w io.Writer, funcs []hotspot.FunctionResult) error {
 		}
 	}
 
-	cw.Flush()
-
-	if err := cw.Error(); err != nil {
-		return err
-	}
-
-	_, err := io.WriteString(w, buf.String())
-
-	return err
+	return flushCSV(w, cw, &buf)
 }
 
 type jsonReport struct {
@@ -498,6 +498,7 @@ type jsonHotspot struct {
 	Indentation int      `json:"indentation"`
 	LastTouch   string   `json:"last_touch,omitempty"`
 	Hotspot     float64  `json:"hotspot"`
+	TrendFactor float64  `json:"trend_factor"`
 }
 
 type jsonCoupling struct {
@@ -548,6 +549,7 @@ func renderJSON(
 			Indentation: r.Indentation,
 			LastTouch:   lastTouch(r.LastTouch),
 			Hotspot:     r.Hotspot,
+			TrendFactor: r.TrendFactor,
 		})
 	}
 

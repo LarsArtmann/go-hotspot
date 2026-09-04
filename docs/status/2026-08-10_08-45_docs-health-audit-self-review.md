@@ -18,42 +18,42 @@
 
 ## a) FULLY DONE (verified with build + vet + test)
 
-| Item | Evidence |
-|---|---|
-| **FEATURES.md created from code** | 25 features across 6 domain areas. Every status verified against source with `file:line` citations. Zero rounding up — 8 features marked PARTIALLY_FUNCTIONAL, 4 marked PLANNED. `FEATURES.md` (8227 bytes). |
-| **TODO_LIST.md created from harvested reports** | 26 actionable items across 3 impact tiers, harvested from both status reports (06-34 and 06-51). Each item verified against code — shipped items removed, not retained. No "Previously Completed" section. `TODO_LIST.md` (6197 bytes). |
-| **ROADMAP.md created from long-term ideas** | 4 themes (Visualization, Advanced Analysis, Language Expansion, Workflow Integration) with raw ideas. Explicit non-goals section. No bounded tasks (those are in TODO_LIST). `ROADMAP.md` (3080 bytes). |
-| **docs/DOMAIN_LANGUAGE.md created from code** | 16 domain terms extracted from type names, function names, and methodology. Each term has code reference column. `docs/DOMAIN_LANGUAGE.md` (3749 bytes). |
-| **CHANGELOG.md rebuilt from git log** | Removed fictional `[0.1.0] - 2026-01-01` entry (zero git tags exist). Replaced with real `[Unreleased]` content from all 5 commits, including the breaking `report.Render` signature change. `CHANGELOG.md` (2093 bytes). |
-| **Status report 1 (06-34) annotated inline** | 14 items struck through with commit hashes. Resolution banner added. Items resolved: `max()` removal, `strings.Cut`, daemon file review, go.mod verification, doc comments, competitive analysis, package name fix, scoring/sorting separation. |
-| **Status report 2 (06-51) annotated inline** | 10 items struck through. Resolution banner added. Items resolved: gopls staleness, CHANGELOG gap, API changelog, LSP staleness docs, test status investigation, `max()` motivation. |
-| **README.md fixed** | Added missing `--sort` flag to flags table (shipped in `d40de29`, never documented). |
-| **AGENTS.md cleaned** | Removed 2 transient LSP-cache bullets that fail the endurance test. Kept Go 1.26.5 race detector bug (real enduring constraint). Size: 5690 bytes (well within 5-15 KB budget). |
-| **Build/test/vet verification** | `go build ./...` clean, `go test ./...` 42/42 pass, `go vet ./...` clean. No code changed this session. |
+| Item                                            | Evidence                                                                                                                                                                                                                                        |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FEATURES.md created from code**               | 25 features across 6 domain areas. Every status verified against source with `file:line` citations. Zero rounding up — 8 features marked PARTIALLY_FUNCTIONAL, 4 marked PLANNED. `FEATURES.md` (8227 bytes).                                    |
+| **TODO_LIST.md created from harvested reports** | 26 actionable items across 3 impact tiers, harvested from both status reports (06-34 and 06-51). Each item verified against code — shipped items removed, not retained. No "Previously Completed" section. `TODO_LIST.md` (6197 bytes).         |
+| **ROADMAP.md created from long-term ideas**     | 4 themes (Visualization, Advanced Analysis, Language Expansion, Workflow Integration) with raw ideas. Explicit non-goals section. No bounded tasks (those are in TODO_LIST). `ROADMAP.md` (3080 bytes).                                         |
+| **docs/DOMAIN_LANGUAGE.md created from code**   | 16 domain terms extracted from type names, function names, and methodology. Each term has code reference column. `docs/DOMAIN_LANGUAGE.md` (3749 bytes).                                                                                        |
+| **CHANGELOG.md rebuilt from git log**           | Removed fictional `[0.1.0] - 2026-01-01` entry (zero git tags exist). Replaced with real `[Unreleased]` content from all 5 commits, including the breaking `report.Render` signature change. `CHANGELOG.md` (2093 bytes).                       |
+| **Status report 1 (06-34) annotated inline**    | 14 items struck through with commit hashes. Resolution banner added. Items resolved: `max()` removal, `strings.Cut`, daemon file review, go.mod verification, doc comments, competitive analysis, package name fix, scoring/sorting separation. |
+| **Status report 2 (06-51) annotated inline**    | 10 items struck through. Resolution banner added. Items resolved: gopls staleness, CHANGELOG gap, API changelog, LSP staleness docs, test status investigation, `max()` motivation.                                                             |
+| **README.md fixed**                             | Added missing `--sort` flag to flags table (shipped in `d40de29`, never documented).                                                                                                                                                            |
+| **AGENTS.md cleaned**                           | Removed 2 transient LSP-cache bullets that fail the endurance test. Kept Go 1.26.5 race detector bug (real enduring constraint). Size: 5690 bytes (well within 5-15 KB budget).                                                                 |
+| **Build/test/vet verification**                 | `go build ./...` clean, `go test ./...` 42/42 pass, `go vet ./...` clean. No code changed this session.                                                                                                                                         |
 
 ---
 
 ## b) PARTIALLY DONE (started but incomplete)
 
-| Item | What was done | What's missing |
-|---|---|---|
-| **Status report annotations** | Both reports got inline strikethroughs for resolved items with commit hashes | Report 2 items 2, 3, 6, 8 (section d) and several section f items were left untouched — some may already be done (e.g., `go-structure-linter` auto-fixes may have been committed by daemon). Didn't verify each remaining item against current code. |
-| **Cross-file consistency** | Checked FEATURES ↔ README, TODO ↔ CHANGELOG, TODO ↔ ROADMAP | Didn't verify all internal markdown links resolve. Didn't check CONTRIBUTING.md for accuracy beyond a surface read. |
-| **TODO_LIST completeness** | 26 items harvested and verified | Missed items from report 2: "Review go-structure-linter auto-fixes", "Review gitignore-upserter auto-fixes", "Run `golangci-lint run ./...` to confirm", "Run `buildflow -s erraudit`", "Diff CLI output before/after refactor". These were in report 2 section f items 3-7, 10-11 but didn't make it into TODO_LIST. |
-| **DOMAIN_LANGUAGE accuracy** | 16 terms defined with code references | Two terms ("Knowledge island", "Bus factor") are listed but have no code implementation yet — marked "Planned" but their presence in a domain glossary could mislead readers into thinking they exist. |
+| Item                          | What was done                                                                | What's missing                                                                                                                                                                                                                                                                                                        |
+| ----------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Status report annotations** | Both reports got inline strikethroughs for resolved items with commit hashes | Report 2 items 2, 3, 6, 8 (section d) and several section f items were left untouched — some may already be done (e.g., `go-structure-linter` auto-fixes may have been committed by daemon). Didn't verify each remaining item against current code.                                                                  |
+| **Cross-file consistency**    | Checked FEATURES ↔ README, TODO ↔ CHANGELOG, TODO ↔ ROADMAP                  | Didn't verify all internal markdown links resolve. Didn't check CONTRIBUTING.md for accuracy beyond a surface read.                                                                                                                                                                                                   |
+| **TODO_LIST completeness**    | 26 items harvested and verified                                              | Missed items from report 2: "Review go-structure-linter auto-fixes", "Review gitignore-upserter auto-fixes", "Run `golangci-lint run ./...` to confirm", "Run `buildflow -s erraudit`", "Diff CLI output before/after refactor". These were in report 2 section f items 3-7, 10-11 but didn't make it into TODO_LIST. |
+| **DOMAIN_LANGUAGE accuracy**  | 16 terms defined with code references                                        | Two terms ("Knowledge island", "Bus factor") are listed but have no code implementation yet — marked "Planned" but their presence in a domain glossary could mislead readers into thinking they exist.                                                                                                                |
 
 ---
 
 ## c) NOT STARTED
 
-| Item | Why it matters |
-|---|---|
-| **HARVEST from THIS report** | This report's section (f) contains up to 50 next tasks. They need to be harvested into TODO_LIST.md / ROADMAP.md — but that's the NEXT session's job, not this one. |
-| **Committing the work** | All 10 changed files are uncommitted. No commit was made. The auto-git daemon may commit, but the work should be reviewed first. |
-| **README library example fix** | The README "As a Go library" section uses `internal/` import paths (`internal/complexity`, `internal/git`, `internal/hotspot`). These are not externally importable — the example won't compile from outside the module. Documented in FEATURES.md but not fixed in README. |
-| **CONTRIBUTING.md review** | CONTRIBUTING.md is thin (22 lines), references the race workaround correctly, but doesn't mention `flake.nix` (doesn't exist), lint config (doesn't exist), or any development workflow beyond two commands. Not rebuilt this session. |
-| **DESIGN.md review** | DESIGN.md was not touched or verified this session. It may contain claims that drift from code. |
-| **`.gitignore` / `.gitattributes` review** | Both files were daemon-generated and never reviewed (per report 1 item d.7). I annotated the report item as "resolved" but never actually read either file's contents. |
+| Item                                       | Why it matters                                                                                                                                                                                                                                                              |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **HARVEST from THIS report**               | This report's section (f) contains up to 50 next tasks. They need to be harvested into TODO_LIST.md / ROADMAP.md — but that's the NEXT session's job, not this one.                                                                                                         |
+| **Committing the work**                    | All 10 changed files are uncommitted. No commit was made. The auto-git daemon may commit, but the work should be reviewed first.                                                                                                                                            |
+| **README library example fix**             | The README "As a Go library" section uses `internal/` import paths (`internal/complexity`, `internal/git`, `internal/hotspot`). These are not externally importable — the example won't compile from outside the module. Documented in FEATURES.md but not fixed in README. |
+| **CONTRIBUTING.md review**                 | CONTRIBUTING.md is thin (22 lines), references the race workaround correctly, but doesn't mention `flake.nix` (doesn't exist), lint config (doesn't exist), or any development workflow beyond two commands. Not rebuilt this session.                                      |
+| **DESIGN.md review**                       | DESIGN.md was not touched or verified this session. It may contain claims that drift from code.                                                                                                                                                                             |
+| **`.gitignore` / `.gitattributes` review** | Both files were daemon-generated and never reviewed (per report 1 item d.7). I annotated the report item as "resolved" but never actually read either file's contents.                                                                                                      |
 
 ---
 
@@ -66,6 +66,7 @@ I reported **Accuracy: 9.5/10** and **Fitness: 9.5/10** in the closing message. 
 ### 2. TODO_LIST is missing 5+ items from the reports
 
 Report 2 section (f) items 3, 4, 5, 6, 7, 10, 11 were NOT harvested into TODO_LIST.md. These include:
+
 - Run `golangci-lint run ./...` to confirm zero errcheck warnings
 - Run `buildflow -s erraudit --format finding` to see all 9 findings
 - Review all 38 branching-flow findings
@@ -118,6 +119,7 @@ DESIGN.md contains the competitive analysis, data model, and v1/v2 scope. I read
 ## f) Up to 50 things to do next
 
 ### Critical — fix this session's gaps
+
 1. ~~**Harvest missing report 2 items into TODO_LIST**~~ done — TODO_LIST rebuilt multiple times
 2. ~~**Fix README library example**~~ done at `6999d76` — rewrote to "CLI tool" with honest module-internal note
 3. ~~**Correct report 1 annotation d.7**~~ done — `.gitignore`/`.gitattributes` reviewed in M22 at `cf4ccee`
@@ -126,6 +128,7 @@ DESIGN.md contains the competitive analysis, data model, and v1/v2 scope. I read
 6. ~~**Verify DESIGN.md against code**~~ done at `6999d76` (M24)
 
 ### High priority — infrastructure (from prior reports, still open)
+
 7. ~~**Create first git tag (`v0.1.0`)**~~ done at `cf4ccee`
 8. ~~**Add `flake.nix`**~~ done at `6999d76`
 9. ~~**Add GitHub Actions CI**~~ done at `6999d76`
@@ -134,6 +137,7 @@ DESIGN.md contains the competitive analysis, data model, and v1/v2 scope. I read
 12. ~~**Run `buildflow -s erraudit --format finding`**~~ done — erraudit 0 violations in CI mode at `bade91c`
 
 ### Medium priority — code quality (from prior reports, still open)
+
 13. ~~**Add error-path test for `report.Render`**~~ done at `6999d76`
 14. ~~**Add `context.Context` to `git.Collect`**~~ done at `6999d76`
 15. ~~**Surface author names in report**~~ done at `6999d76`
@@ -154,6 +158,7 @@ DESIGN.md contains the competitive analysis, data model, and v1/v2 scope. I read
 30. ~~**Add `--output` flag**~~ done at `6999d76`
 
 ### Lower priority — features and polish
+
 31. ~~**Add `--min-commits` filter**~~ done at `6999d76`
 32. ~~**Add `--author` filter**~~ done at `6999d76`
 33. **Add `--since-version TAG`** — release-to-release analysis. Impact: Low. Effort: M. Category: Feature.
@@ -193,4 +198,4 @@ All 10 changed files are uncommitted. Options: (a) one commit "docs: full docs-h
 
 ---
 
-*Status report generated at 2026-08-10 08:45 CEST based on this session's docs-health audit work only.*
+_Status report generated at 2026-08-10 08:45 CEST based on this session's docs-health audit work only._

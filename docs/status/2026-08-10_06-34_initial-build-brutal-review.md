@@ -16,52 +16,52 @@
 
 ## a) FULLY DONE (working and tested)
 
-| Item | Evidence |
-|---|---|
-| **Git churn collection** | `internal/git/collector.go` — parses `git log --numstat`, tracks commits, lines added/deleted, recency-weighted churn, authors, first/last touch, co-change data. 9 tests. |
-| **Recency-weighted churn (exponential decay)** | `recencyWeight()` with configurable half-life. Verified: 180-day half-life → 6-month-old change ≈ 50% weight. **No competitor has this.** |
-| **Temporal coupling (code-maat formula)** | `internal/hotspot/coupling.go` — degree = sharedCommits / ceil(avg(totalCommits)) × 100. Max-changeset guard (30 files). Self-pair filtering. 5 tests. Verified on go-cqrs-lite: found `catalog/adapters/query.go ↔ command.go` at 100%. |
-| **Go cyclomatic complexity (go/ast, zero CGo)** | `internal/complexity/counter.go` — true McCabe via `go/ast`. Handles if/for/range/switch/select/case/&&/\|\|. Per-function breakdown with method receiver names. 9 tests. |
-| **Indentation-based complexity (CodeScene approach)** | Language-neutral fallback for non-Go files. SLOC + indentation + max depth. |
-| **Hotspot scoring (normalized complexity × churn)** | Tornhill methodology: both dimensions normalized across project, then multiplied. Configurable complexity metric (cyclomatic/indentation/sloc) and churn metric (weighted/commits/lines). |
-| **Six sort modes** | `--sort hotspot\|stable\|churn\|commits\|complexity\|age`. Verified: stable shows least-changed code, age shows oldest untouched code. |
-| **Four output formats** | Table, markdown, CSV, JSON — all tested and verified. JSON includes full metadata for programmatic use. |
-| **File filtering** | Extension filter, test file toggle, generated file detection (suffix-based), path prefix filter, vendor exclusion. |
-| **README, LICENSE, DESIGN.md** | Written with competitive comparison table, usage examples, and design rationale. |
+| Item                                                  | Evidence                                                                                                                                                                                                                                 |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Git churn collection**                              | `internal/git/collector.go` — parses `git log --numstat`, tracks commits, lines added/deleted, recency-weighted churn, authors, first/last touch, co-change data. 9 tests.                                                               |
+| **Recency-weighted churn (exponential decay)**        | `recencyWeight()` with configurable half-life. Verified: 180-day half-life → 6-month-old change ≈ 50% weight. **No competitor has this.**                                                                                                |
+| **Temporal coupling (code-maat formula)**             | `internal/hotspot/coupling.go` — degree = sharedCommits / ceil(avg(totalCommits)) × 100. Max-changeset guard (30 files). Self-pair filtering. 5 tests. Verified on go-cqrs-lite: found `catalog/adapters/query.go ↔ command.go` at 100%. |
+| **Go cyclomatic complexity (go/ast, zero CGo)**       | `internal/complexity/counter.go` — true McCabe via `go/ast`. Handles if/for/range/switch/select/case/&&/\|\|. Per-function breakdown with method receiver names. 9 tests.                                                                |
+| **Indentation-based complexity (CodeScene approach)** | Language-neutral fallback for non-Go files. SLOC + indentation + max depth.                                                                                                                                                              |
+| **Hotspot scoring (normalized complexity × churn)**   | Tornhill methodology: both dimensions normalized across project, then multiplied. Configurable complexity metric (cyclomatic/indentation/sloc) and churn metric (weighted/commits/lines).                                                |
+| **Six sort modes**                                    | `--sort hotspot\|stable\|churn\|commits\|complexity\|age`. Verified: stable shows least-changed code, age shows oldest untouched code.                                                                                                   |
+| **Four output formats**                               | Table, markdown, CSV, JSON — all tested and verified. JSON includes full metadata for programmatic use.                                                                                                                                  |
+| **File filtering**                                    | Extension filter, test file toggle, generated file detection (suffix-based), path prefix filter, vendor exclusion.                                                                                                                       |
+| **README, LICENSE, DESIGN.md**                        | Written with competitive comparison table, usage examples, and design rationale.                                                                                                                                                         |
 
 ---
 
 ## b) PARTIALLY DONE (collected data but underutilized)
 
-| Item | What exists | What's missing |
-|---|---|---|
-| **Author/bus-factor data** | `Authors` set + `AuthorCount()` collected per file | Not surfaced in reports beyond a count column. No bus-factor metric. No knowledge island detection (≥95% single-author). No author names in output. |
-| **Per-function complexity (Go)** | `FuncComplexity` struct with name, cyclomatic, line range | Not used anywhere. No function-level hotspot ranking. Dead data. |
-| **Temporal coupling** | Degree formula + thresholds working | No "sum of couplings" metric (architectural centrality). No trend direction (growing vs shrinking coupling). No coupling-degree-per-author. |
-| **First/Last touch timestamps** | Collected and shown in LAST column | No "complexity trend over time" (CodeScene's key feature — re-running complexity on historic revisions). |
-| ~~**CHANGELOG.md**~~ | ~~Auto-generated by daemon~~ | ~~Not curated, probably contains noise.~~ **Curated** at `6bc7a28`, docs-health audit — rebuilt from git log |
+| Item                             | What exists                                               | What's missing                                                                                                                                      |
+| -------------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Author/bus-factor data**       | `Authors` set + `AuthorCount()` collected per file        | Not surfaced in reports beyond a count column. No bus-factor metric. No knowledge island detection (≥95% single-author). No author names in output. |
+| **Per-function complexity (Go)** | `FuncComplexity` struct with name, cyclomatic, line range | Not used anywhere. No function-level hotspot ranking. Dead data.                                                                                    |
+| **Temporal coupling**            | Degree formula + thresholds working                       | No "sum of couplings" metric (architectural centrality). No trend direction (growing vs shrinking coupling). No coupling-degree-per-author.         |
+| **First/Last touch timestamps**  | Collected and shown in LAST column                        | No "complexity trend over time" (CodeScene's key feature — re-running complexity on historic revisions).                                            |
+| ~~**CHANGELOG.md**~~             | ~~Auto-generated by daemon~~                              | ~~Not curated, probably contains noise.~~ **Curated** at `6bc7a28`, docs-health audit — rebuilt from git log                                        |
 
 ---
 
 ## c) NOT STARTED
 
-| Item | Why it matters |
-|---|---|
-| ~~**flake.nix**~~ | ~~Lars's AGENTS.md: "use flake.nix for ALL build/task automation". Zero Nix infrastructure exists.~~ done at `6999d76` |
-| ~~**CI/CD (GitHub Actions)**~~ | ~~No automated testing on push. No release pipeline.~~ done at `6999d76` |
-| ~~**Releases/tags**~~ | ~~README says `go install ...@latest` but there are **zero tags**. Install command will fail.~~ done at `cf4ccee` (tag `v0.1.0`) |
-| ~~**Linting config (.golangci.yml)**~~ | ~~No static analysis beyond `go vet`.~~ done at `6999d76` |
-| ~~**Benchmark tests**~~ | ~~README claims "fast" with zero evidence.~~ done at `6999d76` |
-| **HTML/treemap output** | CodeScene's signature visualization. Would differentiate from all CLI competitors. |
-| **TUI (Bubble Tea)** | noisemap has one. We don't. |
-| **Complexity trends over time** | CodeScene's killer feature: re-run complexity on historic versions to show deterioration. |
-| **Method/function-level hotspots** | Rank individual functions, not just files. |
-| **Duplication detection** | code-inspector has token-level clone detection. |
-| **Dependency graph** | code-inspector has fan-in/fan-out/cycle detection. |
-| ~~**goreleaser**~~ | ~~No release automation.~~ done at `cf4ccee` |
-| **Knowledge loss simulation** | CodeScene: mark developers as "ex-departed", highlight affected code. |
-| **Multi-repo analysis** | Cross-repository temporal coupling via ticket IDs. |
-| ~~**.go file content-based generated detection**~~ | ~~Only suffix-based (`*.gen.go`). Real generated files have `// Code generated by...` headers.~~ done at `6999d76` |
+| Item                                               | Why it matters                                                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| ~~**flake.nix**~~                                  | ~~Lars's AGENTS.md: "use flake.nix for ALL build/task automation". Zero Nix infrastructure exists.~~ done at `6999d76`           |
+| ~~**CI/CD (GitHub Actions)**~~                     | ~~No automated testing on push. No release pipeline.~~ done at `6999d76`                                                         |
+| ~~**Releases/tags**~~                              | ~~README says `go install ...@latest` but there are **zero tags**. Install command will fail.~~ done at `cf4ccee` (tag `v0.1.0`) |
+| ~~**Linting config (.golangci.yml)**~~             | ~~No static analysis beyond `go vet`.~~ done at `6999d76`                                                                        |
+| ~~**Benchmark tests**~~                            | ~~README claims "fast" with zero evidence.~~ done at `6999d76`                                                                   |
+| **HTML/treemap output**                            | CodeScene's signature visualization. Would differentiate from all CLI competitors.                                               |
+| **TUI (Bubble Tea)**                               | noisemap has one. We don't.                                                                                                      |
+| **Complexity trends over time**                    | CodeScene's killer feature: re-run complexity on historic versions to show deterioration.                                        |
+| **Method/function-level hotspots**                 | Rank individual functions, not just files.                                                                                       |
+| **Duplication detection**                          | code-inspector has token-level clone detection.                                                                                  |
+| **Dependency graph**                               | code-inspector has fan-in/fan-out/cycle detection.                                                                               |
+| ~~**goreleaser**~~                                 | ~~No release automation.~~ done at `cf4ccee`                                                                                     |
+| **Knowledge loss simulation**                      | CodeScene: mark developers as "ex-departed", highlight affected code.                                                            |
+| **Multi-repo analysis**                            | Cross-repository temporal coupling via ticket IDs.                                                                               |
+| ~~**.go file content-based generated detection**~~ | ~~Only suffix-based (`*.gen.go`). Real generated files have `// Code generated by...` headers.~~ done at `6999d76`               |
 
 ---
 
@@ -75,35 +75,38 @@
 
 4. **Non-Go cyclomatic is a crude heuristic.** `indentation/4 + 1` is barely better than a guess. The README says "correlates well with branching" but I have zero validation data for this claim. For a tool that claims to be "the best", this is a weak point.
 
-4. ~~**Initial prototype was in the wrong repo.** Built `cmd/churn` inside go-cqrs-lite before the user corrected me to use a dedicated repo. Required cleanup. Should have asked up front.~~ resolved during initial build
+5. ~~**Initial prototype was in the wrong repo.** Built `cmd/churn` inside go-cqrs-lite before the user corrected me to use a dedicated repo. Required cleanup. Should have asked up front.~~ resolved during initial build
 
-5. ~~**First research was wrong.** I claimed "no maintained Go-native tool exists" based on one agent summary. The user challenged this, and I found 4 Go tools on GitHub in 2 minutes. This was a significant research failure that could have led to building a redundant tool.~~ resolved — competitive analysis now in DESIGN.md
+6. ~~**First research was wrong.** I claimed "no maintained Go-native tool exists" based on one agent summary. The user challenged this, and I found 4 Go tools on GitHub in 2 minutes. This was a significant research failure that could have led to building a redundant tool.~~ resolved — competitive analysis now in DESIGN.md
 
-6. ~~**No `go.mod` version verification.** The go.mod says `go 1.26.4` but I never verified this Go version exists or is installed. Just copied from go-cqrs-lite.~~ resolved — go.mod updated to `1.26.5`, all tests pass
+7. ~~**No `go.mod` version verification.** The go.mod says `go 1.26.4` but I never verified this Go version exists or is installed. Just copied from go-cqrs-lite.~~ resolved — go.mod updated to `1.26.5`, all tests pass
 
-7. ~~**Daemon-generated files staged without review.** The auto-git daemon created `.editorconfig`, `.gitattributes`, `AGENTS.md`, `CHANGELOG.md`, `CONTRIBUTING.md` — I committed them without reading their contents. Per Lars's AGENTS.md: "NEVER revert changes you didn't author — READ it, judge it." I didn't follow my own rules in reverse: I committed files I didn't author without reviewing them.~~ resolved — AGENTS.md rewritten at `6bc7a28`, CHANGELOG.md curated by docs-health audit
+8. ~~**Daemon-generated files staged without review.** The auto-git daemon created `.editorconfig`, `.gitattributes`, `AGENTS.md`, `CHANGELOG.md`, `CONTRIBUTING.md` — I committed them without reading their contents. Per Lars's AGENTS.md: "NEVER revert changes you didn't author — READ it, judge it." I didn't follow my own rules in reverse: I committed files I didn't author without reviewing them.~~ resolved — AGENTS.md rewritten at `6bc7a28`, CHANGELOG.md curated by docs-health audit
 
-8. ~~**Package name mismatch bug.** Initially named the package `gitanal` while the directory was `git`. Cost a test cycle. Should have caught this immediately.~~ resolved during initial build
+9. ~~**Package name mismatch bug.** Initially named the package `gitanal` while the directory was `git`. Cost a test cycle. Should have caught this immediately.~~ resolved during initial build
 
-9. **README comparison table has unverified claims.** I wrote "code-inspector forces CGo even for Go" — this is true based on the README, but I didn't verify by building it. The competitive table is research-based, not empirical.
+10. **README comparison table has unverified claims.** I wrote "code-inspector forces CGo even for Go" — this is true based on the README, but I didn't verify by building it. The competitive table is research-based, not empirical.
 
-10. **The `--sort age` zero-time edge case.** Files with no git history get `time.Time{}` and sort last. But the `AgeDays()` method returns 0 for zero-time, which makes them look "fresh" — contradicting the sort. The method and the sort disagree.
+11. **The `--sort age` zero-time edge case.** Files with no git history get `time.Time{}` and sort last. But the `AgeDays()` method returns 0 for zero-time, which makes them look "fresh" — contradicting the sort. The method and the sort disagree.
 
 ---
 
 ## e) WHAT WE SHOULD IMPROVE (quality critique)
 
 ### Architecture improvements
+
 - ~~**Separate scoring from sorting.** Currently `Score()` just computes, `Sort()` orders — good. But `Score()` returns unsorted results, which is surprising. Should document this clearly or sort by hotspot by default.~~ resolved — `Score()` computes, `Sort()` orders separately, documented in AGENTS.md
 - **`Result` struct is a god struct.** 15 fields mixing churn, complexity, temporal, and metadata. Could be composed: `ChurnResult`, `ComplexityResult`, etc.
 - **No context.Context support.** `git.Collect` runs `exec.Command` without cancellation. Long-running analysis can't be aborted.
 
 ### Correctness improvements
+
 - **Rename handling in coupling is incomplete.** `normalizeRename` handles per-commit renames, but a file renamed across history fragments its coupling graph. git's `-M` flag helps but isn't enough for long histories.
 - **Generated file detection is suffix-only.** Should also check for `// Code generated` header (Go convention).
 - **Indentation complexity doesn't normalize mixed tabs/spaces.** A file mixing tabs and spaces gets inconsistent indentation counts.
 
 ### UX improvements
+
 - **No `--author` filter.** Can't ask "what did Alice touch most?"
 - **No `--min-commits` filter.** Can't exclude files touched only once (noise).
 - **No exit codes for CI.** Can't gate: "fail if any hotspot > threshold".
@@ -111,6 +114,7 @@
 - **No config file.** Every flag must be passed on the command line.
 
 ### Competitive gaps
+
 - **vs CodeScene:** No code health metric, no complexity trends, no knowledge maps, no off-boarding simulation.
 - **vs code-inspector:** No duplication detection, no dependency graph, no multi-language cyclomatic (tree-sitter).
 - **vs noisemap:** No TUI, no terminal heatmap visualization.
@@ -120,6 +124,7 @@
 ## f) Up to 50 things to do next
 
 ### Infrastructure (critical — do first)
+
 1. ~~**Add `flake.nix`** with build, test, lint, devShell, format apps~~ done at `6999d76`
 2. ~~**Add GitHub Actions CI** (build, vet, test, race, lint on push/PR)~~ done at `6999d76`
 3. ~~**Create first git tag** (`v0.1.0`) so `go install` actually works~~ done at `cf4ccee`
@@ -132,6 +137,7 @@
 10. ~~**Add `context.Context` support** to `git.Collect` for cancellation~~ done at `6999d76`
 
 ### Core analysis (high impact)
+
 11. ~~**Surface author names in report** (not just count)~~ done at `6999d76`
 12. **Add bus-factor metric** (min authors to lose before unmaintainable)
 13. **Add knowledge island detection** (≥95% single-author files)
@@ -148,6 +154,7 @@
 24. **Add "recent activity only" mode** (`--recent 30d` to filter to files touched in last 30 days)
 
 ### Output & visualization (medium impact)
+
 25. **Add HTML treemap output** (CodeScene's signature viz)
 26. **Add D2/Mermaid diagram output** for coupling graph
 27. **Add Bubble Tea TUI** with interactive heatmap
@@ -159,6 +166,7 @@
 33. **Add delta mode** (`--compare v0.1.0..v0.2.0` — what changed between releases)
 
 ### Advanced features (differentiators)
+
 34. **Add tree-sitter as optional build tag** for non-Go cyclomatic complexity
 35. **Add duplication detection** (token-level clone detection like code-inspector)
 36. **Add dependency graph** (fan-in, fan-out, cycle detection)
@@ -168,6 +176,7 @@
 40. **Add cross-repo coupling** (via ticket IDs in commit messages)
 
 ### Quality & polish
+
 41. **Add benchmark tests** (`go test -bench`) — prove the "fast" claim
 42. **Add fuzz tests** for git parsing (malformed numstat lines)
 43. ~~**Add integration test** that runs on a fixture git repo (not just string parsing)~~ done at `cf4ccee`
@@ -184,14 +193,17 @@
 ## g) Questions I CANNOT answer myself
 
 ### 1. Module path and repo ownership
+
 I assumed `github.com/larsartmann/go-hotspot` based on the go-cqrs-lite pattern. Is this the correct GitHub org/path? Should it be under a different account? Should the repo name be different (e.g., `go-codehotspot`, `crime-scene`, `tornhill`)?
 
 ### 2. Tree-sitter strategy
+
 Should non-Go cyclomatic complexity use tree-sitter (requires CGo, like code-inspector) or stay pure-Go with indentation heuristics? The DESIGN.md says "deferred as optional build tag" — but is that the right call, or should CGo be a first-class dependency from the start for correctness? This is a fundamental architecture decision I can't make alone because it affects the entire build story.
 
 ### 3. Is this a library or a product?
+
 The DESIGN.md and README position it as both CLI + library. But the scope of "be the best" could mean: (a) best CLI tool for quick analysis, (b) best Go library for embedding in CI pipelines, or (c) best CodeScene alternative (which implies dashboards, trends, knowledge maps, etc. — a much larger product). Which direction should we optimize for? This determines whether we prioritize TUI/HTML visualization or API stability/library ergonomics.
 
 ---
 
-*Status report generated at 2026-08-10 06:34 CEST based on session work only.*
+_Status report generated at 2026-08-10 06:34 CEST based on session work only._

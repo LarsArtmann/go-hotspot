@@ -1,7 +1,7 @@
 # Status Report: go-output Integration & Self-Review
 
-**Date:** 2026-08-11 08:26  
-**Session goal:** Evaluate whether `go-output` and `cmdguard` can benefit go-hotspot; integrate what fits.  
+**Date:** 2026-08-11 08:26\
+**Session goal:** Evaluate whether `go-output` and `cmdguard` can benefit go-hotspot; integrate what fits.\
 **Verdict:** cmdguard rejected. go-output integrated for coupling graph visualization (DOT + Mermaid). **Three critical build-system issues found in self-review.**
 
 ---
@@ -9,6 +9,7 @@
 ## a) FULLY DONE
 
 ### Research & Analysis
+
 - Researched go-output (16-format output library, Graph/Table/Tree data model, root + 14 sub-modules)
 - Researched cmdguard (Cobra wrapper with DI, lifecycle, type-safe flags, 6+ heavy deps)
 - Correctly identified cmdguard as wrong fit (single-command tool, no subcommands/DI/lifecycle needed)
@@ -16,6 +17,7 @@
 - Verified the ROADMAP already listed "D2/Mermaid diagram output for the temporal coupling graph" as a desired feature
 
 ### go-output Integration (code)
+
 - Added `go-output` v0.37.0 (root) + `go-output/graph` v0.37.0 + `go-output/escape` v0.37.0 as dependencies
 - Resolved Pattern B workspace sentinel-version issue (`testhelpers` and `graphtest` pinned to v0.37.0 to override `v0.0.0-00010101000000-000000000000`)
 - Created `internal/report/graph.go` — builds `output.Graph` from `[]hotspot.CouplingPair`, renders via `graph.WriteDOT` and `graph.WriteMermaid`
@@ -25,22 +27,26 @@
 - Updated `--format` help string in `main.go` to include `dot|mermaid`
 
 ### gofmt/go-output JSON v2 Build Support
+
 - Set `GOEXPERIMENT=jsonv2` in `flake.nix` devShell (required by go-output's `encoding/json/v2` import)
 - Set `GOEXPERIMENT=jsonv2` in all `flake.nix` apps (build, test, lint, vet)
 - Set `GOEXPERIMENT=jsonv2` as workflow-level env in `.github/workflows/ci.yml`
 
 ### Tests
+
 - Added 4 new tests: `TestRenderCouplingDOT`, `TestRenderCouplingMermaid`, `TestRenderGraphEmptyPairs`, `TestParseFormatGraph`
 - Added DOT and Mermaid to `TestGoldenAllFormats` golden test cases
 - Generated golden files: `testdata/golden/dot.txt`, `testdata/golden/mermaid.txt`
 - All existing tests still pass (table, markdown, csv, json golden files unchanged)
 
 ### Documentation
+
 - Updated `AGENTS.md`: commands section (GOEXPERIMENT prefix), package table (report package now lists dot/mermaid), conventions section (go-output dep documented, GOEXPERIMENT requirement, --format dot/mermaid behavior)
 - Updated `ROADMAP.md`: marked "D2/Mermaid diagram output" as DONE with note about D2 being future work
 - Updated `README.md`: `--format` flag reference now includes `dot`, `mermaid`
 
 ### Verification (partial — see section d)
+
 - `GOEXPERIMENT=jsonv2 go build ./...` — OK
 - `GOEXPERIMENT=jsonv2 go vet ./...` — OK
 - `GOEXPERIMENT=jsonv2 go test ./... -gcflags=all=-l` — all pass
@@ -56,6 +62,7 @@
 ## b) PARTIALLY DONE
 
 ### Build system updates
+
 - `flake.nix` devShell and apps: DONE (GOEXPERIMENT set)
 - `flake.nix` buildGoModule: **BROKEN** (see section d)
 - `.goreleaser.yml`: **NOT UPDATED** (see section d)
@@ -63,6 +70,7 @@
 - `README.md` install instructions: **NOT UPDATED** (see section d)
 
 ### Documentation
+
 - AGENTS.md: mostly done but still has stale "~200 golangci-lint warnings" text from a previous session (should say 0 issues)
 - ROADMAP.md: done for this feature
 - README.md: format reference updated, but missing GOEXPERIMENT build prerequisite for end users
@@ -86,6 +94,7 @@
 ### 1. CRITICAL: `.goreleaser.yml` missing `GOEXPERIMENT: jsonv2` — RELEASE BUILDS WILL FAIL
 
 **Verified:** `env -u GOEXPERIMENT goreleaser release --snapshot --clean` fails with:
+
 ```
 build failed: exit status 1: imports encoding/json/jsontext: build constraints exclude all Go files
 imports encoding/json/v2: build constraints exclude all Go files
@@ -98,6 +107,7 @@ The goreleaser env block at `.goreleaser.yml:13-14` has `CGO_ENABLED=0` but NOT 
 ### 2. CRITICAL: `nix build .` (buildGoModule) is BROKEN
 
 **Verified:** `nix build .` fails with:
+
 ```
 error: The `env` attribute set cannot contain any attributes passed to derivation.
 The following attributes are overlapping:
@@ -105,6 +115,7 @@ The following attributes are overlapping:
 ```
 
 Two problems:
+
 - **Pre-existing:** `CGO_ENABLED = 0;` is set as a direct derivation attribute in `buildGoModule`, but recent nixpkgs requires it in an `env` attrset (or it conflicts with `buildGoModule`'s internal `CGO_ENABLED=1`).
 - **My addition:** I added `GOEXPERIMENT = "jsonv2";` the same wrong way — as a direct attribute instead of in `env`.
 - **Also:** `vendorHash = null` was correct when there were zero deps, but now that we have real deps, this needs to be a real hash. The build fails before reaching vendor hash checking, but this is a latent issue.
@@ -120,6 +131,7 @@ Two problems:
 ### 4. Process failure: didn't test ALL build paths before declaring done
 
 I verified `go build`, `go test`, `go vet`, `golangci-lint`, and `nix run .#build` (shell wrapper), but I did NOT verify:
+
 - `nix build .` (the actual Nix derivation) — **broken**
 - `goreleaser release` without devShell env — **broken**
 - `go install` without devShell env — **would fail**
@@ -153,12 +165,14 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 ## f) Up to 50 things we should get done next
 
 ### Critical (release-blocking)
+
 1. **Fix `.goreleaser.yml`:** Add `GOEXPERIMENT: jsonv2` to env block
 2. **Fix `flake.nix` buildGoModule:** Move `CGO_ENABLED` and `GOEXPERIMENT` to `env` attrset, update `vendorHash` for real deps
 3. **Fix `README.md`:** Document GOEXPERIMENT=jsonv2 build requirement for `go install` / building from source
 4. **Verify `nix build .` works after fix** (run the actual derivation, not the shell app)
 
 ### High priority (correctness/polish)
+
 5. **Add D2 diagram format** (`--format d2`) using go-output's `d2` sub-module — ROADMAP says "D2/Mermaid", we only did DOT/Mermaid
 6. **Switch to undirected graph** for coupling — `graph.WithDirected(false)` — coupling is symmetric
 7. **Add edge penwidth** proportional to coupling degree for visual weight
@@ -167,6 +181,7 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 10. **Add CHANGELOG.md entry** for go-output integration + DOT/Mermaid formats
 
 ### Medium priority (developer experience)
+
 11. **Add GOEXPERIMENT note to DESIGN.md** if it has a dependencies section
 12. **Consider `make`/`just`/`taskfile` wrapper** that sets GOEXPERIMENT automatically (for non-Nix users)
 13. **Add `.envrc` for direnv** that exports GOEXPERIMENT=jsonv2 (for non-Nix users)
@@ -179,6 +194,7 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 20. **Consider color-coupling nodes by package** (e.g., `internal/git/` nodes one color, `internal/report/` another)
 
 ### Previous session carry-over (not started)
+
 21. **Fix gosec G204 properly** — replace blanket exclusion in `.golangci.yml` with targeted `//nolint` or input validation on `ref` in collector.go
 22. **Annotate stale report** at `docs/status/2026-08-11_07-22_dogfooding-self-review.md` — note all 9 lint issues were resolved
 23. **Design fix for relative-vs-absolute risk band split-brain** — `hotspot.RiskBand()` (relative) vs `parseFailRisk()` (absolute) share vocabulary but mean different things
@@ -186,6 +202,7 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 25. **Remove blanket gosec G204 exclusion** from `.golangci.yml:160`
 
 ### Architecture/roadmap
+
 26. **Explore go-output for table rendering** — current reporter.go (400+ lines) hand-rolls table/markdown/csv. Could be replaced with go-output dispatch. (Rejected this session as not worth it, but worth revisiting if formats proliferate.)
 27. **Add SARIF output** for GitHub code scanning (ROADMAP item)
 28. **Add HTML report output** (ROADMAP item) — go-output has HTML/markup sub-module
@@ -199,6 +216,7 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 36. **Consider streaming output** for large repos — go-output has `StreamingRenderer` interface
 
 ### Testing/quality
+
 37. **Add benchmark for DOT/Mermaid rendering** — no benchmark exists for graph formats
 38. **Add fuzz test for `couplingGraph`** — verify it handles empty/malformed pairs
 39. **Add test for large coupling graphs** (100+ pairs) — verify no performance cliff
@@ -207,6 +225,7 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 42. **Verify `go test` works without GOEXPERIMENT** — if any test imports the report package, it will fail without jsonv2
 
 ### Documentation
+
 43. **Add format examples to README** — show sample DOT/Mermaid output inline
 44. **Add screenshot of rendered coupling graph** to README (render DOT via graphviz, save as PNG)
 45. **Update FEATURES.md** if it exists, to list DOT/Mermaid as done
@@ -214,6 +233,7 @@ I declared "ALL CLEAN" based on incomplete verification. The `nix run .#build` a
 47. **Add `--help` output to README** for quick reference
 
 ### Cleanup
+
 48. **Run `go mod tidy` after any dep changes** to keep go.mod/go.sum clean
 49. **Review if `go-output/escape` can be removed** — it's indirect via graph, may not need explicit pin
 50. **Consider vendoring** — with deps, `go mod vendor` + committed vendor/ may be cleaner than relying on module proxy for releases

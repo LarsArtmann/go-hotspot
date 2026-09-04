@@ -27,13 +27,13 @@ RANK  PATH                          LANG  COMMITS  CHURN  AUTHORS  CYC  SLOC  HO
 
 ## What makes it different
 
-| Feature | code-inspector | noisemap | code-maat | **go-hotspot** |
-|---|---|---|---|---|
-| Recency weighting | None | None | Time-window | **Exponential decay** |
-| Temporal coupling | None | None | Yes (dead) | **Yes (native Go)** |
-| Go complexity | CGo (tree-sitter) | go/ast | N/A | **go/ast (zero CGo)** |
-| Churn metric | Commits | Commits | Both | **Commits + lines + recency-weighted** |
-| CGo required? | Always | Never | JVM | **Never** |
+| Feature           | code-inspector    | noisemap | code-maat   | **go-hotspot**                         |
+| ----------------- | ----------------- | -------- | ----------- | -------------------------------------- |
+| Recency weighting | None              | None     | Time-window | **Exponential decay**                  |
+| Temporal coupling | None              | None     | Yes (dead)  | **Yes (native Go)**                    |
+| Go complexity     | CGo (tree-sitter) | go/ast   | N/A         | **go/ast (zero CGo)**                  |
+| Churn metric      | Commits           | Commits  | Both        | **Commits + lines + recency-weighted** |
+| CGo required?     | Always            | Never    | JVM         | **Never**                              |
 
 ### Key innovations
 
@@ -103,46 +103,46 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 
 ### Flags
 
-| Flag | Default | Description |
-|---|---|---|
-| `--since` | `1 year ago` | Git date spec for analysis window start |
-| `--until` | | Git date spec for analysis window end |
-| `--branch` | `HEAD` | Git revision to analyze |
-| `--recency` | `180` | Recency half-life in days (0 = no decay) |
-| `--format` | `table` | Output: `table`, `markdown`, `csv`, `json`, `dot`, `mermaid`, `d2` |
-| `--top` | `25` | Rows to show (0 = all) |
-| `--complexity` | `cyclomatic` | Metric: `cyclomatic`, `indentation`, `sloc` |
-| `--churn` | `weighted` | Metric: `weighted`, `commits`, `lines` |
-| `--ext` | `.go` | Comma-separated file extensions |
-| `--include-tests` | `true` | Include `_test.go` files |
-| `--include-generated` | `false` | Include `*.gen.go`, `*.pb.go` |
-| `--paths` | | Comma-separated path prefixes to include |
-| `--no-coupling` | `false` | Skip temporal coupling analysis |
-| `--since-version` | | Analyze commits since this git tag (e.g., `v1.0.0`) |
-| `--sort` | `hotspot` | Sort: `hotspot`, `stable`, `churn`, `commits`, `complexity`, `age` |
-| `--coupling-min-shared` | `5` | Minimum shared commits for coupling |
-| `--coupling-min-degree` | `30` | Minimum coupling degree (%) |
-| `--output` | | Write report to file instead of stdout |
-| `--fail-above` | `0` | Exit with code 2 if max hotspot score exceeds this (0 = disabled) |
-| `--fail-risk` | | Exit 2 if max score exceeds absolute band: `low=0.01`, `medium=0.03`, `high=0.08`, `critical=0.15` (the RISK column is relative; these are not) |
-| `--no-header` | `false` | Suppress summary header (for script piping) |
-| `--functions` | `0` | Show top N functions by hotspot score (Go only, 0 = disabled) |
-| `--min-commits` | `0` | Exclude files with fewer commits (0 = no minimum) |
-| `--author` | | Show only files touched by this git author |
-| `--version` | | Print version information and exit |
+| Flag                    | Default      | Description                                                                                                                                     |
+| ----------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--since`               | `1 year ago` | Git date spec for analysis window start                                                                                                         |
+| `--until`               |              | Git date spec for analysis window end                                                                                                           |
+| `--branch`              | `HEAD`       | Git revision to analyze                                                                                                                         |
+| `--recency`             | `180`        | Recency half-life in days (0 = no decay)                                                                                                        |
+| `--format`              | `table`      | Output: `table`, `markdown`, `csv`, `json`, `dot`, `mermaid`, `d2`                                                                              |
+| `--top`                 | `25`         | Rows to show (0 = all)                                                                                                                          |
+| `--complexity`          | `cyclomatic` | Metric: `cyclomatic`, `indentation`, `sloc`                                                                                                     |
+| `--churn`               | `weighted`   | Metric: `weighted`, `commits`, `lines`                                                                                                          |
+| `--ext`                 | `.go`        | Comma-separated file extensions                                                                                                                 |
+| `--include-tests`       | `true`       | Include `_test.go` files                                                                                                                        |
+| `--include-generated`   | `false`      | Include `*.gen.go`, `*.pb.go`                                                                                                                   |
+| `--paths`               |              | Comma-separated path prefixes to include                                                                                                        |
+| `--no-coupling`         | `false`      | Skip temporal coupling analysis                                                                                                                 |
+| `--since-version`       |              | Analyze commits since this git tag (e.g., `v1.0.0`)                                                                                             |
+| `--sort`                | `hotspot`    | Sort: `hotspot`, `stable`, `churn`, `commits`, `complexity`, `age`                                                                              |
+| `--coupling-min-shared` | `5`          | Minimum shared commits for coupling                                                                                                             |
+| `--coupling-min-degree` | `30`         | Minimum coupling degree (%)                                                                                                                     |
+| `--output`              |              | Write report to file instead of stdout                                                                                                          |
+| `--fail-above`          | `0`          | Exit with code 2 if max hotspot score exceeds this (0 = disabled)                                                                               |
+| `--fail-risk`           |              | Exit 2 if max score exceeds absolute band: `low=0.01`, `medium=0.03`, `high=0.08`, `critical=0.15` (the RISK column is relative; these are not) |
+| `--no-header`           | `false`      | Suppress summary header (for script piping)                                                                                                     |
+| `--functions`           | `0`          | Show top N functions by hotspot score (Go only, 0 = disabled)                                                                                   |
+| `--min-commits`         | `0`          | Exclude files with fewer commits (0 = no minimum)                                                                                               |
+| `--author`              |              | Show only files touched by this git author                                                                                                      |
+| `--version`             |              | Print version information and exit                                                                                                              |
 
 ### Exit Codes
 
 go-hotspot follows BSD `sysexits.h` conventions for CI/CD integration:
 
-| Code | BSD Name | Meaning | When |
-|------|----------|---------|------|
-| 0 | — | Success | Analysis completed without errors |
-| 1 | EX_USAGE | Invalid input | Bad flag value or missing argument |
-| 2 | — | Threshold exceeded | `--fail-above` or `--fail-risk` limit triggered |
-| 65 | EX_DATAERR | Source corrupt | Unparseable Go file or read failure |
-| 69 | EX_UNAVAILABLE | Infrastructure | Git not installed, not a repo, or output write failed |
-| 70 | EX_SOFTWARE | Internal bug | Unexpected error (please report) |
+| Code | BSD Name       | Meaning            | When                                                  |
+| ---- | -------------- | ------------------ | ----------------------------------------------------- |
+| 0    | —              | Success            | Analysis completed without errors                     |
+| 1    | EX_USAGE       | Invalid input      | Bad flag value or missing argument                    |
+| 2    | —              | Threshold exceeded | `--fail-above` or `--fail-risk` limit triggered       |
+| 65   | EX_DATAERR     | Source corrupt     | Unparseable Go file or read failure                   |
+| 69   | EX_UNAVAILABLE | Infrastructure     | Git not installed, not a repo, or output write failed |
+| 70   | EX_SOFTWARE    | Internal bug       | Unexpected error (please report)                      |
 
 Each error prints a structured What/Why/Fix/WayOut message to stderr before exiting.
 
@@ -182,7 +182,7 @@ for path := range history.Files {
 results := hotspot.Score(history, complexities, hotspot.ScoreOptions{
     Complexity: hotspot.MetricCyclomatic,
     Churn:      hotspot.ChurnWeighted,
-})
+}, time.Now())
 ```
 
 ## License

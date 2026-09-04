@@ -38,7 +38,7 @@ func main() {
 	results := hotspot.Score(history, complexities, hotspot.ScoreOptions{
 		Complexity: hotspot.MetricCyclomatic,
 		Churn:      hotspot.ChurnWeighted,
-	})
+	}, now)
 	hotspot.Sort(results, hotspot.SortHotspot, now)
 
 	for _, r := range results[:min(5, len(results))] {

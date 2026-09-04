@@ -17,12 +17,14 @@ Replaced the bespoke `internal/fault` package with a `go-error-family`-based `in
 ## a) FULLY DONE
 
 ### 1. Researched erraudit's Error Architecture
+
 - Discovered `erraudit` uses `github.com/larsartmann/go-error-family` (Lars's own zero-dependency library) — NOT `samber/oops` in production code
 - Mapped the full pipeline: `Error` struct implements `Coded`/`Classified`/`Contextual` interfaces → `errorfamily.Classify()` resolves Family → `Family.ExitCode()` returns BSD sysexits code → `HandleError()` renders What/Why/Fix/WayOut template to stderr
 - Identified the 6 Families: Rejection(1), Conflict(1), Transient(75), Corruption(65), Infrastructure(69), Orchestration(70)
 - Verified go-error-family is zero-dependency (stdlib only), Go 1.26.5
 
 ### 2. Built `internal/errors/` Package (3 files, 363 lines)
+
 - **`errors.go`** (121 lines) — 11 domain-specific constructors:
   - Git errors (5): `GitNotInstalled`, `GitNotARepo`, `GitBadRevision`, `GitNoCommits`, `GitFailure` — all Infrastructure family (exit 69)
   - CLI errors (1): `CLIUsage` — Rejection family (exit 1)
@@ -37,10 +39,12 @@ Replaced the bespoke `internal/fault` package with a `go-error-family`-based `in
   - `TestThresholdExceededMessage` + `TestHandleErrorNil`
 
 ### 3. Deleted `internal/fault/` Package
+
 - Removed `fault.go` (214 lines), `fault_test.go` (~200 lines)
 - Zero remaining references to `internal/fault` anywhere in the codebase
 
 ### 4. Rewired All Callers (6 files)
+
 - **`cmd/go-hotspot/main.go`**: `fault.Print` + `fault.ExitCode` → `apierrors.HandleError` (single call); `fault.Usage` → `apierrors.CLIUsage`; `fault.Report` → `apierrors.ReportCreate`; `fault.Threshold` → `apierrors.ThresholdExceeded`; output file `defer f.Close()` now logs close errors instead of `_ =`
 - **`internal/git/collector.go`**: Replaced 5 `fault.Git()` calls + 3 helper functions (`wrapStderr`, `gitNotFoundHint`, `gitStderrHint`) with single `classifyGitError()` that inspects cause + stderr and picks the most specific code. Removed unused `fmt` import.
 - **`internal/complexity/counter.go`**: `fault.Analysis("read",...)` → `errors.AnalysisRead(path, err)`; `fault.Analysis("parse",...)` → `errors.AnalysisParse(path, err)`
@@ -49,6 +53,7 @@ Replaced the bespoke `internal/fault` package with a `go-error-family`-based `in
 - **`examples/basic/main.go`**: Silent swallow `continue` → `log.Printf` + `continue`
 
 ### 5. Verified End-to-End
+
 - 106 tests pass (up from 65 before this session's error system work started — added errors package tests)
 - `go build ./...` — clean
 - `go vet ./...` — clean
@@ -66,12 +71,15 @@ Replaced the bespoke `internal/fault` package with a `go-error-family`-based `in
 ## b) PARTIALLY DONE
 
 ### 1. erraudit Violations (5 remaining, down from 12)
+
 The 5 remaining violations are all known false positives, but none have `//nolint` directives:
+
 - **3× context_loss** (`main.go:74`, `main.go:85`, `main.go:185`) — erraudit flags `showVersion` as lost context, but `showVersion` is a bool that's irrelevant to the error. These are bare `return err` propagations of already-classified errors.
 - **1× ignored** (`main.go:245`) — `defer func() { _ = f.Close() }()` for read-only file in `isGeneratedContent`. Has explanatory comment but no `//nolint` directive.
 - **1× silent_swallow WARNING** (`examples/basic/main.go:28`) — we added `log.Printf` but erraudit still flags it as a swallow because the function has no error return.
 
 ### 2. Documentation
+
 - `CHANGELOG.md` exists but has no `[Unreleased]` section for the go-error-family migration
 - `README.md` has no exit code documentation
 - `AGENTS.md` has no mention of the `internal/errors` package or go-error-family dependency
@@ -81,16 +89,21 @@ The 5 remaining violations are all known false positives, but none have `//nolin
 ## c) NOT STARTED
 
 ### 1. Git Error Classification Tests
+
 `classifyGitError()` in `collector.go` has 5 branches (ErrNotFound, "not a git repository", "ambiguous argument", "no commits", default) but zero test coverage. This is a carry-over from the prior session's fault package — the function was rewritten but still untested.
 
 ### 2. End-to-End Exit Code Tests
+
 No automated test verifies that `go-hotspot` exits with code 69 on git failure, code 2 on threshold, code 1 on bad flags. Verified manually only.
 
 ### 3. Structured Context Attachment
+
 go-error-family supports `.WithContext("key", "value")` on errors. The current constructors don't attach path/operation context to the error struct itself — the path is embedded in the message string via `WrapCorruptionf("read %s", path)`. This works but loses the structured context map that `ErrorContext()` returns.
 
 ### 4. Commit and Push
+
 None of this session's changes are committed. Working tree has:
+
 - Modified: `cmd/go-hotspot/main.go`, `cmd/go-hotspot/main_test.go`, `examples/basic/main.go`, `go.mod`, `internal/complexity/counter.go`, `internal/complexity/counter_test.go`, `internal/git/collector.go`, `internal/git/integration_test.go`, `internal/report/reporter.go`, `internal/report/reporter_test.go`
 - New: `internal/errors/` (3 files), `go.sum`, `docs/status/` (prior session's report)
 - Deleted: `internal/fault/` (2 files)
@@ -100,18 +113,23 @@ None of this session's changes are committed. Working tree has:
 ## d) TOTALLY FUCKED UP
 
 ### 1. Left Dead Documentation Behind
+
 The prior session's self-review report (`docs/status/2026-08-10_14-53_typed-error-system-self-review.md`) documents `internal/fault` as the error system. That package no longer exists. Anyone reading that report will be misled. It should be annotated or updated.
 
 ### 2. Didn't Wire `examples/coupling/main.go`
+
 Only checked `examples/basic/main.go` for the `complexity.Analyze` signature change. The coupling example was handled in a prior session but I didn't verify it compiles against the new errors package. (Build passes, so it likely doesn't call Analyze directly, but I didn't check.)
 
 ### 3. `errors_test.go` Doesn't Test Error Messages
+
 The tests verify `Code()` and `Classify()` but never assert the actual error message string. If a constructor produces a garbled message, the test won't catch it.
 
 ### 4. No Integration Test for the Full Error Pipeline
+
 There's no test that runs `run()` with a broken git repo and verifies the complete chain: `git.Collect` → `classifyGitError` → `apierrors.HandleError` → correct exit code + stderr output. The unit tests verify pieces, but the integration is untested.
 
 ### 5. Prior Session's Self-Review is Now Stale
+
 The 20-item next steps list in the prior status report references `fault.Git()`, `fault.Analysis()`, `wrapStderr()`, `gitStderrHint()` etc. — all deleted. Anyone following that list will be confused.
 
 ---
@@ -119,26 +137,31 @@ The 20-item next steps list in the prior status report references `fault.Git()`,
 ## e) WHAT WE SHOULD IMPROVE
 
 ### Architecture
+
 1. **Use `WithContext` on errors** — Instead of embedding path in message (`WrapCorruptionf("read %s", path)`), use `.WithContext("path", path)`. This surfaces in `ErrorContext()` map and can be consumed by structured logging, JSON API boundaries, and diagnostics.
 2. **Consider `errorfamily.WrapOnce` at package boundaries** — Currently `classifyGitError` wraps every error unconditionally. If an inner function already returned an `*errorfamily.Error`, we'd double-wrap. `WrapOnce` prevents this.
 3. **Register a custom `Classifier` for `exec.ErrNotFound`** — Instead of checking `errors.Is(err, exec.ErrNotFound)` in `classifyGitError`, register it with `errorfamily.RegisterClassification(exec.ErrNotFound, Infrastructure)` — cleaner, more declarative.
 4. **Add a diagnostic `DiagnosticFunc`** — go-error-family's `HandleErrorWithContext` supports diagnostic rules. For git failures, a diagnostic could check: "Is git installed? Is this a repo? Does the branch exist?" and attach findings.
 
 ### Error Coverage
+
 5. **context.Canceled handling** — `parseNumStat` returns `ctx.Err()` bare on cancellation. This should be wrapped — either as Transient (retryable) or explicitly handled in `Collect()`.
 6. **`sc.Err()` bare return** — `parseNumStat` returns `sc.Err()` unwrapped. This should be wrapped as a git Infrastructure error.
 7. **`os.Create` permission vs disk-full** — `ReportCreate` lumps all `os.Create` failures into one code. Could differentiate permission denied (Rejection) vs disk full (Infrastructure).
 
 ### Testing
+
 8. **Table-driven test for `classifyGitError`** — 5 branches, 0 tests. Critical user-facing classification logic.
 9. **Exit code integration test** — Build the binary in a test temp dir, run it against a non-repo, verify exit 69 and stderr content.
 10. **Golden file for stderr output** — The What/Why/Fix/WayOut output should have a golden test to catch regressions in user-facing messages.
 
 ### Linting
+
 11. **The 219 lint warnings** — The project has 219 golangci-lint warnings across all packages. Most are varnamelen, wrapcheck, paralleltest. The new `internal/errors/` package is clean (0 issues), but the rest of the codebase needs attention.
 12. **`//nolint` directives for false positives** — The 5 remaining erraudit violations need `//nolint:context_loss` etc. with rationale.
 
 ### Process
+
 13. **The commit boundary is messy** — The working tree contains changes from two sessions: the prior `fault` system (now deleted) and the new `go-error-family` system. A clean commit would need to squash this into one logical change: "feat: adopt go-error-family for typed errors with BSD exit codes".
 
 ---
@@ -146,12 +169,14 @@ The 20-item next steps list in the prior status report references `fault.Git()`,
 ## f) NEXT STEPS (Up to 50)
 
 #### CRITICAL — Do Now
+
 1. ~~Commit all changes: `git add -A && git commit -m "feat: adopt go-error-family for typed errors with BSD exit codes"`~~ done at `31d6acb`, `bade91c`
 2. ~~Add `//nolint` directives for the 5 remaining erraudit false positives~~ done at `bade91c`
 3. Write table-driven test for `classifyGitError()` covering all 5 branches
 4. ~~Annotate prior status report (`docs/status/2026-08-10_14-53_*.md`) as SUPERSEDED~~ done — annotated and archived
 
 #### HIGH — Do Soon
+
 5. ~~Update `CHANGELOG.md` with `[Unreleased]` section for the migration~~ done
 6. Update `README.md` with exit code table (0, 1, 2, 65, 69, 70)
 7. ~~Update `AGENTS.md` with `internal/errors` package description and go-error-family dependency note~~ done
@@ -164,6 +189,7 @@ The 20-item next steps list in the prior status report references `fault.Git()`,
 14. Push to GitHub after commit
 
 #### MEDIUM — Quality of Life
+
 15. Differentiate `os.Create` errors: permission denied → Rejection, disk full → Infrastructure
 16. Register `exec.ErrNotFound` as a sentinel with `errorfamily.RegisterClassification`
 17. Use `errorfamily.WrapOnce` in `classifyGitError` to prevent double-wrapping
@@ -180,6 +206,7 @@ The 20-item next steps list in the prior status report references `fault.Git()`,
 28. Add error system architecture diagram to docs
 
 #### LOWER — Nice to Have
+
 29. ~~Add `golangci-lint` to CI (GitHub Actions)~~ done — `.github/workflows/ci.yml` already has lint job
 30. Add `erraudit` to CI as a quality gate
 31. Add goreleaser snapshot test to CI

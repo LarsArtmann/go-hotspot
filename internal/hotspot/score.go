@@ -56,7 +56,8 @@ type Result struct {
 	SLOC        int
 	Indentation int
 	Cyclomatic  int
-	Hotspot     float64 // normalized 0-1 score
+	Hotspot     float64 // normalized 0-1 score, adjusted by trend factor
+	TrendFactor float64 // churn trend: 1.0 = actively maintained, →0 = burst then stop
 	FirstTouch  time.Time
 	LastTouch   time.Time
 }
@@ -156,10 +157,12 @@ func Sort(results []Result, order SortOrder, now time.Time) {
 
 // Score combines git history and complexity analysis into ranked hotspot results.
 // It normalizes both dimensions across all files, following the Tornhill methodology.
+// The now parameter is used to compute churn trend factors.
 func Score(
 	history *git.History,
 	complexities map[string]complexity.FileComplexity,
 	opts ScoreOptions,
+	now time.Time,
 ) []Result {
 	results := make([]Result, 0, len(history.Files))
 
@@ -180,6 +183,7 @@ func Score(
 			SLOC:        cx.SLOC,
 			Indentation: cx.Indentation,
 			Cyclomatic:  cx.Cyclomatic,
+			TrendFactor: churnTrendFactor(fc.FirstTouch, fc.LastTouch, now),
 			FirstTouch:  fc.FirstTouch,
 			LastTouch:   fc.LastTouch,
 		}
@@ -189,14 +193,52 @@ func Score(
 		sumChurn += churnValue(r, opts.Churn)
 	}
 
-	// Normalize and compute hotspot = normalizedComplexity × normalizedChurn.
+	// Normalize and compute hotspot = normalizedComplexity × normalizedChurn × trendFactor.
+	// The trend factor penalizes files whose churn happened in a short burst and
+	// then stopped — a file built once and never touched is stable, not a hotspot.
 	for i := range results {
 		cx := complexityValue(results[i], opts.Complexity)
 		ch := churnValue(results[i], opts.Churn)
-		results[i].Hotspot = normalizedProduct(cx, sumComplexity, ch, sumChurn)
+		results[i].Hotspot = normalizedProduct(cx, sumComplexity, ch, sumChurn) * results[i].TrendFactor
 	}
 
 	return results
+}
+
+// churnTrendFactor quantifies whether a file is actively maintained or was a
+// one-time burst. Returns a value in [0, 1] where 1.0 means the file is actively
+// maintained (churn spread over time, recent last touch) and values approaching
+// 0 mean the file was built in a burst and never touched since.
+//
+// The computation uses the silence ratio: how long the file has been dormant
+// relative to its active development span. A file developed over 1 day and not
+// touched for 10 days has a silence ratio of 10, yielding a low trend factor.
+// A file developed over 60 days and touched today has a ratio of 0, yielding 1.0.
+func churnTrendFactor(first, last, now time.Time) float64 {
+	if first.IsZero() || last.IsZero() {
+		return 1.0 // unknown history — don't penalize
+	}
+
+	spanDays := last.Sub(first).Hours() / 24
+	ageDays := now.Sub(last).Hours() / 24
+
+	if spanDays < 0 || ageDays < 0 {
+		return 1.0 // clock skew — don't penalize
+	}
+
+	// Clamp span to at least 1 day to avoid division by zero for same-day bursts.
+	if spanDays < 1 {
+		spanDays = 1
+	}
+
+	// 1/(1+silenceRatio) gives a smooth decay:
+	//   ratio=0 → 1.0 (actively maintained)
+	//   ratio=1 → 0.5 (dormant as long as active)
+	//   ratio=3 → 0.25 (dormant 3× longer than active)
+	//   ratio=7 → 0.125 (clearly settled)
+	silenceRatio := ageDays / spanDays
+
+	return 1.0 / (1.0 + silenceRatio)
 }
 
 // sortedAuthors converts an author set to a lexicographically sorted slice.
@@ -255,12 +297,34 @@ func TopN(results []Result, n int) []Result {
 }
 
 // RiskBand classifies a hotspot score into a human-readable risk level.
-func RiskBand(score float64, maxScore float64) string {
+// The trendFactor caps the maximum risk: files with low trend factors (burst
+// then stop) can never be "critical" or "high" regardless of their relative
+// position, because they are not actively maintained hotspots.
+func RiskBand(score, maxScore, trendFactor float64) string {
 	if maxScore <= 0 {
 		return "unknown"
 	}
 
+	// Trend factor caps risk level for stable/settled files.
+	if trendFactor < 0.15 {
+		return "stable" // burst then stop — not a hotspot
+	}
+
+	if trendFactor < 0.3 {
+		return "low" // mostly dormant
+	}
+
 	pct := score / maxScore
+	if trendFactor < 0.5 {
+		// Settled file — at most "medium" regardless of relative position.
+		if pct >= 0.33 {
+			return "medium"
+		}
+
+		return "low"
+	}
+
+	// Actively maintained file — normal relative bands.
 	switch {
 	case pct >= 0.66:
 		return "critical"

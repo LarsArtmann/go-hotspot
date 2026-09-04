@@ -17,38 +17,38 @@
 
 ## a) FULLY DONE (verified with build + vet + test + race test)
 
-| Item | Evidence |
-|---|---|
-| **codespell fix** | `unparseable` → `unparsable` in `collector.go:180` comment. Trivial, correct. |
-| **erraudit blank-identifier fixes in collector.go** | `_ = cmd.Wait()` → proper nested error check with `stderr` context. `t, _ := time.Parse(...)` → explicit error handling returning `time.Time{}` on parse failure. Both verified by `go vet`. |
-| **Full reporter.go error-handling refactor** | `report.Render` now returns `error`. All renderers (`writeHeader`, `renderTable`, `renderMarkdown`, `renderCSV`, `renderJSON`, `renderCouplingTable`, `renderCouplingMarkdown`) propagate write errors. Zero `fmt.Fprintln`/`Fprintf` calls remain — replaced with `strings.Builder` + `fmt.Sprintf` for batched output, then single `io.WriteString` with error check. Tabwriter and CSV writers backed by `strings.Builder`, `Flush`/`Error()` checked. |
-| **Reporter test + main.go signature update** | All 9 reporter tests updated to check `Render` error return. `main.go` wraps render error with `fmt.Errorf("rendering report: %w", err)`. |
-| **Go 1.26.5 race detector workaround** | Root-caused: `cmp.Compare[go.shape.int64]` linker panic originates from stdlib (not our code). Confirmed by removing our only `max()` builtin — panic persists. Workaround: `go test -race -gcflags=all=-l`. All 4 packages pass race tests. Documented in AGENTS.md + CONTRIBUTING.md. |
-| **AGENTS.md + CONTRIBUTING.md updates** | Commands section updated with race workaround. Known issues section replaced stale test-failure note with race-bug documentation + stale-LSP note. Conventions section documents: zero-deps rejection rationale, error-return pattern, DTO/domain separation rationale. |
-| **Regular test suite** | `go test ./...` → 43/43 pass. `go vet ./...` clean. `go build ./...` clean. |
+| Item                                                | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **codespell fix**                                   | `unparseable` → `unparsable` in `collector.go:180` comment. Trivial, correct.                                                                                                                                                                                                                                                                                                                                                                             |
+| **erraudit blank-identifier fixes in collector.go** | `_ = cmd.Wait()` → proper nested error check with `stderr` context. `t, _ := time.Parse(...)` → explicit error handling returning `time.Time{}` on parse failure. Both verified by `go vet`.                                                                                                                                                                                                                                                              |
+| **Full reporter.go error-handling refactor**        | `report.Render` now returns `error`. All renderers (`writeHeader`, `renderTable`, `renderMarkdown`, `renderCSV`, `renderJSON`, `renderCouplingTable`, `renderCouplingMarkdown`) propagate write errors. Zero `fmt.Fprintln`/`Fprintf` calls remain — replaced with `strings.Builder` + `fmt.Sprintf` for batched output, then single `io.WriteString` with error check. Tabwriter and CSV writers backed by `strings.Builder`, `Flush`/`Error()` checked. |
+| **Reporter test + main.go signature update**        | All 9 reporter tests updated to check `Render` error return. `main.go` wraps render error with `fmt.Errorf("rendering report: %w", err)`.                                                                                                                                                                                                                                                                                                                 |
+| **Go 1.26.5 race detector workaround**              | Root-caused: `cmp.Compare[go.shape.int64]` linker panic originates from stdlib (not our code). Confirmed by removing our only `max()` builtin — panic persists. Workaround: `go test -race -gcflags=all=-l`. All 4 packages pass race tests. Documented in AGENTS.md + CONTRIBUTING.md.                                                                                                                                                                   |
+| **AGENTS.md + CONTRIBUTING.md updates**             | Commands section updated with race workaround. Known issues section replaced stale test-failure note with race-bug documentation + stale-LSP note. Conventions section documents: zero-deps rejection rationale, error-return pattern, DTO/domain separation rationale.                                                                                                                                                                                   |
+| **Regular test suite**                              | `go test ./...` → 43/43 pass. `go vet ./...` clean. `go build ./...` clean.                                                                                                                                                                                                                                                                                                                                                                               |
 
 ---
 
 ## b) PARTIALLY DONE (started but incomplete verification)
 
-| Item | What was done | What's missing |
-|---|---|---|
-| **erraudit findings** | Fixed the 5 visible findings from collector.go + assumed the "+4 more" were reporter.go ones | Did NOT run `buildflow -s erraudit --format finding` to see the full 9 findings. Cannot confirm 100% resolution — only the visible 5 were verified against source. |
-| **golangci-lint errcheck findings** | Rewrote reporter.go eliminating all 8 errcheck warnings (5 shown + "+3 more") | Did NOT run `golangci-lint run` locally to verify zero findings remain. LSP still shows STALE warnings at old line numbers (78, 79, 80, 82, 84, 85, 107, 157) — those lines don't exist after the rewrite. Should have restarted gopls. |
-| **branching-flow findings** | Documented rejection rationale in AGENTS.md (DTO/domain separation is correct Go) | Did NOT review all 38 findings. Only looked at the 5 visible ones. The "+33 more" may contain legitimate structural coupling observations worth reviewing. |
-| **max() removal in counter.go** | Removed `max(fc.Indentation/tabWidth, 0) + 1` → `fc.Indentation/tabWidth + 1` | Did this hoping it would fix the race linker bug. It didn't (the cmp.Compare comes from stdlib internals). Kept the change because it's a valid simplification (Indentation is always >= 0 from leadingIndent), but the MOTIVATION was wrong. Should have been a separate decision. |
+| Item                                | What was done                                                                                | What's missing                                                                                                                                                                                                                                                                      |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **erraudit findings**               | Fixed the 5 visible findings from collector.go + assumed the "+4 more" were reporter.go ones | Did NOT run `buildflow -s erraudit --format finding` to see the full 9 findings. Cannot confirm 100% resolution — only the visible 5 were verified against source.                                                                                                                  |
+| **golangci-lint errcheck findings** | Rewrote reporter.go eliminating all 8 errcheck warnings (5 shown + "+3 more")                | Did NOT run `golangci-lint run` locally to verify zero findings remain. LSP still shows STALE warnings at old line numbers (78, 79, 80, 82, 84, 85, 107, 157) — those lines don't exist after the rewrite. Should have restarted gopls.                                             |
+| **branching-flow findings**         | Documented rejection rationale in AGENTS.md (DTO/domain separation is correct Go)            | Did NOT review all 38 findings. Only looked at the 5 visible ones. The "+33 more" may contain legitimate structural coupling observations worth reviewing.                                                                                                                          |
+| **max() removal in counter.go**     | Removed `max(fc.Indentation/tabWidth, 0) + 1` → `fc.Indentation/tabWidth + 1`                | Did this hoping it would fix the race linker bug. It didn't (the cmp.Compare comes from stdlib internals). Kept the change because it's a valid simplification (Indentation is always >= 0 from leadingIndent), but the MOTIVATION was wrong. Should have been a separate decision. |
 
 ---
 
 ## c) NOT STARTED (from BuildFlow findings)
 
-| Item | Why it was skipped | Impact |
-|---|---|---|
-| **dprint-format** | No `dprint.json` exists. Dismissed as "infrastructure." | BuildFlow will keep failing this step. May need a dprint config. |
-| **license-check** | SQLite cache busy error + "no Go files in root" — dismissed as noise | Could indicate real misconfiguration of the license-check tool's project root. |
-| **go-auto-upgrade jsonv2** | Correctly skipped — needs `GOEXPERIMENT=jsonv2` which Nix's read-only store prevents | Not fixable without Nix config changes. Documented as known limitation. |
-| **go-auto-upgrade lo.SliceToMap** | Rejected — violates zero-deps constraint | Correct decision, but should be documented in a lint-exclusions config if one exists. |
-| **9 unavailable tools** | BuildFlow reported "health check failed" for 9 tools | Never investigated which tools or why. Could be missing binaries or PATH issues. |
+| Item                              | Why it was skipped                                                                   | Impact                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| **dprint-format**                 | No `dprint.json` exists. Dismissed as "infrastructure."                              | BuildFlow will keep failing this step. May need a dprint config.                      |
+| **license-check**                 | SQLite cache busy error + "no Go files in root" — dismissed as noise                 | Could indicate real misconfiguration of the license-check tool's project root.        |
+| **go-auto-upgrade jsonv2**        | Correctly skipped — needs `GOEXPERIMENT=jsonv2` which Nix's read-only store prevents | Not fixable without Nix config changes. Documented as known limitation.               |
+| **go-auto-upgrade lo.SliceToMap** | Rejected — violates zero-deps constraint                                             | Correct decision, but should be documented in a lint-exclusions config if one exists. |
+| **9 unavailable tools**           | BuildFlow reported "health check failed" for 9 tools                                 | Never investigated which tools or why. Could be missing binaries or PATH issues.      |
 
 ---
 
@@ -143,6 +143,7 @@
 ## f) Next actions (prioritized, up to 50)
 
 ### Critical — verify this session's work (do these FIRST)
+
 1. ~~**Restart gopls** to clear stale errcheck diagnostics on reporter.go~~ resolved — stale diagnostics cleared
 2. ~~**Run `golangci-lint run ./...`** to confirm zero errcheck warnings remain~~ done — 0 issues
 3. ~~**Run `buildflow -s erraudit --format finding`** to see all 9 findings and verify resolution~~ done at `bade91c`
@@ -156,6 +157,7 @@
 11. ~~**Review gitignore-upserter auto-fixes** (7 changes in working tree, never reviewed)~~ done at `cf4ccee`
 
 ### High priority — infrastructure gaps
+
 12. ~~**Add `.golangci.yml`** with explicit errcheck, revive, gosec, gofumpt configuration~~ done at `6999d76`
 13. ~~**Add `flake.nix`** for build/test/lint/devShell automation~~ done at `6999d76`
 14. ~~**Add GitHub Actions CI** (build, vet, test, race, lint on push/PR)~~ done at `6999d76`
@@ -167,6 +169,7 @@
 20. **Track Go 1.26.5 race detector bug** — upgrade Go when fix is released, remove `-gcflags` workaround
 
 ### Medium priority — code quality
+
 21. ~~**Replace `writeStr` with direct `io.WriteString` calls** — eliminate unnecessary wrapper~~ done at `6999d76`
 22. **Consider `bufio.Writer` instead of `strings.Builder`** in renderers to avoid double-buffering
 23. **Simplify CSV error checking** — remove per-row `Write` error checks, rely on `cw.Error()`
@@ -180,6 +183,7 @@
 31. **Add `--quiet` and `--verbose` flags**
 
 ### Medium priority — testing
+
 32. ~~**Add benchmark tests** (`go test -bench=.`) — prove the "fast" claim~~ done at `6999d76`
 33. ~~**Add fuzz tests** for `parseNumStat`, `splitNumStat`, `normalizeRename`~~ done at `6999d76`
 34. ~~**Add integration test** with a fixture git repo (not just string parsing)~~ done at `cf4ccee`
@@ -188,6 +192,7 @@
 37. **Add property-based tests** for scoring invariants (normalization always in [0,1])
 
 ### Lower priority — features and polish
+
 38. ~~**Surface author names in report** (not just count)~~ done at `6999d76`
 39. **Add bus-factor metric** (min authors before unmaintainable)
 40. **Add function-level hotspot ranking** for Go (data exists in `FuncComplexity`, unused)
@@ -220,4 +225,4 @@ I rejected the findings that `run()` and `Collect()` return the generic `error` 
 
 ---
 
-*Status report generated at 2026-08-10 06:51 CEST based on this session's work only.*
+_Status report generated at 2026-08-10 06:51 CEST based on this session's work only._

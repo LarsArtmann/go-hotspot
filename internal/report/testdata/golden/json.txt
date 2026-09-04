@@ -24,7 +24,8 @@
       "sloc": 200,
       "indentation": 120,
       "last_touch": "—",
-      "hotspot": 0.085
+      "hotspot": 0.085,
+      "trend_factor": 1
     },
     {
       "path": "utils.go",
@@ -42,7 +43,8 @@
       "sloc": 50,
       "indentation": 20,
       "last_touch": "—",
-      "hotspot": 0.012
+      "hotspot": 0.012,
+      "trend_factor": 0.5
     }
   ],
   "couplings": [

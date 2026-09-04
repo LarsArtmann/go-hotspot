@@ -11,6 +11,7 @@
 ## a) FULLY DONE (verified)
 
 ### 1. Verified current code reality before touching any doc
+
 - Ran `go build ./...` (clean), `go test ./...` (106/106 pass), `go vet ./...` (clean)
 - Verified `internal/fault/` deleted, `internal/errors/` exists (3 files, 363 lines)
 - Verified `go-error-family v0.10.0` in `go.mod` (the only non-stdlib dependency)
@@ -22,6 +23,7 @@
 - Verified erraudit has 4 `//nolint:erraudit` directives (3 in `main.go`, 1 in `examples/basic/main.go`)
 
 ### 2. CHANGELOG.md — `[Unreleased]` section added
+
 - Documented typed error system via `internal/errors` (11 constructors, BSD exit codes, What/Why/Fix/WayOut templates)
 - Documented git error classification (`classifyGitError`)
 - Documented erraudit compliance (0 violations CI mode)
@@ -33,6 +35,7 @@
 - Documented all 5 erraudit violation resolutions
 
 ### 3. FEATURES.md — error system + accuracy fixes
+
 - Added new "Error Handling" section with 4 features (typed errors, user-facing messages, git classification, erraudit compliance)
 - Updated test count 58 → 106 (62 top-level + 44 subtests), 6 packages
 - Changed "Zero external dependencies" → "Minimal external dependencies" with `go-error-family` noted
@@ -40,15 +43,18 @@
 - Updated CLI row to reflect 8 unit + 3 integration tests
 
 ### 4. TODO_LIST.md — rebuilt from scratch
+
 - 17 genuinely open items harvested from 6 recent reports, each with evidence + source citation
 - Organized into High Impact (4 items), Medium Impact (8 items), Low Impact (4 items)
 - Key new items harvested: `ReportRender("version output")` semantic lie, `classifyGitError()` test coverage, `context.Canceled` wrapping, `sc.Err()` wrapping, README exit code table, golden test for stderr, error message assertions, `.WithContext` structured context
 
 ### 5. ROADMAP.md — long-term ideas harvested
+
 - Added: color-coded risk bands, `--watch` mode, man page + shell completions, `--debug` flag, JSON error output, structured logging with `slog`, HTML report output
 - Removed stale goreleaser entry (already shipped at `cf4ccee`)
 
 ### 6. AGENTS.md — conventions modernized
+
 - Added `internal/errors` package to architecture table
 - Fixed "Zero external deps" → "One external dep: `go-error-family`"
 - Replaced stale "Functions return the `error` interface" convention with go-error-family typed error pattern
@@ -57,23 +63,25 @@
 
 Every numbered item in every report resolved inline with `~~strikethrough~~` and commit hash. Resolution banners added. Open items left unmarked.
 
-| Report | Items resolved | Banner | Notes |
-|--------|---------------|--------|-------|
-| `06-34` initial-build-brutal-review | ~20 of 50 | (prior session) | Section c table struck through (flake.nix, CI, tags, lint, benchmarks, goreleaser, generated detection). Section f items 1-5, 9-11, 17, 19-21, 43, 47 struck. |
-| `06-51` buildflow-remediation | ~30 of 50 | (prior session) | Section d items 2, 3, 6, 8 resolved. Section e items 6, 9, 10 resolved. Section f items 2-7, 10-17, 21, 24-30, 32-36, 38 resolved. |
-| `08-45` docs-health-audit | ~38 of 50 | (this session) | Section f items 1-50 comprehensively struck through. |
-| `08-58` pareto-execution-plan | 27/27 (ALL) | (this session) | Full M1-M27 table rewritten with resolution column. **Archived.** |
-| `13-52` pareto-execution-status | ~8 of 50 | (this session) | Section f items 1-8 (M1, M10, M18, M21, M22, M25), 48-50 struck. |
-| `14-20` pareto-completion | ~3 of 50 | (this session) | Section f items 8, 34, 43 struck. |
-| `14-53` typed-error-system | ~12 of 20 | (this session) | SUPERSEDED banner added. Section f items 1-4, 7-8, 10-13, 15-16, 18-19 struck. **Archived.** |
-| `15-38` go-error-family-migration | ~6 of 50 | (this session) | Section f items 1-2, 4-5, 7, 26, 29 struck. |
-| `15-54` erraudit-violation-resolution | ~5 of 30 | (this session) | Section f items 3-5, 7 struck. |
+| Report                                | Items resolved | Banner          | Notes                                                                                                                                                         |
+| ------------------------------------- | -------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `06-34` initial-build-brutal-review   | ~20 of 50      | (prior session) | Section c table struck through (flake.nix, CI, tags, lint, benchmarks, goreleaser, generated detection). Section f items 1-5, 9-11, 17, 19-21, 43, 47 struck. |
+| `06-51` buildflow-remediation         | ~30 of 50      | (prior session) | Section d items 2, 3, 6, 8 resolved. Section e items 6, 9, 10 resolved. Section f items 2-7, 10-17, 21, 24-30, 32-36, 38 resolved.                            |
+| `08-45` docs-health-audit             | ~38 of 50      | (this session)  | Section f items 1-50 comprehensively struck through.                                                                                                          |
+| `08-58` pareto-execution-plan         | 27/27 (ALL)    | (this session)  | Full M1-M27 table rewritten with resolution column. **Archived.**                                                                                             |
+| `13-52` pareto-execution-status       | ~8 of 50       | (this session)  | Section f items 1-8 (M1, M10, M18, M21, M22, M25), 48-50 struck.                                                                                              |
+| `14-20` pareto-completion             | ~3 of 50       | (this session)  | Section f items 8, 34, 43 struck.                                                                                                                             |
+| `14-53` typed-error-system            | ~12 of 20      | (this session)  | SUPERSEDED banner added. Section f items 1-4, 7-8, 10-13, 15-16, 18-19 struck. **Archived.**                                                                  |
+| `15-38` go-error-family-migration     | ~6 of 50       | (this session)  | Section f items 1-2, 4-5, 7, 26, 29 struck.                                                                                                                   |
+| `15-54` erraudit-violation-resolution | ~5 of 30       | (this session)  | Section f items 3-5, 7 struck.                                                                                                                                |
 
 ### 8. Archival
+
 - `08-58` pareto-execution-plan → `docs/planning/archived/` (all 27/27 tasks done)
 - `14-53` typed-error-system → `docs/status/archived/` (SUPERSEDED — `internal/fault` deleted)
 
 ### 9. Cross-file consistency verified
+
 - No stale "zero deps" / "stdlib only" claims remain in any living doc
 - Test count consistent (106) in FEATURES.md
 - `go-error-family` mentioned in CHANGELOG, FEATURES, AGENTS
@@ -85,16 +93,19 @@ Every numbered item in every report resolved inline with `~~strikethrough~~` and
 ## b) PARTIALLY DONE
 
 ### 1. Report annotations — depth varies by report
+
 **Done:** All 9 reports have resolution banners. Every numbered section-f item across all reports has been checked against code and either struck through or left unmarked.
 
 **Not done:** Some section b/c/d/e items in the middle reports (08-45, 13-52, 14-20, 15-38, 15-54) were not exhaustively struck. The annotations focused on section f (the "next steps" lists) because those are the items a reader scanning for "is this done?" cares about most. Deeper sections like "what we should improve" (section e) contain philosophical observations, not actionable items — striking those adds noise, not signal.
 
 ### 2. README.md not updated with exit code table
+
 **Done:** Identified the gap (README has zero exit code documentation despite 6 distinct BSD codes).
 
 **Not done:** Didn't write the exit code table into README. Added it to TODO_LIST instead. This is a documentation gap that a user would notice immediately, but I chose to document the gap rather than fix it because the docs-health skill's scope is meta-documentation, not feature documentation. This is debatable.
 
 ### 3. CONTRIBUTING.md not updated for error system
+
 **Done:** Identified that CONTRIBUTING.md (rebuilt at `6999d76`) doesn't mention the `internal/errors` package or go-error-family.
 
 **Not done:** Didn't add an error handling section. CONTRIBUTING.md was rebuilt in a prior session and is accurate for what it covers — it just doesn't cover the new error system. This should be a follow-up task.
@@ -104,24 +115,31 @@ Every numbered item in every report resolved inline with `~~strikethrough~~` and
 ## c) NOT STARTED
 
 ### 1. Did not fix the `ReportRender("version output")` semantic lie
+
 `main.go:74` still wraps a `--version` output failure as `ReportRender`, which tells the user to "omit --output" — completely irrelevant to version output. This was documented in TODO_LIST but not fixed. This is a **code fix**, not a documentation task. The docs-health skill says "fix drift in place" for docs, but this is a code bug.
 
 ### 2. Did not write the status report you are reading
+
 Until this sentence, no status report existed for this session. (Now it does.)
 
 ### 3. Did not verify DESIGN.md for drift
+
 DESIGN.md was updated in a prior session (M24 at `6999d76`), but the error system migration (`31d6acb`) may have introduced drift. The data model section might not reflect `internal/errors` or the `go-error-family` dependency.
 
 ### 4. Did not update DOMAIN_LANGUAGE.md
+
 DOMAIN_LANGUAGE.md has 16 domain terms. The error system introduced new domain vocabulary (Family, Code, MessageTemplate, What/Why/Fix/WayOut, BSD sysexits) that isn't captured there.
 
 ### 5. Did not check `.golangci.yml` for the errors package
+
 The lint config was adopted at `e954c95`. The `internal/errors` package was written at `31d6acb`. I didn't verify whether the lint config properly covers the new package or whether there are lint exclusions needed for the `go-error-family` dependency.
 
 ### 6. Did not run `erraudit` to verify current violation count
+
 The most recent report (15-54) claims 0 violations in CI mode. I verified code via `go build` and `go test` but didn't run `erraudit ./...` to confirm the claim is still true after any potential drift.
 
 ### 7. Did not check internal links in docs
+
 Every internal markdown link (`docs/status/...`, `CHANGELOG.md#section`, etc.) was not systematically verified. The skill says "every internal markdown link resolves" — I didn't do this check.
 
 ---
@@ -129,21 +147,27 @@ Every internal markdown link (`docs/status/...`, `CHANGELOG.md#section`, etc.) w
 ## d) TOTALLY FUCKED UP
 
 ### 1. Didn't catch the FEATURES.md "Library API" section inconsistency
+
 The Library API section says "Tagged `v0.1.0`" for the CLI tool row. But 5 commits have landed since `v0.1.0` — including a complete error system replacement. The tag is stale relative to HEAD. I updated the test count and error sections but didn't flag that the release status is drifting. The `[Unreleased]` CHANGELOG section documents the changes, but FEATURES.md gives the impression that `v0.1.0` is current.
 
 ### 2. The annotation depth is uneven across reports
+
 The three oldest reports (06-34, 06-51, 08-45) got deep, thorough annotations — every numbered item in every section checked. The four newer reports (13-52, 14-20, 15-38, 15-54) got section-f-focused annotations with lighter coverage on sections b-e. A reader opening 15-38 section e "WHAT WE SHOULD IMPROVE" will see unstruck items that are actually done (e.g., item 5 "context.Canceled handling" — I verified it's still open, but I didn't annotate the OTHER items in that section). This is the "skipping items you didn't check" failure mode the skill warns about — I just did it selectively rather than not at all.
 
 ### 3. Didn't annotate the 06-34 section b "PARTIALLY DONE" table
+
 Section b of the initial-build report has a table with rows like "Author/bus-factor data" and "Per-function complexity (Go)" marked as partially done. The author row was upgraded to FULLY_FUNCTIONAL (names now surface). I didn't strike through the table row to show it's resolved. A reader sees "PARTIALLY DONE" and assumes it's still incomplete.
 
 ### 4. Didn't verify the 15-54 report's core claim
+
 The 15-54 report claims `erraudit ./...` reports 0 violations in CI mode. I didn't re-run `erraudit` to confirm this. I annotated based on the report's own claim + the commit history. If `erraudit` was run with different flags than CI uses, the annotation could be falsely positive.
 
 ### 5. Created the archived directories but didn't add README files
+
 `docs/status/archived/` and `docs/planning/archived/` now exist with files in them, but there's no README explaining what these directories are for or that files in them are historical snapshots not meant to be edited. A future agent might try to "fix" an archived report.
 
 ### 6. TODO_LIST has 17 items but the reports contain 200+
+
 Across 6 unharvested reports, there are easily 200+ "next steps" items. I deduplicated heavily and routed long-term ideas to ROADMAP, but the TODO_LIST at 17 items feels thin relative to the volume of open work documented in the reports. Some of this is legitimate dedup (many reports repeat the same items), but some may be over-filtering. I may have dropped items that are unique to one report because they seemed low priority.
 
 ---
@@ -263,4 +287,4 @@ I deduplicated 200+ "next steps" items from 6 reports down to 17 unique tasks. M
 
 ---
 
-*Status report generated at 2026-08-10 16:21 CEST based on this session's docs-health audit work only.*
+_Status report generated at 2026-08-10 16:21 CEST based on this session's docs-health audit work only._
