@@ -3,7 +3,8 @@ package report
 
 import (
 	"encoding/csv"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"fmt"
 	"io"
 	"strconv"
@@ -574,10 +575,9 @@ func renderJSON(
 		}
 	}
 
-	enc := json.NewEncoder(w)
-	enc.SetIndent("", "  ")
+	enc := jsontext.NewEncoder(w, jsontext.WithIndent("  "))
 
-	return enc.Encode(rep)
+	return json.MarshalEncode(enc, rep)
 }
 
 // fmtAuthors renders author names for display, showing up to 2 names plus a count.

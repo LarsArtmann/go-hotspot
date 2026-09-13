@@ -148,9 +148,13 @@ linters:
     ginkgolinter:
       forbid-focus-container: true
       forbid-spec-pollution: true
+    gocognit:
+      min-complexity: 25
     gocritic:
       disabled-checks:
         - ifElseChain
+    gocyclo:
+      min-complexity: 20
     gomoddirectives:
       replace-local: true
     gosec:
@@ -167,6 +171,8 @@ linters:
         - generic
     makezero:
       always: true
+    nestif:
+      min-complexity: 6
     revive:
       rules:
         - disabled: true
@@ -175,6 +181,17 @@ linters:
           name: unused-parameter
         - disabled: true
           name: redefines-builtin-id
+    tagalign:
+      align: false
+      order:
+        - binding
+        - json
+        - yaml
+        - xml
+        - toml
+        - validate
+        - mapstructure
+      sort: true
     testifylint:
       disable:
         - go-require

@@ -3,7 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/json/jsontext"
+	"encoding/json/v2"
 	"io"
 	"os"
 	"os/exec"
@@ -542,13 +543,13 @@ func TestFunctionsJSONOutput(t *testing.T) { //nolint:paralleltest // uses t.Chd
 	// Must parse as a single JSON document.
 	var doc map[string]any
 
-	dec := json.NewDecoder(&buf)
-	if err := dec.Decode(&doc); err != nil {
+	dec := jsontext.NewDecoder(&buf)
+	if err := json.UnmarshalDecode(dec, &doc); err != nil {
 		t.Fatalf("output is not a single valid JSON document: %v\noutput: %s", err, buf.String())
 	}
 
 	// Confirm no second document follows.
-	if dec.More() {
+	if dec.PeekKind() != 0 {
 		t.Errorf("expected a single JSON document, got multiple")
 	}
 
