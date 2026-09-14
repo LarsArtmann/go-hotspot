@@ -294,6 +294,105 @@ func TestExitCodeThreshold(t *testing.T) { //nolint:paralleltest // uses t.Chdir
 	}
 }
 
+func TestRejectsMultiplePositionalArgs(t *testing.T) {
+	t.Parallel()
+
+	err := run(context.Background(), []string{"repoA", "repoB"}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected error for multiple positional arguments")
+	}
+
+	if code := apierrors.ExitCode(err); code != 1 {
+		t.Errorf("ExitCode = %d, want 1 (EX_USAGE)", code)
+	}
+
+	if !strings.Contains(err.Error(), "repoA repoB") {
+		t.Errorf("error should name the rejected arguments, got: %v", err)
+	}
+}
+
+func TestTargetDirectoryMissing(t *testing.T) {
+	t.Parallel()
+
+	err := run(context.Background(), []string{"does/not/exist"}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected error for missing target directory")
+	}
+
+	if code := apierrors.ExitCode(err); code != 1 {
+		t.Errorf("ExitCode = %d, want 1 (EX_USAGE)", code)
+	}
+
+	if !strings.Contains(err.Error(), "does/not/exist") {
+		t.Errorf("error should name the target path, got: %v", err)
+	}
+}
+
+func TestTargetIsFile(t *testing.T) {
+	t.Parallel()
+
+	file := filepath.Join(t.TempDir(), "plain.txt")
+	if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	err := run(context.Background(), []string{file}, io.Discard, io.Discard, time.Now())
+	if err == nil {
+		t.Fatal("expected error when target is a file")
+	}
+
+	if code := apierrors.ExitCode(err); code != 1 {
+		t.Errorf("ExitCode = %d, want 1 (EX_USAGE)", code)
+	}
+}
+
+func TestTargetDirectoryAnalyzesRequestedRepo(t *testing.T) { //nolint:paralleltest // uses t.Chdir — mutates process CWD
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	outer := t.TempDir()
+	t.Chdir(outer)
+
+	repo := filepath.Join(outer, "inner-repo")
+	if err := os.Mkdir(repo, 0o750); err != nil {
+		t.Fatal(err)
+	}
+
+	execGit(t, "-C", repo, "init")
+	execGit(t, "-C", repo, "config", "user.name", "Test")
+	execGit(t, "-C", repo, "config", "user.email", "test@example.com")
+
+	goFile := filepath.Join(repo, "main.go")
+	if err := os.WriteFile(goFile, []byte("package main\nfunc main() {}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	execGit(t, "-C", repo, "add", "main.go")
+
+	cmd := exec.CommandContext(t.Context(), "git", "-C", repo, "commit", "-m", "init")
+
+	now := time.Now().Format(time.RFC3339)
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_DATE="+now,
+		"GIT_COMMITTER_DATE="+now,
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git commit: %v\n%s", err, out)
+	}
+
+	var buf bytes.Buffer
+
+	err := run(context.Background(), []string{repo}, &buf, io.Discard, time.Now())
+	if err != nil {
+		t.Fatalf("run with target repo returned error: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "main.go") {
+		t.Errorf("report should analyze the targeted repo, got:\n%s", buf.String())
+	}
+}
+
 func TestParseFailRisk(t *testing.T) {
 	t.Parallel()
 
