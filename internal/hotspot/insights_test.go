@@ -131,7 +131,7 @@ func TestInsightsComplexityWithoutChurn(t *testing.T) {
 	now := time.Now()
 
 	results := []Result{
-		insightResult("stable_monster.go", 200, 5, 5, 1, now.Add(-300*24*time.Hour)),
+		insightResult("stable_monster.go", 200, 2, 2, 1, now.Add(-300*24*time.Hour)),
 		insightResult("stable_beast.go", 150, 3, 3, 1, now.Add(-300*24*time.Hour)),
 		insightResult("quiet.go", 5, 10, 10, 1, now),
 		insightResult("active.go", 8, 2000, 2000, 1, now),

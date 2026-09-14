@@ -182,7 +182,7 @@ func churnNoComplexityInsight(results []Result) []Insight {
 			continue
 		}
 
-		if churnKey(r) >= qChurnHigh && r.Cyclomatic <= cycMedian && r.Cyclomatic <= lowComplexityCap {
+		if churnKey(r) >= qChurnHigh && float64(r.Cyclomatic) <= cycMedian && r.Cyclomatic <= lowComplexityCap {
 			matches = append(matches, r)
 		}
 	}
@@ -216,7 +216,7 @@ func complexityNoChurnInsight(results []Result) []Insight {
 	var matches []Result
 
 	for _, r := range results {
-		if r.Cyclomatic >= cycHigh && churnKey(r) <= qChurnLow {
+		if float64(r.Cyclomatic) >= cycHigh && churnKey(r) <= qChurnLow {
 			matches = append(matches, r)
 		}
 	}
