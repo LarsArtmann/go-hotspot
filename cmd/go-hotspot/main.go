@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -83,6 +84,37 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		}
 
 		return apierrors.CLIUsage(err.Error())
+	}
+
+	// Positional [target]: repository directory to analyze. Anything beyond
+	// one positional argument is rejected — silently ignoring arguments would
+	// analyze the wrong repository and present wrong data as insight.
+	target := "."
+	switch extra := fs.Args(); {
+	case len(extra) > 1:
+		return apierrors.CLIUsage(fmt.Sprintf(
+			"unexpected arguments %q (usage: go-hotspot [flags] [target-directory])",
+			strings.Join(extra, " "),
+		))
+	case len(extra) == 1:
+		target = extra[0]
+	}
+
+	// Resolve --output against the caller's directory BEFORE entering the
+	// target, so a relative -output path lands where the user invoked us.
+	if *output != "" {
+		abs, resolveErr := filepath.Abs(*output)
+		if resolveErr != nil {
+			return apierrors.ReportCreate(*output, resolveErr)
+		}
+
+		*output = abs
+	}
+
+	if target != "." {
+		if err := enterTarget(target); err != nil {
+			return err //nolint:erraudit // enterTarget classifies via apierrors.CLIUsage
+		}
 	}
 
 	// 1. Resolve --since-version to a date if set.
@@ -173,6 +205,26 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	// 8. Fail-above threshold check (--fail-risk overrides --fail-above if set).
 	if err := checkThreshold(results, failThreshold(*failAbove, *failRisk)); err != nil {
 		return err //nolint:erraudit // checkThreshold classifies via apierrors.ThresholdExceeded
+	}
+
+	return nil
+}
+
+// enterTarget validates the positional target directory and switches the
+// process into it, so the git collector and complexity analyzer operate on the
+// requested repository instead of the caller's working directory.
+func enterTarget(target string) error {
+	info, statErr := os.Stat(target)
+	if statErr != nil {
+		return apierrors.CLIUsage(fmt.Sprintf("target directory %q is not accessible: %v", target, statErr))
+	}
+
+	if !info.IsDir() {
+		return apierrors.CLIUsage(fmt.Sprintf("target %q is not a directory", target))
+	}
+
+	if chdirErr := os.Chdir(target); chdirErr != nil {
+		return apierrors.CLIUsage(fmt.Sprintf("cannot enter target directory %q: %v", target, chdirErr))
 	}
 
 	return nil
