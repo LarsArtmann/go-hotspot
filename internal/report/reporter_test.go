@@ -80,7 +80,7 @@ func TestParseFormat(t *testing.T) {
 
 func TestRenderTable(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -95,7 +95,7 @@ func TestRenderTable(t *testing.T) {
 
 func TestRenderMarkdown(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -110,7 +110,7 @@ func TestRenderMarkdown(t *testing.T) {
 
 func TestRenderCSV(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,7 +140,7 @@ func TestRenderCSV(t *testing.T) {
 
 func TestRenderJSON(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -168,7 +168,7 @@ func TestRenderCoupling(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatTable, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatTable, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -189,7 +189,7 @@ func TestRenderCoupling(t *testing.T) {
 
 func TestRenderEmptyResults(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, nil, nil, sampleSummary(), FormatTable, 0, nil); err != nil {
+	if err := Render(&buf, nil, nil, sampleSummary(), FormatTable, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -249,7 +249,7 @@ func TestRenderWriteError(t *testing.T) {
 	for _, format := range []Format{FormatTable, FormatMarkdown, FormatCSV, FormatJSON} {
 		var fw failingWriter
 
-		err := Render(fw, results, nil, summary, format, 0, nil)
+		err := Render(fw, results, nil, summary, format, 0, nil, nil)
 		if err == nil {
 			t.Errorf("Render with failingWriter (format %d) should return error", format)
 		}
@@ -274,7 +274,7 @@ func TestRenderCouplingWriteError(t *testing.T) {
 	for _, format := range []Format{FormatTable, FormatMarkdown} {
 		var fw failingWriter
 
-		err := Render(fw, results, pairs, summary, format, 0, nil)
+		err := Render(fw, results, pairs, summary, format, 0, nil, nil)
 		if err == nil {
 			t.Errorf("Render with couplings + failingWriter (format %d) should return error", format)
 		}
@@ -371,7 +371,7 @@ func TestRenderFunctionsJSON(t *testing.T) {
 	funcs := sampleFunctions()
 
 	var buf bytes.Buffer
-	if err := Render(&buf, results, nil, summary, FormatJSON, 0, funcs); err != nil {
+	if err := Render(&buf, results, nil, summary, FormatJSON, 0, funcs, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -417,7 +417,7 @@ func TestRenderCouplingDOT(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatDOT, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatDOT, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -447,7 +447,7 @@ func TestRenderCouplingMermaid(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatMermaid, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatMermaid, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -469,7 +469,7 @@ func TestRenderCouplingD2(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatD2, 0, nil); err != nil {
+	if err := Render(&buf, sampleResults(), pairs, sampleSummary(), FormatD2, 0, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -499,7 +499,7 @@ func TestRenderGraphEmptyPairs(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if err := Render(&buf, sampleResults(), nil, sampleSummary(), tc.format, 0, nil); err != nil {
+			if err := Render(&buf, sampleResults(), nil, sampleSummary(), tc.format, 0, nil, nil); err != nil {
 				t.Fatal(err)
 			}
 			if buf.Len() > 0 {
@@ -550,7 +550,7 @@ func BenchmarkRenderTable(b *testing.B) {
 	b.ResetTimer()
 
 	for range b.N {
-		if err := Render(io.Discard, results, nil, summary, FormatTable, 0, nil); err != nil {
+		if err := Render(io.Discard, results, nil, summary, FormatTable, 0, nil, nil); err != nil {
 			b.Fatal(err)
 		}
 	}

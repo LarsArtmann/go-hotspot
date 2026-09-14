@@ -66,6 +66,10 @@ type Summary struct {
 // embedded in the JSON output (as a "functions" array); the other formats
 // append a separate Top Functions section via RenderFunctions. Passing nil or
 // an empty slice emits nothing.
+//
+// insights is the actionable-findings section produced by hotspot.Insights.
+// It renders in table, markdown, and JSON; CSV and the graph formats have no
+// insight representation. Passing nil or an empty slice emits nothing.
 func Render(
 	w io.Writer,
 	results []hotspot.Result,
@@ -74,6 +78,7 @@ func Render(
 	format Format,
 	topN int,
 	funcs []hotspot.FunctionResult,
+	insights []hotspot.Insight,
 ) error {
 	limited := results
 	if topN > 0 && topN < len(results) {
@@ -82,7 +87,7 @@ func Render(
 
 	switch format {
 	case FormatJSON:
-		return renderJSONReport(w, limited, couplings, summary, funcs)
+		return renderJSONReport(w, limited, couplings, summary, funcs, insights)
 	case FormatCSV:
 		return renderCSVReport(w, limited)
 	case FormatDOT:
@@ -92,9 +97,9 @@ func Render(
 	case FormatD2:
 		return renderCouplingD2(w, couplings)
 	case FormatMarkdown:
-		return renderMarkdownReport(w, limited, couplings, summary)
+		return renderMarkdownReport(w, limited, couplings, summary, insights)
 	default:
-		return renderTableReport(w, limited, couplings, summary)
+		return renderTableReport(w, limited, couplings, summary, insights)
 	}
 }
 
@@ -135,8 +140,9 @@ func renderJSONReport(
 	couplings []hotspot.CouplingPair,
 	summary Summary,
 	funcs []hotspot.FunctionResult,
+	insights []hotspot.Insight,
 ) error {
-	if err := renderJSON(w, results, couplings, summary, funcs); err != nil {
+	if err := renderJSON(w, results, couplings, summary, funcs, insights); err != nil {
 		return errors.ReportRender("render JSON", err)
 	}
 
@@ -156,6 +162,7 @@ func renderMarkdownReport(
 	results []hotspot.Result,
 	couplings []hotspot.CouplingPair,
 	summary Summary,
+	insights []hotspot.Insight,
 ) error {
 	if err := writeHeader(w, summary); err != nil {
 		return errors.ReportRender("write header", err)
@@ -171,10 +178,22 @@ func renderMarkdownReport(
 		}
 	}
 
+	if len(insights) > 0 {
+		if err := renderInsightsMarkdown(w, insights); err != nil {
+			return errors.ReportRender("render insights markdown", err)
+		}
+	}
+
 	return nil
 }
 
-func renderTableReport(w io.Writer, results []hotspot.Result, couplings []hotspot.CouplingPair, summary Summary) error {
+func renderTableReport(
+	w io.Writer,
+	results []hotspot.Result,
+	couplings []hotspot.CouplingPair,
+	summary Summary,
+	insights []hotspot.Insight,
+) error {
 	if err := writeHeader(w, summary); err != nil {
 		return errors.ReportRender("write header", err)
 	}
@@ -186,6 +205,12 @@ func renderTableReport(w io.Writer, results []hotspot.Result, couplings []hotspo
 	if len(couplings) > 0 {
 		if err := renderCouplingTable(w, couplings); err != nil {
 			return errors.ReportRender("render coupling table", err)
+		}
+	}
+
+	if len(insights) > 0 {
+		if err := renderInsightsTable(w, insights); err != nil {
+			return errors.ReportRender("render insights table", err)
 		}
 	}
 
@@ -346,7 +371,6 @@ func renderCouplingTable(w io.Writer, pairs []hotspot.CouplingPair) error {
 	if _, err := io.WriteString(w, "\n─ temporal coupling (files that change together) ─\n\n"); err != nil {
 		return err
 	}
-
 	var buf strings.Builder
 
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
