@@ -82,6 +82,9 @@ nix run github:larsartmann/go-hotspot
 # Analyze current directory (defaults: last year, .go files, 180-day half-life)
 go-hotspot
 
+# Analyze any repository without cd-ing into it
+go-hotspot ~/projects/my-repo
+
 # Production code only (exclude tests)
 go-hotspot --include-tests=false
 
@@ -97,9 +100,25 @@ go-hotspot --paths "metaengine/"
 # All file extensions, not just Go
 go-hotspot --ext ".go,.py,.ts"
 
+# Curated multi-language code profile (docs/config/lockfiles stay excluded)
+go-hotspot --ext auto
+
 # Custom coupling thresholds
 go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 ```
+
+### Insights
+
+Every report ends with an **insights** section that turns the raw ranking into
+recommended actions: churn concentration (the Pareto core — which few files
+carry most of the risk), high-churn/low-complexity noise, stable complex files
+to prepare tests for, single-maintainer hotspots, hotspots that went quiet,
+and the tightest co-change pair. Insights are relative to the analyzed set,
+sorted high → low severity, and `--no-insights` hides them.
+
+Scores in table/markdown output use a **0–100 relative scale** (the worst file
+is 100.0) so the number agrees with the RISK label; CSV and JSON keep the raw
+normalized score for machine consumers.
 
 ### Flags
 
@@ -113,7 +132,7 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--top`                 | `25`         | Rows to show (0 = all)                                                                                                                          |
 | `--complexity`          | `cyclomatic` | Metric: `cyclomatic`, `indentation`, `sloc`                                                                                                     |
 | `--churn`               | `weighted`   | Metric: `weighted`, `commits`, `lines`                                                                                                          |
-| `--ext`                 | `.go`        | Comma-separated file extensions                                                                                                                 |
+| `--ext`                 | `.go`        | Comma-separated file extensions, or `auto` for the multi-language code profile                                                  |
 | `--include-tests`       | `true`       | Include `_test.go` files                                                                                                                        |
 | `--include-generated`   | `false`      | Include `*.gen.go`, `*.pb.go`                                                                                                                   |
 | `--paths`               |              | Comma-separated path prefixes to include                                                                                                        |
@@ -128,8 +147,11 @@ go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
 | `--no-header`           | `false`      | Suppress summary header (for script piping)                                                                                                     |
 | `--functions`           | `0`          | Show top N functions by hotspot score (Go only, 0 = disabled)                                                                                   |
 | `--min-commits`         | `0`          | Exclude files with fewer commits (0 = no minimum)                                                                                               |
-| `--author`              |              | Show only files touched by this git author                                                                                                      |
-| `--version`             |              | Print version information and exit                                                                                                              |
+| `--author`              |              | Show only files touched by this git author                                                                                      |
+| `--no-insights`         | `false`      | Hide the actionable insights section                                                                                            |
+| `--verbose`             | `false`      | Print every skipped file instead of a summary count                                                                             |
+| `[target]`              | `.`          | Repository directory to analyze (extra arguments are rejected)                                                                  |
+| `--version`             |              | Print version information and exit                                                                                              |
 
 ### Exit Codes
 
