@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- **Actionable insights section**: every report ends with `─ insights ─` (terminal) / `## Insights` (markdown) / an `insights` array (JSON) that converts rankings into recommended actions — churn concentration (top 5% of files vs share of churn), churn-without-complexity noise, stable-complex files to add tests before touching, single-maintainer hotspots (fires only when the repo has multi-author files), stale top-ranked hotspots, and coupling advice for the tightest co-change pair. `--no-insights` hides it.
+- **Target directory argument**: `go-hotspot ~/projects/my-repo` analyzes that repository; extra positional arguments are rejected with a usage error instead of being silently ignored (which previously analyzed the wrong repository). Relative `--output` paths resolve against the caller's directory.
+- **Readable score scale**: table/markdown output shows SCORE as 0–100 relative to the worst file (top = 100.0), agreeing with the RISK labels; CSV/JSON keep raw normalized scores.
+- **`--ext auto`**: curated multi-language code profile (Go, JS/TS, Python, Rust, Java, templ, Svelte, Vue, Elixir, …) that excludes docs, config, and lockfiles. Default stays `.go`.
+- **`--verbose`**: prints every skipped file; by default files deleted from disk (but present in git history) are summarized in a single count line instead of hundreds of warnings.
+- Strict validation for `--format`, `--sort`, `--complexity`, `--churn`, `--fail-risk`: typos exit with a usage error listing valid values instead of silently falling back to defaults.
+- Insights engine with rule tests + render tests + golden coverage (`table-insights`, `json-insights`) in `internal/hotspot/insights.go` and `internal/report`.
+
+### Fixed
+
+- **JSON `half_life_days` no longer emitted as `0`** when recency decay is disabled: Go 1.26.7's `encoding/json/v2` requires `omitzero` (not `omitempty`) to omit numeric zeros. The stale JSON golden failure this surfaced pre-dated this change (verified at the session-start commit).
+
 - **Graph output formats for temporal coupling**: `--format dot`, `--format mermaid`, and `--format d2` render the coupling graph using `go-output` (DOT/Mermaid/D2 renderers). DOT renders as an undirected graph with left-to-right layout; Mermaid uses `flowchart TD`; D2 uses `direction: right`. Graph formats render only the coupling graph (no hotspot table or header).
 - `go-output` dependency (root + graph + d2 sub-modules) for Graph types, builders, and DOT/Mermaid/D2 rendering
 - `FormatDOT`, `FormatMermaid`, `FormatD2` enum values + `ParseFormat` support for `"dot"`, `"graphviz"`, `"mermaid"`, `"d2"`

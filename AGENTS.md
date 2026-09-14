@@ -41,7 +41,7 @@ Go 1.26.5. Module: `github.com/larsartmann/go-hotspot`.
 Data flows one direction through five packages; `main.go` orchestrates:
 
 ```
-git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspot.Coupling  →  report.Render (+ report.RenderFunctions if --functions)
+git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspot.Coupling  →  hotspot.Insights  →  report.Render (+ report.RenderFunctions if --functions)
 ```
 
 | Package                  | Responsibility                                                                                                                                               |
@@ -49,7 +49,7 @@ git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspo
 | `cmd/go-hotspot/main.go` | Flag parsing, filter logic, pipeline orchestration. 23 tests (including integration tests with real git repos).                                              |
 | `internal/git`           | Runs `git log --numstat`, parses into `FileChurn` + coupling data. Context-cancelable.                                                                       |
 | `internal/complexity`    | SLOC, indentation, and go/ast cyclomatic complexity.                                                                                                         |
-| `internal/hotspot`       | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`).                                                                                      |
+| `internal/hotspot`       | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`) + actionable insights (`Insights`).                                                 |
 | `internal/report`        | Output rendering: table, markdown, csv, json, dot, mermaid, d2. Graph formats (DOT/Mermaid/D2) use go-output for coupling visualization. Golden-file tested. |
 | `internal/errors`        | Domain-specific typed errors built on `go-error-family`. BSD exit codes + What/Why/Fix/WayOut message templates.                                             |
 
@@ -102,12 +102,60 @@ shared commits, min 30% degree. Pairs are canonicalized via `orderedPair` so
 
 ### Generated/test file filtering lives in `main.go`, not the packages
 
-`fileFilter`, `isGenerated`, `isGeneratedContent`, `generatedSuffixes` are all in
-`cmd/go-hotspot/main.go`. Generated detection is twofold: suffix-based
-(`.gen.go`, `_gen.go`, `.pb.go`, `.pb.gw.go`, `.templ.go`) and content-based
-(scans for `// Code generated ... DO NOT EDIT` header).
-`vendor/` is always excluded. The internal packages are filter-agnostic —
-filtering happens by deleting from `history.Files` before scoring.
+`fileFilter`, `isGenerated`, `isGeneratedContent`, `generatedSuffixes`, and
+`resolveExts` (the `--ext auto` profile) are all in `cmd/go-hotspot/main.go`.
+Generated detection is twofold: suffix-based (`.gen.go`, `_gen.go`, `.pb.go`,
+`.pb.gw.go`, `.templ.go`) and content-based (scans for `// Code generated ...
+DO NOT EDIT` header). `vendor/` is always excluded. The internal packages are
+filter-agnostic — filtering happens by deleting from `history.Files` before
+scoring.
+
+### Target directory: the process chdirs before analysis
+
+The first positional argument is the repository to analyze; `enterTarget`
+validates it and `os.Chdir`s into it BEFORE `git.Collect`, so everything
+downstream (git, complexity reads, report paths) stays relative to the target.
+A relative `--output` is resolved to an absolute path first so the report lands
+where the user invoked the tool. Extra positional args and missing/non-directory
+targets exit 1 (`CLIUsage`).
+
+### Insights are set-relative, with a distributional minimum
+
+`hotspot.Insights` mirrors `RiskBand`'s philosophy: everything is relative to
+the analyzed result set, never absolute. Quartile-based rules (churn≠complexity,
+bus factor, stale hotspots) require `quartileMinFiles = 8` samples — quartiles
+on fewer files are noise. Bus factor only fires when at least one file has
+multiple authors (solo repos stay quiet). Test files are excluded from
+churn-anomaly rules. `churnQuartiles`/`cyclomaticQuartiles` return
+`(q1, median, q3)` — two q1-bound-as-q3 destructuring bugs were caught by
+tests; keep that order in mind.
+
+### Score display vs score storage are deliberately different
+
+Table/markdown render SCORE as 0–100 relative to the max (`fmtScoreRel`),
+agreeing with the relative risk bands. CSV/JSON store the raw normalized score.
+`--fail-above`/`--fail-risk` stay absolute-raw. Don't unify these three scales —
+they serve different consumers (human display, machine data, CI gates).
+
+### Missing-from-disk history files are a count, not warnings
+
+Files in git history that no longer exist on disk (deleted/renamed in-window)
+are expected in every repo. `analyzeFiles` classifies `errors.Is(err,
+fs.ErrNotExist)` misses into one summary line; real analysis failures keep
+per-file warnings; `--verbose` names every skipped path. Large repos have
+hundreds of these — never reintroduce per-file stderr noise.
+
+### Enum flags are validated, not defaulted
+
+`validateFlagChoices` rejects unknown `--format`/`--sort`/`--complexity`/
+`--churn`/`--fail-risk` values with a usage error listing valid values
+(including aliases). The `valid*` slices must stay in sync with the `Parse*`
+functions' alias sets — when adding an alias, update both.
+
+### JSON numeric zero omission needs `omitzero` on Go 1.26.7+
+
+`encoding/json/v2`'s `omitempty` no longer omits numeric zero; use `omitzero`
+(see `Summary.HalfLifeDays`).
 
 ## Known issues
 

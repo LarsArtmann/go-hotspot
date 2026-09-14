@@ -20,6 +20,14 @@ Raw ideas:
 - Color-coded risk bands in terminal output (red/orange/yellow when stdout is a TTY)
 - SARIF output for GitHub code scanning integration
 - HTML report output for CI dashboards
+- go-finding integration: emit insights as `go-finding.Finding`s (ToolName
+  "go-hotspot", one rule per InsightKind, severity mapping high→error,
+  medium→warning, low→info, file-level Position). This would give SARIF export,
+  LSP diagnostics, and routing into go-finding's detect→triage→fix pipeline for
+  free, and is the natural substrate for the SARIF idea above. Note: go-finding
+  would become go-hotspot's third external dependency — decide deliberately.
+  (Assessed 2026-09-14; deferred to keep the two-dependency policy until the
+  value lands user-visibly.)
 
 ### 2. Advanced Analysis
 
