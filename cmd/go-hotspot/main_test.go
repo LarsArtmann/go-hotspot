@@ -436,6 +436,55 @@ func TestMissingFilesSummarizedNotSpammed(t *testing.T) { //nolint:paralleltest 
 	}
 }
 
+func TestRejectsUnknownEnumFlagValues(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		flag  string
+		value string
+	}{
+		{"format", "xml"},
+		{"sort", "random"},
+		{"complexity", "cycolmatic"},
+		{"churn", "kilos"},
+		{"fail-risk", "extreme"},
+	}
+
+	for _, tc := range cases {
+		err := run(context.Background(), []string{"--" + tc.flag, tc.value}, io.Discard, io.Discard, time.Now())
+		if err == nil {
+			t.Errorf("--%s %s should be rejected", tc.flag, tc.value)
+
+			continue
+		}
+
+		if code := apierrors.ExitCode(err); code != 1 {
+			t.Errorf("--%s %s: ExitCode = %d, want 1 (EX_USAGE)", tc.flag, tc.value, code)
+		}
+
+		if !strings.Contains(err.Error(), "invalid --"+tc.flag) {
+			t.Errorf("--%s %s: error should name the flag, got: %v", tc.flag, tc.value, err)
+		}
+	}
+}
+
+func TestAcceptsEnumFlagAliases(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	aliases := [][]string{
+		{"--format", "graphviz", "--no-coupling"},
+		{"--sort", "cyc"},
+		{"--complexity", "indent"},
+		{"--churn", "raw"},
+	}
+
+	for _, args := range aliases {
+		if err := run(context.Background(), args, io.Discard, io.Discard, time.Now()); err != nil {
+			t.Errorf("alias args %v should be accepted, got: %v", args, err)
+		}
+	}
+}
+
 func TestParseFailRisk(t *testing.T) {
 	t.Parallel()
 

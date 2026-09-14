@@ -120,6 +120,12 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		}
 	}
 
+	// Reject unknown enum values before any analysis: a silent fallback to
+	// the default would produce a subtly wrong report with no hint why.
+	if err := validateFlagChoices(*format, *sortOrder, *complexityMetric, *churnMetric, *failRisk); err != nil {
+		return err //nolint:erraudit // validateFlagChoices classifies via apierrors.CLIUsage
+	}
+
 	// 1. Resolve --since-version to a date if set.
 	sinceArg, err := resolveSince(ctx, *since, *sinceVersion)
 	if err != nil {
@@ -470,8 +476,55 @@ func hasAnySuffix(path string, suffixes []string) bool {
 	return false
 }
 
-func parseComplexityMetric(s string) hotspot.ComplexityMetric {
-	switch strings.ToLower(s) {
+// Accepted values for enum-valued flags. They must stay in sync with the
+// Parse* functions (which keep accepting these same aliases as defaults).
+var (
+	validFormats    = []string{"table", "markdown", "md", "csv", "json", "dot", "graphviz", "mermaid", "d2"}
+	validSortOrders = []string{"hotspot", "stable", "churn", "commits", "commit", "complexity", "cyc", "cyclomatic", "age", "stale", "old"}
+	validComplexity = []string{"cyclomatic", "indentation", "indent", "sloc", "loc", "lines"}
+	validChurn      = []string{"weighted", "commits", "commit", "lines", "raw"}
+	validFailRisks  = []string{"low", "medium", "high", "critical"}
+)
+
+// validateFlagChoices rejects typos in enum-valued flags with the list of
+// accepted values, so the user fixes the invocation instead of receiving a
+// report computed under silently substituted options.
+func validateFlagChoices(format, sortOrder, complexityMetric, churnMetric, failRisk string) error {
+	check := func(flag, value string, allowed []string) error {
+		for _, a := range allowed {
+			if strings.EqualFold(value, a) {
+				return nil
+			}
+		}
+
+		return apierrors.CLIUsage(fmt.Sprintf(
+			"invalid --%s value %q (valid: %s)", flag, value, strings.Join(allowed, ", ")))
+	}
+
+	if err := check("format", format, validFormats); err != nil {
+		return err
+	}
+
+	if err := check("sort", sortOrder, validSortOrders); err != nil {
+		return err
+	}
+
+	if err := check("complexity", complexityMetric, validComplexity); err != nil {
+		return err
+	}
+
+	if err := check("churn", churnMetric, validChurn); err != nil {
+		return err
+	}
+
+	if failRisk == "" {
+		return nil
+	}
+
+	return check("fail-risk", failRisk, validFailRisks)
+}
+
+func parseComplexityMetric(s string) hotspot.ComplexityMetric {	switch strings.ToLower(s) {
 	case "indentation", "indent":
 		return hotspot.MetricIndentation
 	case "sloc", "loc", "lines":
