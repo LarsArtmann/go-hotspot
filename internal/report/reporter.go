@@ -551,7 +551,7 @@ type jsonReport struct {
 		LastCommit   string  `json:"last_commit"`
 		TotalCommits int     `json:"total_commits"`
 		TotalFiles   int     `json:"total_files"`
-		HalfLifeDays float64 `json:"half_life_days,omitempty"`
+		HalfLifeDays float64 `json:"half_life_days,omitzero"`
 	} `json:"summary"`
 	Hotspots  []jsonHotspot  `json:"hotspots"`
 	Couplings []jsonCoupling `json:"couplings,omitempty"`

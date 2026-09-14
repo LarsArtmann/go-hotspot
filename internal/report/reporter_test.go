@@ -555,3 +555,94 @@ func BenchmarkRenderTable(b *testing.B) {
 		}
 	}
 }
+
+func sampleInsights() []hotspot.Insight {
+	return []hotspot.Insight{
+		{
+			Kind:     hotspot.InsightConcentration,
+			Severity: hotspot.SeverityHigh,
+			Title:    "72% of churn is concentrated in 3 of 42 files",
+			Detail:   "Concentrate refactoring and test coverage on these files first.",
+			Files:    []string{"main.go", "utils.go", "handler.go"},
+		},
+		{
+			Kind:     hotspot.InsightCoupling,
+			Severity: hotspot.SeverityMedium,
+			Title:    "config.go and flags.go changed together in 30 commits (61% degree)",
+			Detail:   "Extract the shared concept, merge them, or put an interface between them.",
+			Files:    []string{"config.go", "flags.go"},
+		},
+		{
+			Kind:     hotspot.InsightStaleHotspot,
+			Severity: hotspot.SeverityLow,
+			Title:    "1 top-ranked hotspot(s) have been quiet for over 90 days",
+			Detail:   "If the quiet is genuine, lock it in with tests; if not, expect the churn to return.",
+			Files:    []string{"legacy.go"},
+		},
+	}
+}
+
+func TestRenderInsightsTable(t *testing.T) {
+	var buf bytes.Buffer
+
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0, nil, sampleInsights()); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{"─ insights ─", "[high]", "[medium]", "[low]", "72% of churn", "files: main.go, utils.go, handler.go"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("table output missing %q\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderInsightsMarkdown(t *testing.T) {
+	var buf bytes.Buffer
+
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0, nil, sampleInsights()); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{"## Insights", "- **[high]** 72% of churn", "`main.go`", "`flags.go`"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("markdown output missing %q\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderInsightsJSON(t *testing.T) {
+	var buf bytes.Buffer
+
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatJSON, 0, nil, sampleInsights()); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	for _, want := range []string{`"insights"`, `"kind": "concentration"`, `"severity": "high"`, `"files": [`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("JSON output missing %q\n%s", want, out)
+		}
+	}
+}
+
+func TestRenderNilInsightsEmitsNothing(t *testing.T) {
+	var buf bytes.Buffer
+
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 0, nil, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(buf.String(), "insights") {
+		t.Errorf("nil insights should emit no section:\n%s", buf.String())
+	}
+
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatCSV, 0, nil, sampleInsights()); err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(buf.String(), "insights") {
+		t.Errorf("CSV format should not contain insights:\n%s", buf.String())
+	}
+}

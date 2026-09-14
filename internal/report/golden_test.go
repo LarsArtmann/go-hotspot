@@ -23,20 +23,23 @@ func TestGoldenAllFormats(t *testing.T) {
 		name      string
 		format    Format
 		couplings []hotspot.CouplingPair
+		insights  []hotspot.Insight
 	}{
-		{"table", FormatTable, couplings},
-		{"markdown", FormatMarkdown, couplings},
-		{"csv", FormatCSV, nil},
-		{"json", FormatJSON, couplings},
-		{"dot", FormatDOT, couplings},
-		{"mermaid", FormatMermaid, couplings},
-		{"d2", FormatD2, couplings},
+		{"table", FormatTable, couplings, nil},
+		{"markdown", FormatMarkdown, couplings, nil},
+		{"csv", FormatCSV, nil, nil},
+		{"json", FormatJSON, couplings, nil},
+		{"dot", FormatDOT, couplings, nil},
+		{"mermaid", FormatMermaid, couplings, nil},
+		{"d2", FormatD2, couplings, nil},
+		{"table-insights", FormatTable, couplings, sampleInsights()},
+		{"json-insights", FormatJSON, couplings, sampleInsights()},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if err := Render(&buf, results, tc.couplings, summary, tc.format, 0, nil, nil); err != nil {
+			if err := Render(&buf, results, tc.couplings, summary, tc.format, 0, nil, tc.insights); err != nil {
 				t.Fatal(err)
 			}
 
