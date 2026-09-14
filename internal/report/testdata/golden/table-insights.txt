@@ -1,0 +1,30 @@
+────────────────────────────────────────────────────────────
+ go-hotspot — code complexity × churn analysis
+────────────────────────────────────────────────────────────
+ window:    2025-01-01 → 2026-08-09
+ commits:   500
+ files:     42
+
+RANK  PATH      LANG  COMMITS  CHURN  AUTHORS         CYC  SLOC  LAST  HOTSPOT   RISK
+1     main.go   Go    50       700    Alice, Bob, +1  15   200   —     0.085000  critical
+2     utils.go  Go    10       70     Alice           4    50    —     0.012000  medium
+
+─ temporal coupling (files that change together) ─
+
+FILE A  FILE B  SHARED  DEGREE
+a.go    b.go    15      80%
+
+─ insights ─
+
+[high] 72% of churn is concentrated in 3 of 42 files
+        Concentrate refactoring and test coverage on these files first.
+        files: main.go, utils.go, handler.go
+
+[medium] config.go and flags.go changed together in 30 commits (61% degree)
+        Extract the shared concept, merge them, or put an interface between them.
+        files: config.go, flags.go
+
+[low] 1 top-ranked hotspot(s) have been quiet for over 90 days
+        If the quiet is genuine, lock it in with tests; if not, expect the churn to return.
+        files: legacy.go
+

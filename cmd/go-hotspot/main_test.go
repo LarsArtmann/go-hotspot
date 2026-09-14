@@ -393,6 +393,49 @@ func TestTargetDirectoryAnalyzesRequestedRepo(t *testing.T) { //nolint:parallelt
 	}
 }
 
+func TestMissingFilesSummarizedNotSpammed(t *testing.T) { //nolint:paralleltest // uses t.Chdir via setupMiniRepo
+	setupMiniRepo(t)
+
+	rel := "second.go" // committed, then deleted from disk
+	if err := os.WriteFile(rel, []byte("package main\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	execGit(t, "add", rel)
+	execGit(t, "commit", "-m", "second")
+
+	if err := os.Remove(rel); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errOut bytes.Buffer
+
+	runArgs := func(extra ...string) []string { return append([]string{"--no-insights"}, extra...) }
+
+	if err := run(context.Background(), runArgs(), &out, &errOut, time.Now()); err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	stderr := errOut.String()
+	if strings.Contains(stderr, rel) {
+		t.Errorf("deleted file should not be named in default stderr:\n%s", stderr)
+	}
+
+	if !strings.Contains(stderr, "no longer exist on disk") {
+		t.Errorf("expected summary line for missing files, got:\n%s", stderr)
+	}
+
+	var verboseErr bytes.Buffer
+
+	if err := run(context.Background(), runArgs("--verbose"), &out, &verboseErr, time.Now()); err != nil {
+		t.Fatalf("verbose run failed: %v", err)
+	}
+
+	if !strings.Contains(verboseErr.String(), rel) {
+		t.Errorf("--verbose should name the skipped file, got:\n%s", verboseErr.String())
+	}
+}
+
 func TestParseFailRisk(t *testing.T) {
 	t.Parallel()
 

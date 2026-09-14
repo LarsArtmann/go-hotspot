@@ -1,0 +1,90 @@
+{
+  "summary": {
+    "first_commit": "2025-01-01",
+    "last_commit": "2026-08-09",
+    "total_commits": 500,
+    "total_files": 42
+  },
+  "hotspots": [
+    {
+      "path": "main.go",
+      "language": "Go",
+      "commits": 50,
+      "added": 500,
+      "deleted": 200,
+      "churn": 700,
+      "weighted_churn": 400,
+      "authors": 3,
+      "author_names": [
+        "Alice",
+        "Bob",
+        "Carol"
+      ],
+      "cyclomatic": 15,
+      "sloc": 200,
+      "indentation": 120,
+      "last_touch": "—",
+      "hotspot": 0.085,
+      "trend_factor": 1
+    },
+    {
+      "path": "utils.go",
+      "language": "Go",
+      "commits": 10,
+      "added": 50,
+      "deleted": 20,
+      "churn": 70,
+      "weighted_churn": 30,
+      "authors": 1,
+      "author_names": [
+        "Alice"
+      ],
+      "cyclomatic": 4,
+      "sloc": 50,
+      "indentation": 20,
+      "last_touch": "—",
+      "hotspot": 0.012,
+      "trend_factor": 0.5
+    }
+  ],
+  "couplings": [
+    {
+      "file_a": "a.go",
+      "file_b": "b.go",
+      "shared_commits": 15,
+      "degree": 80
+    }
+  ],
+  "insights": [
+    {
+      "kind": "concentration",
+      "severity": "high",
+      "title": "72% of churn is concentrated in 3 of 42 files",
+      "detail": "Concentrate refactoring and test coverage on these files first.",
+      "files": [
+        "main.go",
+        "utils.go",
+        "handler.go"
+      ]
+    },
+    {
+      "kind": "coupling",
+      "severity": "medium",
+      "title": "config.go and flags.go changed together in 30 commits (61% degree)",
+      "detail": "Extract the shared concept, merge them, or put an interface between them.",
+      "files": [
+        "config.go",
+        "flags.go"
+      ]
+    },
+    {
+      "kind": "stale_hotspot",
+      "severity": "low",
+      "title": "1 top-ranked hotspot(s) have been quiet for over 90 days",
+      "detail": "If the quiet is genuine, lock it in with tests; if not, expect the churn to return.",
+      "files": [
+        "legacy.go"
+      ]
+    }
+  ]
+}
