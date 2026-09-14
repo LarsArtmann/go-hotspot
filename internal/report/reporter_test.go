@@ -667,3 +667,25 @@ func TestFmtScoreRel(t *testing.T) {
 		}
 	}
 }
+
+func TestFormatInsightFilesCap(t *testing.T) {
+	t.Parallel()
+
+	files := []string{"a.go", "b.go", "c.go", "d.go", "e.go", "f.go", "g.go"}
+
+	got := formatInsightFiles(files, false)
+	want := "a.go, b.go, c.go, d.go, e.go … +2 more"
+	if got != want {
+		t.Errorf("formatInsightFiles = %q, want %q", got, want)
+	}
+
+	gotQuoted := formatInsightFiles(files, true)
+	if !strings.HasPrefix(gotQuoted, "`a.go`, `b.go`") || !strings.HasSuffix(gotQuoted, "+2 more") {
+		t.Errorf("quoted format = %q, want backtick-wrapped cap", gotQuoted)
+	}
+
+	short := formatInsightFiles(files[:2], false)
+	if short != "a.go, b.go" {
+		t.Errorf("short list = %q, want uncapped join", short)
+	}
+}
