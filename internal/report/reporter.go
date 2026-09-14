@@ -371,6 +371,7 @@ func renderCouplingTable(w io.Writer, pairs []hotspot.CouplingPair) error {
 	if _, err := io.WriteString(w, "\n─ temporal coupling (files that change together) ─\n\n"); err != nil {
 		return err
 	}
+
 	var buf strings.Builder
 
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
@@ -404,6 +405,55 @@ func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
 	for _, p := range pairs {
 		fmt.Fprintf(&b, "| `%s` | `%s` | %d | %.0f%% |\n",
 			p.FileA, p.FileB, p.SharedCommits, p.Degree)
+	}
+
+	_, err := io.WriteString(w, b.String())
+
+	return err
+}
+
+// renderInsightsTable writes the actionable-insights section for terminal output.
+func renderInsightsTable(w io.Writer, insights []hotspot.Insight) error {
+	if _, err := io.WriteString(w, "\n─ insights ─\n\n"); err != nil {
+		return err
+	}
+
+	var b strings.Builder
+
+	for _, in := range insights {
+		fmt.Fprintf(&b, "[%s] %s\n", in.Severity, in.Title)
+		fmt.Fprintf(&b, "        %s\n", in.Detail)
+
+		if len(in.Files) > 0 {
+			fmt.Fprintf(&b, "        files: %s\n", strings.Join(in.Files, ", "))
+		}
+
+		b.WriteByte('\n')
+	}
+
+	_, err := io.WriteString(w, b.String())
+
+	return err
+}
+
+// renderInsightsMarkdown writes the actionable-insights section as markdown.
+func renderInsightsMarkdown(w io.Writer, insights []hotspot.Insight) error {
+	var b strings.Builder
+
+	b.WriteString("\n## Insights\n\n")
+
+	for _, in := range insights {
+		fmt.Fprintf(&b, "- **[%s]** %s\n", in.Severity, in.Title)
+		fmt.Fprintf(&b, "  %s\n", in.Detail)
+
+		if len(in.Files) > 0 {
+			quoted := make([]string, 0, len(in.Files))
+			for _, f := range in.Files {
+				quoted = append(quoted, "`"+f+"`")
+			}
+
+			fmt.Fprintf(&b, "  Files: %s\n", strings.Join(quoted, ", "))
+		}
 	}
 
 	_, err := io.WriteString(w, b.String())
@@ -506,6 +556,7 @@ type jsonReport struct {
 	Hotspots  []jsonHotspot  `json:"hotspots"`
 	Couplings []jsonCoupling `json:"couplings,omitempty"`
 	Functions []jsonFunction `json:"functions,omitempty"`
+	Insights  []jsonInsight  `json:"insights,omitempty"`
 }
 
 type jsonHotspot struct {
@@ -546,12 +597,24 @@ type jsonFunction struct {
 	Hotspot    float64 `json:"hotspot"`
 }
 
+// jsonInsight is the actionable-insight DTO emitted under the "insights" key
+// of the JSON report. It mirrors hotspot.Insight with the kind rendered as its
+// stable machine-readable name.
+type jsonInsight struct {
+	Kind     string   `json:"kind"`
+	Severity string   `json:"severity"`
+	Title    string   `json:"title"`
+	Detail   string   `json:"detail"`
+	Files    []string `json:"files"`
+}
+
 func renderJSON(
 	w io.Writer,
 	results []hotspot.Result,
 	couplings []hotspot.CouplingPair,
 	summary Summary,
 	funcs []hotspot.FunctionResult,
+	insights []hotspot.Insight,
 ) error {
 	var rep jsonReport
 	if !summary.FirstCommit.IsZero() {
@@ -595,6 +658,24 @@ func renderJSON(
 				LineCount:  fn.LineCount,
 				StartLine:  fn.StartLine,
 				Hotspot:    fn.Hotspot,
+			})
+		}
+	}
+
+	if len(insights) > 0 {
+		rep.Insights = make([]jsonInsight, 0, len(insights))
+		for _, in := range insights {
+			files := in.Files
+			if files == nil {
+				files = []string{}
+			}
+
+			rep.Insights = append(rep.Insights, jsonInsight{
+				Kind:     in.Kind.String(),
+				Severity: in.Severity,
+				Title:    in.Title,
+				Detail:   in.Detail,
+				Files:    files,
 			})
 		}
 	}

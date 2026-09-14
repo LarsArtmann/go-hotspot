@@ -10,6 +10,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -67,6 +68,8 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	failRisk := fs.String("fail-risk", "", "exit 2 if max score exceeds absolute band: low|medium|high|critical")
 	sinceVersion := fs.String("since-version", "", "analyze commits since this git tag (e.g., v1.0.0)")
 	functions := fs.Int("functions", 0, "show top N functions by hotspot score (0 = disabled, Go only)")
+	noInsights := fs.Bool("no-insights", false, "hide the actionable insights section")
+	verbose := fs.Bool("verbose", false, "print every skipped file instead of a summary count")
 
 	// Handle --version before parsing so it works even with other invalid flags.
 	if hasVersionFlag(args) {
@@ -142,7 +145,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		prefixes:         splitCSV(*paths),
 	}
 
-	complexities, analysisWarnings := analyzeFiles(history, filter, errOut)
+	complexities, analysisWarnings := analyzeFiles(history, filter, errOut, *verbose)
 
 	if analysisWarnings > 0 {
 		fmt.Fprintf(errOut, "go-hotspot: %d file(s) skipped due to analysis errors\n", analysisWarnings)
@@ -189,7 +192,15 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		topFuncs = hotspot.RankFunctions(results, complexities, *functions)
 	}
 
-	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top, topFuncs); err != nil {
+	// Actionable insights: derived from the scored results and coupling pairs
+	// unless explicitly suppressed. The trendFactor argument is not needed
+	// here — Insights works on the already-trend-adjusted results.
+	var insights []hotspot.Insight
+	if !*noInsights {
+		insights = hotspot.Insights(results, couplings, now)
+	}
+
+	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top, topFuncs, insights); err != nil {
 		return err //nolint:erraudit // renderReport classifies via apierrors
 	}
 
@@ -233,14 +244,20 @@ func enterTarget(target string) error {
 // analyzeFiles runs complexity analysis on each surviving file in history,
 // removing filtered/unanalyzable files and returning the complexity map
 // plus a count of files that failed analysis.
+//
+// Files present in git history but missing from disk (deleted or renamed
+// within the window) are expected in every repository and are reported as a
+// single count; other analysis failures warn per file. --verbose prints every
+// skipped path regardless of category.
 func analyzeFiles(
 	history *git.History,
 	filter fileFilter,
 	errOut io.Writer,
+	verbose bool,
 ) (map[string]complexity.FileComplexity, int) {
 	complexities := make(map[string]complexity.FileComplexity, len(history.Files))
 
-	var warnings int
+	var warnings, missing int
 
 	for path := range history.Files {
 		if !filter.keep(path) {
@@ -251,16 +268,28 @@ func analyzeFiles(
 
 		fc, analyzeErr := complexity.Analyze(path)
 		if analyzeErr != nil {
-			fmt.Fprintln(errOut, "go-hotspot: warning:", analyzeErr)
+			if errors.Is(analyzeErr, fs.ErrNotExist) {
+				missing++
+
+				if verbose {
+					fmt.Fprintln(errOut, "go-hotspot: missing from disk, skipped:", path)
+				}
+			} else {
+				fmt.Fprintln(errOut, "go-hotspot: warning:", analyzeErr)
+
+				warnings++
+			}
 
 			delete(history.Files, path)
-
-			warnings++
 
 			continue
 		}
 
 		complexities[path] = fc
+	}
+
+	if missing > 0 {
+		fmt.Fprintf(errOut, "go-hotspot: %d file(s) in git history no longer exist on disk — skipped\n", missing)
 	}
 
 	return complexities, warnings
@@ -303,6 +332,7 @@ func renderReport(
 	format string,
 	topN int,
 	funcs []hotspot.FunctionResult,
+	insights []hotspot.Insight,
 ) error {
 	writer := out
 
@@ -321,7 +351,7 @@ func renderReport(
 		writer = file
 	}
 
-	if err := report.Render(writer, results, couplings, summary, report.ParseFormat(format), topN, funcs); err != nil {
+	if err := report.Render(writer, results, couplings, summary, report.ParseFormat(format), topN, funcs, insights); err != nil {
 		return err //nolint:erraudit // report.Render already classifies via errors.ReportRender
 	}
 

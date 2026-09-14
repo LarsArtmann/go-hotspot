@@ -201,7 +201,7 @@ func TestRenderEmptyResults(t *testing.T) {
 
 func TestRenderTopN(t *testing.T) {
 	var buf bytes.Buffer
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 1, nil); err != nil {
+	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatTable, 1, nil, nil); err != nil {
 		t.Fatal(err)
 	}
 
