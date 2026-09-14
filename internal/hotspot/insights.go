@@ -177,7 +177,7 @@ func concentrationInsight(results []Result) []Insight {
 // structure: generated content, lockfiles, or mechanical churn — data-quality
 // noise that inflates everyone else's normalization, not structural risk.
 func churnNoComplexityInsight(results []Result) []Insight {
-	qChurnHigh, _, _ := churnQuartiles(results)
+	_, _, qChurnHigh := churnQuartiles(results)
 	_, cycMedian, _ := cyclomaticQuartiles(results)
 
 	var matches []Result
@@ -262,7 +262,7 @@ func busFactorInsight(results []Result) []Insight {
 		return nil
 	}
 
-	qChurnHigh, _, _ := churnQuartiles(results)
+	_, _, qChurnHigh := churnQuartiles(results)
 
 	var matches []Result
 
