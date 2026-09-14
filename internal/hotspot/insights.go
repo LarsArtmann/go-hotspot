@@ -71,6 +71,11 @@ type Insight struct {
 // is reported as "quiet" instead of active risk.
 const StaleHotspotAgeDays = 90
 
+// quartileMinFiles is the minimum result count for distributional rules.
+// Quartiles on fewer samples are statistically meaningless and would produce
+// noise instead of insight.
+const quartileMinFiles = 8
+
 // lowComplexityCap bounds the churn-without-complexity rule: even relative to
 // a complex codebase, "structurally trivial" must stay absolutely trivial.
 const lowComplexityCap = 15
@@ -88,7 +93,7 @@ func Insights(results []Result, couplings []CouplingPair, now time.Time) []Insig
 
 	insights = append(insights, concentrationInsight(results)...)
 
-	if len(results) >= 4 {
+	if len(results) >= quartileMinFiles {
 		insights = append(insights, churnNoComplexityInsight(results)...)
 		insights = append(insights, complexityNoChurnInsight(results)...)
 		insights = append(insights, busFactorInsight(results)...)
