@@ -18,7 +18,10 @@
 | Task                                                                                    | Status    | Impact | Effort | Evidence                                                                                                                                                                                                     |
 | --------------------------------------------------------------------------------------- | --------- | ------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Wire structured logging (`slog`) into `HandleError` + `.WithContext` on analysis errors | 🔴 `TODO` | Med    | 1h     | `go-error-family` v0.10.0 has `WithContextAny` but no `slog.Logger` is wired in `main()`. Adding context keys has no observable benefit without structured logging. ROADMAP: "Structured logging with slog". |
-| Add `dprint.json` config                                                                | 🔴 `TODO` | Low    | 15min  | BuildFlow dprint-format step fails without config.                                                                                                                                                           |
+
+## Completed (log in CHANGELOG.md, then remove)
+
+- ~~Add `dprint.json` config~~ — 🟢 `DONE` (`dprint.json` present, dprint is the configured formatter).
 
 ## Low Impact
 
