@@ -15,10 +15,17 @@
           version = "0.2.0";
           src = ./.;
           subPackages = [ "cmd/go-hotspot" ];
-          vendorHash = "sha256-p/sUFZTQXgA32HgsV1udsTO3J3PDC7iGsDeKm+/nLe8=";
+          vendorHash = "sha256-14YXgHlo/pbOG5G30KxpHOU1DrtYmsGVhhYCoszxgq0=";
           env = {
             CGO_ENABLED = 0;
             GOEXPERIMENT = "jsonv2";
+          };
+          meta = with pkgs.lib; {
+            description = "Code complexity × git churn hotspot analysis";
+            homepage = "https://github.com/larsartmann/go-hotspot";
+            license = licenses.mit;
+            mainProgram = "go-hotspot";
+            platforms = platforms.unix;
           };
         };
       in
