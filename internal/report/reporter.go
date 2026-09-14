@@ -412,6 +412,41 @@ func renderCouplingMarkdown(w io.Writer, pairs []hotspot.CouplingPair) error {
 	return err
 }
 
+// maxDisplayedInsightFiles caps how many file paths render per insight in
+// human formats; JSON always carries the full list for machine consumers.
+const maxDisplayedInsightFiles = 5
+
+// formatInsightFiles renders a file list for display, collapsing long lists
+// to the first maxDisplayedInsightFiles entries plus a "+N more" suffix. When
+// quote is true each path is wrapped in backticks (markdown style). JSON
+// always carries the full list for machine consumers.
+func formatInsightFiles(files []string, quote bool) string {
+	shown, more := files, 0
+	if len(files) > maxDisplayedInsightFiles {
+		shown, more = files[:maxDisplayedInsightFiles], len(files)-maxDisplayedInsightFiles
+	}
+
+	var b strings.Builder
+
+	for i, f := range shown {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+
+		if quote {
+			b.WriteString("`" + f + "`")
+		} else {
+			b.WriteString(f)
+		}
+	}
+
+	if more > 0 {
+		fmt.Fprintf(&b, " … +%d more", more)
+	}
+
+	return b.String()
+}
+
 // renderInsightsTable writes the actionable-insights section for terminal output.
 func renderInsightsTable(w io.Writer, insights []hotspot.Insight) error {
 	if _, err := io.WriteString(w, "\n─ insights ─\n\n"); err != nil {
@@ -425,7 +460,7 @@ func renderInsightsTable(w io.Writer, insights []hotspot.Insight) error {
 		fmt.Fprintf(&b, "        %s\n", in.Detail)
 
 		if len(in.Files) > 0 {
-			fmt.Fprintf(&b, "        files: %s\n", strings.Join(in.Files, ", "))
+			fmt.Fprintf(&b, "        files: %s\n", formatInsightFiles(in.Files, false))
 		}
 
 		b.WriteByte('\n')
@@ -447,12 +482,7 @@ func renderInsightsMarkdown(w io.Writer, insights []hotspot.Insight) error {
 		fmt.Fprintf(&b, "  %s\n", in.Detail)
 
 		if len(in.Files) > 0 {
-			quoted := make([]string, 0, len(in.Files))
-			for _, f := range in.Files {
-				quoted = append(quoted, "`"+f+"`")
-			}
-
-			fmt.Fprintf(&b, "  Files: %s\n", strings.Join(quoted, ", "))
+			fmt.Fprintf(&b, "  Files: %s\n", formatInsightFiles(in.Files, true))
 		}
 	}
 
