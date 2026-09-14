@@ -406,7 +406,7 @@ func (f fileFilter) keep(path string) bool {
 	return hasAnySuffix(path, f.exts)
 }
 
-var generatedSuffixes = []string{".gen.go", "_gen.go", ".pb.go", ".pb.gw.go", ".templ.go"}
+var generatedSuffixes = []string{".gen.go", "_gen.go", ".pb.go", ".pb.gw.go", ".templ.go", ".min.js", ".min.css"}
 
 func isGenerated(path string) bool {
 	for _, s := range generatedSuffixes {

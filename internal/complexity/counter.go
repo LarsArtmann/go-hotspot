@@ -280,6 +280,28 @@ func detectLanguage(path string) string {
 		return "Kotlin"
 	case ".lua":
 		return "Lua"
+	case ".templ":
+		return "Templ"
+	case ".svelte":
+		return "Svelte"
+	case ".vue":
+		return "Vue"
+	case ".astro":
+		return "Astro"
+	case ".ex", ".exs":
+		return "Elixir"
+	case ".erl", ".hrl":
+		return "Erlang"
+	case ".hs":
+		return "Haskell"
+	case ".dart":
+		return "Dart"
+	case ".zig":
+		return "Zig"
+	case ".clj", ".cljs", ".edn":
+		return "Clojure"
+	case ".mts", ".cts":
+		return "TypeScript"
 	default:
 		return "Other"
 	}
