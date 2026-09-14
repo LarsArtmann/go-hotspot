@@ -485,6 +485,27 @@ func TestAcceptsEnumFlagAliases(t *testing.T) { //nolint:paralleltest // uses t.
 	}
 }
 
+func TestResolveExtsAuto(t *testing.T) {
+	t.Parallel()
+
+	if got := resolveExts(".go"); len(got) != 1 || got[0] != ".go" {
+		t.Errorf("resolveExts(\".go\") = %v, want [.go]", got)
+	}
+
+	f := fileFilter{exts: resolveExts("auto")}
+	for _, keep := range []string{"main.go", "app.ts", "comp.templ", "lib.rs", "svc.py"} {
+		if !f.keep(keep) {
+			t.Errorf("auto profile should keep %q", keep)
+		}
+	}
+
+	for _, skip := range []string{"README.md", "package-lock.json", "go.sum", "config.yml", "styles.css"} {
+		if f.keep(skip) {
+			t.Errorf("auto profile should skip %q", skip)
+		}
+	}
+}
+
 func TestParseFailRisk(t *testing.T) {
 	t.Parallel()
 

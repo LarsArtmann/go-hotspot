@@ -51,7 +51,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	top := fs.Int("top", 25, "rows to show (0 = all)")
 	complexityMetric := fs.String("complexity", "cyclomatic", "complexity metric: cyclomatic|indentation|sloc")
 	churnMetric := fs.String("churn", "weighted", "churn metric: weighted|commits|lines")
-	ext := fs.String("ext", ".go", "comma-separated file extensions to include")
+	ext := fs.String("ext", ".go", "comma-separated file extensions to include, or 'auto' for a multi-language code profile")
 	includeTests := fs.Bool("include-tests", true, "include _test.go files")
 	includeGenerated := fs.Bool("include-generated", false, "include generated files (*.gen.go, *.pb.go)")
 	paths := fs.String("paths", "", "comma-separated path prefixes to include (default: all)")
@@ -145,7 +145,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 
 	// 2. Compute complexity for each file and filter.
 	filter := fileFilter{
-		exts:             splitCSV(*ext),
+		exts:             resolveExts(*ext),
 		includeTests:     *includeTests,
 		includeGenerated: *includeGenerated,
 		prefixes:         splitCSV(*paths),
@@ -522,6 +522,29 @@ func validateFlagChoices(format, sortOrder, complexityMetric, churnMetric, failR
 	}
 
 	return check("fail-risk", failRisk, validFailRisks)
+}
+
+// autoCodeExts is the extension profile behind --ext auto: source code across
+// common languages. Documentation, configuration, lockfiles, and markup are
+// deliberately excluded — their churn is noise, not structural risk. The
+// default remains ".go" so existing invocations are unchanged.
+var autoCodeExts = []string{
+	".go", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts",
+	".py", ".rs", ".java", ".kt", ".kts", ".rb", ".php", ".cs",
+	".c", ".h", ".cpp", ".hpp", ".cc", ".swift", ".scala",
+	".templ", ".svelte", ".vue", ".astro",
+	".ex", ".exs", ".hs", ".lua", ".dart", ".zig", ".clj", ".cljs", ".erl", ".hrl",
+}
+
+// resolveExts maps the --ext flag value to the extension list used by the
+// filter. "auto" selects the multi-language code profile; anything else is
+// treated as a comma-separated list.
+func resolveExts(extFlag string) []string {
+	if strings.EqualFold(strings.TrimSpace(extFlag), "auto") {
+		return autoCodeExts
+	}
+
+	return splitCSV(extFlag)
 }
 
 func parseComplexityMetric(s string) hotspot.ComplexityMetric {	switch strings.ToLower(s) {
