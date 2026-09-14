@@ -684,3 +684,21 @@ func BenchmarkCoupling(b *testing.B) {
 		})
 	}
 }
+
+func TestMaxFunctionHotspot(t *testing.T) {
+	t.Parallel()
+
+	if got := MaxFunctionHotspot(nil); got != 0 {
+		t.Errorf("MaxFunctionHotspot(nil) = %v, want 0", got)
+	}
+
+	funcs := []FunctionResult{
+		{Function: "a", Hotspot: 0.01},
+		{Function: "b", Hotspot: 0.05},
+		{Function: "c", Hotspot: 0.02},
+	}
+
+	if got := MaxFunctionHotspot(funcs); got != 0.05 {
+		t.Errorf("MaxFunctionHotspot = %v, want 0.05", got)
+	}
+}

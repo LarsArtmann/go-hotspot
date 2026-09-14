@@ -646,3 +646,24 @@ func TestRenderNilInsightsEmitsNothing(t *testing.T) {
 		t.Errorf("CSV format should not contain insights:\n%s", buf.String())
 	}
 }
+
+func TestFmtScoreRel(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		score, max float64
+		want       string
+	}{
+		{0.085, 0.085, "100.0"},
+		{0.012, 0.085, "14.1"},
+		{0, 0.085, "0.0"},
+		{0.5, 0, "0.0"},
+		{0, 0, "0.0"},
+	}
+
+	for _, tc := range cases {
+		if got := fmtScoreRel(tc.score, tc.max); got != tc.want {
+			t.Errorf("fmtScoreRel(%v, %v) = %q, want %q", tc.score, tc.max, got, tc.want)
+		}
+	}
+}
