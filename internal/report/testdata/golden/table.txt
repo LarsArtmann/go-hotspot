@@ -5,9 +5,9 @@
  commits:   500
  files:     42
 
-RANK  PATH      LANG  COMMITS  CHURN  AUTHORS         CYC  SLOC  LAST  HOTSPOT   RISK
-1     main.go   Go    50       700    Alice, Bob, +1  15   200   —     0.085000  critical
-2     utils.go  Go    10       70     Alice           4    50    —     0.012000  medium
+RANK  PATH      LANG  COMMITS  CHURN  AUTHORS         CYC  SLOC  LAST  SCORE  RISK
+1     main.go   Go    50       700    Alice, Bob, +1  15   200   —     100.0  critical
+2     utils.go  Go    10       70     Alice           4    50    —     14.1   medium
 
 ─ temporal coupling (files that change together) ─
 

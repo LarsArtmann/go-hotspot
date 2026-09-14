@@ -357,6 +357,19 @@ func MaxHotspot(results []Result) float64 {
 	return highest
 }
 
+// MaxFunctionHotspot returns the highest function hotspot score in the slice,
+// for relative score display. Returns 0 for an empty slice.
+func MaxFunctionHotspot(funcs []FunctionResult) float64 {
+	var highest float64
+	for _, fn := range funcs {
+		if fn.Hotspot > highest {
+			highest = fn.Hotspot
+		}
+	}
+
+	return highest
+}
+
 // FunctionResult is a function-level hotspot ranking entry. The hotspot
 // score is approximated by distributing the file's score proportionally
 // to each function's cyclomatic complexity share.

@@ -267,7 +267,7 @@ func renderTable(w io.Writer, results []hotspot.Result) error {
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
 	if _, err := io.WriteString(
 		tw,
-		"RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tHOTSPOT\tRISK\n",
+	"RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tSCORE\tRISK\n",
 	); err != nil {
 		return err
 	}
@@ -278,7 +278,7 @@ func renderTable(w io.Writer, results []hotspot.Result) error {
 		row := fmt.Sprintf("%d\t%s\t%s\t%d\t%d\t%s\t%d\t%d\t%s\t%s\t%s\n",
 			i+1, truncPath(r.Path, 45), r.Language,
 			r.Commits, r.Churn, fmtAuthors(r.AuthorNames), r.Cyclomatic, r.SLOC,
-			lastTouch(r.LastTouch), fmtScore(r.Hotspot), risk)
+			lastTouch(r.LastTouch), fmtScoreRel(r.Hotspot, maxScore), risk)
 		if _, err := io.WriteString(tw, row); err != nil {
 			return err
 		}
@@ -304,14 +304,14 @@ func renderMarkdown(w io.Writer, results []hotspot.Result) error {
 	maxScore := hotspot.MaxHotspot(results)
 
 	var b strings.Builder
-	b.WriteString("| # | Path | Lang | Commits | Churn | Authors | Cyc | SLOC | Hotspot | Risk |\n")
+	b.WriteString("| # | Path | Lang | Commits | Churn | Authors | Cyc | SLOC | Score | Risk |\n")
 	b.WriteString("|--:|:--|:--|--:|--:|--:|--:|--:|--:|:--|\n")
 
 	for i, r := range results {
 		risk := hotspot.RiskBand(r.Hotspot, maxScore, r.TrendFactor)
 		fmt.Fprintf(&b, "| %d | `%s` | %s | %d | %d | %s | %d | %d | %s | %s |\n",
 			i+1, r.Path, r.Language, r.Commits, r.Churn, fmtAuthors(r.AuthorNames),
-			r.Cyclomatic, r.SLOC, fmtScore(r.Hotspot), risk)
+			r.Cyclomatic, r.SLOC, fmtScoreRel(r.Hotspot, maxScore), risk)
 	}
 
 	_, err := io.WriteString(w, b.String())
@@ -468,14 +468,16 @@ func renderFunctionsTable(w io.Writer, funcs []hotspot.FunctionResult) error {
 	buf.WriteString(strings.Repeat("─", 60))
 	buf.WriteByte('\n')
 
+	maxFunc := hotspot.MaxFunctionHotspot(funcs)
+
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
-	if _, err := io.WriteString(tw, "HOTSPOT\tCYC\tLINES\tFUNCTION\tFILE\n"); err != nil {
+	if _, err := io.WriteString(tw, "SCORE\tCYC\tLINES\tFUNCTION\tFILE\n"); err != nil {
 		return err
 	}
 
 	for _, fn := range funcs {
 		row := fmt.Sprintf("%s\t%d\t%d\t%s\t%s\n",
-			fmtScore(fn.Hotspot), fn.Cyclomatic, fn.LineCount, fn.Function, truncPath(fn.File, 45))
+			fmtScoreRel(fn.Hotspot, maxFunc), fn.Cyclomatic, fn.LineCount, fn.Function, truncPath(fn.File, 45))
 		if _, err := io.WriteString(tw, row); err != nil {
 			return err
 		}
@@ -494,12 +496,14 @@ func renderFunctionsMarkdown(w io.Writer, funcs []hotspot.FunctionResult) error 
 	var b strings.Builder
 
 	b.WriteString("\n## Top Functions by Hotspot Score\n\n")
-	b.WriteString("| Hotspot | Cyc | Lines | Function | File |\n")
+	b.WriteString("| Score | Cyc | Lines | Function | File |\n")
 	b.WriteString("|--:|--:|--:|:--|:--|\n")
+
+	maxFunc := hotspot.MaxFunctionHotspot(funcs)
 
 	for _, fn := range funcs {
 		fmt.Fprintf(&b, "| %s | %d | %d | `%s` | `%s` |\n",
-			fmtScore(fn.Hotspot), fn.Cyclomatic, fn.LineCount, fn.Function, fn.File)
+			fmtScoreRel(fn.Hotspot, maxFunc), fn.Cyclomatic, fn.LineCount, fn.Function, fn.File)
 	}
 
 	_, err := io.WriteString(w, b.String())
@@ -697,13 +701,16 @@ func fmtAuthors(names []string) string {
 	}
 }
 
-// fmtScore renders a hotspot score with appropriate precision.
-func fmtScore(h float64) string {
-	if h >= 0.1 {
-		return strconv.FormatFloat(h, 'f', 4, 64)
+// fmtScoreRel renders a hotspot score on a 0-100 relative scale where the
+// highest-scoring file in the result set is 100.0. This matches the relative
+// risk bands (critical ≥ 66 of max) so numbers and labels agree. Machine
+// formats (CSV, JSON) keep the raw normalized score.
+func fmtScoreRel(score, maxScore float64) string {
+	if maxScore <= 0 {
+		return "0.0"
 	}
 
-	return strconv.FormatFloat(h, 'f', 6, 64)
+	return strconv.FormatFloat(score/maxScore*100, 'f', 1, 64)
 }
 
 // lastTouch formats a file's last-commit date for display, or "—" if unknown.

@@ -86,7 +86,7 @@ func TestRenderTable(t *testing.T) {
 
 	out := buf.String()
 
-	for _, want := range []string{"main.go", "RANK", "HOTSPOT", "Go", "commits", "Alice"} {
+	for _, want := range []string{"main.go", "RANK", "SCORE", "Go", "commits", "Alice", "100.0"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("table output missing %q", want)
 		}
@@ -310,7 +310,7 @@ func TestRenderFunctionsTable(t *testing.T) {
 	}
 
 	out := buf.String()
-	for _, want := range []string{"Top Functions", "main", "helper", "HOTSPOT"} {
+	for _, want := range []string{"Top Functions", "main", "helper", "SCORE", "100.0"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("function table missing %q", want)
 		}
