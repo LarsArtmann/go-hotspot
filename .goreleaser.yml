@@ -61,7 +61,7 @@ changelog:
       - "^style:"
 
 release:
-  draft: true
+  draft: false
   prerelease: auto
 
 gomod:
