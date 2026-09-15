@@ -163,11 +163,11 @@ functions' alias sets — when adding an alias, update both.
   `inlined function cmp.Compare[go.shape.int64] missing func info`. The `cmp.Compare`
   comes from the stdlib (not our code). Workaround: add `-gcflags=all=-l` to disable
   inlining during race builds. This is a Go toolchain bug, not a code issue.
-- **Lint: exactly two pre-existing findings** — `golangci-lint run ./...` reports
-  two `gocognit` warnings (`parseNumStat` in internal/git/collector.go, `Sort` in
-  internal/hotspot/score.go). Both pre-date the v0.3.0 work (verified at the
-  pre-session commit) under the current golangci-lint version. New code must add
-  zero findings; refactor these two deliberately, never during a release.
+- **Lint passes clean** — `golangci-lint run ./...` reports 0 issues. The
+  `.golangci.yml` profile is intentionally strict. New code must maintain this.
+  (During the v0.3.0 work the two long-standing gocognit warnings on
+  `parseNumStat` and `Sort` were eliminated by extracting `flushCoupling` and
+  `lessByOrder` — refactor, don't suppress, when a finding appears.)
 - **Build cache wedging**: the shared GOCACHE can misreport "no space left on
   device" on a corrupted entry; `go clean -cache` clears it (space/inodes are
   not actually exhausted).

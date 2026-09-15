@@ -113,7 +113,7 @@ func ParseSortOrder(s string) SortOrder {
 // age-based sorting.
 func Sort(results []Result, order SortOrder, now time.Time) {
 	sort.Slice(results, func(i, j int) bool {
-		if less, tie := lessByOrder(results[i], results[j], order, now); !tie {
+		if less, tie := lessByOrder(results[i], results[j], order); !tie {
 			return less
 		}
 
@@ -126,7 +126,7 @@ func Sort(results []Result, order SortOrder, now time.Time) {
 // ties on path. A false tie with false less means b sorts first outright —
 // the SortAge zero-time cases deliberately skip the path tie-break, exactly
 // as before this extraction.
-func lessByOrder(a, b Result, order SortOrder, now time.Time) (bool, bool) {
+func lessByOrder(a, b Result, order SortOrder) (bool, bool) {
 	switch order {
 	case SortStable:
 		// Ascending hotspot: stable files first.
