@@ -179,7 +179,7 @@ func churnNoComplexityInsight(results []Result) []Insight {
 	var matches []Result
 
 	for _, r := range results {
-		if isTestPath(r.Path) {
+		if strings.HasSuffix(r.Path, "_test.go") {
 			continue
 		}
 
@@ -425,10 +425,4 @@ func resultPaths(results []Result) []string {
 	}
 
 	return paths
-}
-
-// isTestPath reports whether the path looks like a Go test file. Test churn is
-// the point of tests, so test files are excluded from churn-anomaly rules.
-func isTestPath(path string) bool {
-	return strings.HasSuffix(path, "_test.go")
 }

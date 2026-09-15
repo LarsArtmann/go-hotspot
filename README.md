@@ -156,7 +156,7 @@ normalized score for machine consumers.
 | `--top`                 | `25`         | Rows to show (0 = all)                                                                                                                          |
 | `--complexity`          | `cyclomatic` | Metric: `cyclomatic`, `indentation`, `sloc`                                                                                                     |
 | `--churn`               | `weighted`   | Metric: `weighted`, `commits`, `lines`                                                                                                          |
-| `--ext`                 | `.go`        | Comma-separated file extensions, or `auto` for the multi-language code profile                                                  |
+| `--ext`                 | `.go`        | Comma-separated file extensions, or `auto` for the multi-language code profile                                                                  |
 | `--include-tests`       | `true`       | Include `_test.go` files                                                                                                                        |
 | `--include-generated`   | `false`      | Include `*.gen.go`, `*.pb.go`                                                                                                                   |
 | `--paths`               |              | Comma-separated path prefixes to include                                                                                                        |
@@ -171,11 +171,11 @@ normalized score for machine consumers.
 | `--no-header`           | `false`      | Suppress summary header (for script piping)                                                                                                     |
 | `--functions`           | `0`          | Show top N functions by hotspot score (Go only, 0 = disabled)                                                                                   |
 | `--min-commits`         | `0`          | Exclude files with fewer commits (0 = no minimum)                                                                                               |
-| `--author`              |              | Show only files touched by this git author                                                                                      |
-| `--no-insights`         | `false`      | Hide the actionable insights section                                                                                            |
-| `--verbose`             | `false`      | Print every skipped file instead of a summary count                                                                             |
-| `[target]`              | `.`          | Repository directory to analyze (extra arguments are rejected)                                                                  |
-| `--version`             |              | Print version information and exit                                                                                              |
+| `--author`              |              | Show only files touched by this git author                                                                                                      |
+| `--no-insights`         | `false`      | Hide the actionable insights section                                                                                                            |
+| `--verbose`             | `false`      | Print every skipped file instead of a summary count                                                                                             |
+| `[target]`              | `.`          | Repository directory to analyze (extra arguments are rejected)                                                                                  |
+| `--version`             |              | Print version information and exit                                                                                                              |
 
 ### Exit Codes
 

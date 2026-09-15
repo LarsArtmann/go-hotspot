@@ -15,8 +15,8 @@
 
 ## High Impact
 
-| Task                                                                                    | Status    | Impact | Effort | Evidence                                                                                                                                                                                                     |
-| --------------------------------------------------------------------------------------- | --------- | ------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Task                                                                                                                         | Status    | Impact | Effort | Evidence                                                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------- | --------- | ------ | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | go-finding integration: emit insights as `go-finding.Finding`s (SARIF export, LSP diagnostics, remediation-pipeline routing) | 🔴 `TODO` | High   | 1-2d   | Chosen as the next major feature (2026-09-15). Full assessment + mapping in ROADMAP "go-finding integration". Makes go-hotspot the third external dependency — decision already made by Lars. |
 
 ## Medium Impact

@@ -49,7 +49,7 @@ git.Collect  →  complexity.Analyze (per file)  →  hotspot.Score  →  hotspo
 | `cmd/go-hotspot/main.go` | Flag parsing, filter logic, pipeline orchestration. 23 tests (including integration tests with real git repos).                                              |
 | `internal/git`           | Runs `git log --numstat`, parses into `FileChurn` + coupling data. Context-cancelable.                                                                       |
 | `internal/complexity`    | SLOC, indentation, and go/ast cyclomatic complexity.                                                                                                         |
-| `internal/hotspot`       | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`) + actionable insights (`Insights`).                                                 |
+| `internal/hotspot`       | Normalization-based scoring (`Score`) + temporal coupling (`Coupling`) + actionable insights (`Insights`).                                                   |
 | `internal/report`        | Output rendering: table, markdown, csv, json, dot, mermaid, d2. Graph formats (DOT/Mermaid/D2) use go-output for coupling visualization. Golden-file tested. |
 | `internal/errors`        | Domain-specific typed errors built on `go-error-family`. BSD exit codes + What/Why/Fix/WayOut message templates.                                             |
 
