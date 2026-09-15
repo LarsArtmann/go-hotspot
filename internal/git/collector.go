@@ -109,7 +109,7 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 }
 
 // parseNumStat reads git log --numstat output and populates History.
-func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64, now time.Time) error {
+func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64, now time.Time) error { //nolint:gocognit // linear state machine over the numstat stream; splitting it would scatter the commit/line/coupling state
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<16), 1<<20)
 

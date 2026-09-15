@@ -111,7 +111,7 @@ func ParseSortOrder(s string) SortOrder {
 
 // Sort reorders results by the given sort order. The now parameter is used for
 // age-based sorting.
-func Sort(results []Result, order SortOrder, now time.Time) {
+func Sort(results []Result, order SortOrder, now time.Time) { //nolint:gocognit // one comparator per sort order in a single switch keeps tie-breaking uniform
 	sort.Slice(results, func(i, j int) bool {
 		switch order {
 		case SortStable:
