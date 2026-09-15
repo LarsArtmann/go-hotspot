@@ -109,7 +109,7 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 }
 
 // parseNumStat reads git log --numstat output and populates History.
-func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64, now time.Time) error { //nolint:gocognit // linear state machine over the numstat stream; splitting it would scatter the commit/line/coupling state
+func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64, now time.Time) error {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<16), 1<<20)
 
@@ -119,31 +119,8 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 		changedInCommit []string
 	)
 
-	// maxCouplingFiles excludes mega-commits from coupling analysis.
-	// Large changesets (mass renames, formatting sweeps) create noise.
-	const maxCouplingFiles = 30
-
-	flushCoupling := func() {
-		if len(changedInCommit) > maxCouplingFiles {
-			changedInCommit = nil
-
-			return
-		}
-
-		for _, a := range changedInCommit {
-			fa := h.Files[a]
-			if fa == nil {
-				continue
-			}
-
-			for _, b := range changedInCommit {
-				if a == b {
-					continue
-				}
-
-				fa.CommitsWith[b]++
-			}
-		}
+	flush := func() {
+		flushCoupling(h.Files, changedInCommit)
 
 		changedInCommit = nil
 	}
@@ -159,7 +136,7 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 		switch {
 		case strings.HasPrefix(line, commitPrefix):
 			if changedInCommit != nil {
-				flushCoupling()
+				flush()
 			}
 
 			h.TotalCommits++
@@ -167,7 +144,7 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 			h.extendWindow(curDate)
 		case line == "":
 			if changedInCommit != nil {
-				flushCoupling()
+				flush()
 			}
 
 			continue
@@ -180,7 +157,7 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 	}
 
 	if changedInCommit != nil {
-		flushCoupling()
+		flush()
 	}
 
 	if err := sc.Err(); err != nil {
@@ -188,6 +165,34 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 	}
 
 	return nil
+}
+
+// flushCoupling records co-change counts for one commit's files. Mega-commits
+// (mass renames, formatting sweeps — more than maxCouplingFiles files) are
+// excluded from coupling analysis entirely: their co-change signal is noise.
+func flushCoupling(files map[string]*FileChurn, changed []string) {
+	// maxCouplingFiles excludes mega-commits from coupling analysis.
+	// Large changesets (mass renames, formatting sweeps) create noise.
+	const maxCouplingFiles = 30
+
+	if len(changed) > maxCouplingFiles {
+		return
+	}
+
+	for _, a := range changed {
+		fa := files[a]
+		if fa == nil {
+			continue
+		}
+
+		for _, b := range changed {
+			if a == b {
+				continue
+			}
+
+			fa.CommitsWith[b]++
+		}
+	}
 }
 
 // classifyGitError inspects the cause and stderr to pick the most specific

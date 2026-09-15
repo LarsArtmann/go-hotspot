@@ -111,48 +111,60 @@ func ParseSortOrder(s string) SortOrder {
 
 // Sort reorders results by the given sort order. The now parameter is used for
 // age-based sorting.
-func Sort(results []Result, order SortOrder, now time.Time) { //nolint:gocognit // one comparator per sort order in a single switch keeps tie-breaking uniform
+func Sort(results []Result, order SortOrder, now time.Time) {
 	sort.Slice(results, func(i, j int) bool {
-		switch order {
-		case SortStable:
-			// Ascending hotspot: stable files first. Ties break on path.
-			if results[i].Hotspot != results[j].Hotspot {
-				return results[i].Hotspot < results[j].Hotspot
-			}
-		case SortChurn:
-			if results[i].Churn != results[j].Churn {
-				return results[i].Churn > results[j].Churn
-			}
-		case SortCommits:
-			if results[i].Commits != results[j].Commits {
-				return results[i].Commits > results[j].Commits
-			}
-		case SortComplexity:
-			if results[i].Cyclomatic != results[j].Cyclomatic {
-				return results[i].Cyclomatic > results[j].Cyclomatic
-			}
-		case SortAge:
-			// Older LastTouch = more stale. Zero-time sorts last (unknown age).
-			ai, aj := results[i].LastTouch, results[j].LastTouch
-			if ai.IsZero() && !aj.IsZero() {
-				return false
-			}
-
-			if !ai.IsZero() && aj.IsZero() {
-				return true
-			}
-
-			if !ai.Equal(aj) {
-				return ai.Before(aj) // earlier = older = first
-			}
-		default: // SortHotspot
-			if results[i].Hotspot != results[j].Hotspot {
-				return results[i].Hotspot > results[j].Hotspot
-			}
+		if less, tie := lessByOrder(results[i], results[j], order, now); !tie {
+			return less
 		}
 
 		return results[i].Path < results[j].Path
 	})
+}
+
+// lessByOrder reports whether a sorts before b under the given order. The
+// second return value is true when the primary keys tie; callers then break
+// ties on path. A false tie with false less means b sorts first outright —
+// the SortAge zero-time cases deliberately skip the path tie-break, exactly
+// as before this extraction.
+func lessByOrder(a, b Result, order SortOrder, now time.Time) (bool, bool) {
+	switch order {
+	case SortStable:
+		// Ascending hotspot: stable files first.
+		if a.Hotspot != b.Hotspot {
+			return a.Hotspot < b.Hotspot, false
+		}
+	case SortChurn:
+		if a.Churn != b.Churn {
+			return a.Churn > b.Churn, false
+		}
+	case SortCommits:
+		if a.Commits != b.Commits {
+			return a.Commits > b.Commits, false
+		}
+	case SortComplexity:
+		if a.Cyclomatic != b.Cyclomatic {
+			return a.Cyclomatic > b.Cyclomatic, false
+		}
+	case SortAge:
+		// Older LastTouch = more stale. Zero-time sorts last (unknown age).
+		if a.LastTouch.IsZero() && !b.LastTouch.IsZero() {
+			return false, false
+		}
+
+		if !a.LastTouch.IsZero() && b.LastTouch.IsZero() {
+			return true, false
+		}
+
+		if !a.LastTouch.Equal(b.LastTouch) {
+			return a.LastTouch.Before(b.LastTouch), false // earlier = older = first
+		}
+	default: // SortHotspot
+		if a.Hotspot != b.Hotspot {
+			return a.Hotspot > b.Hotspot, false
+		}
+	}
+
+	return false, true
 }
 
 // Score combines git history and complexity analysis into ranked hotspot results.
