@@ -85,6 +85,7 @@ func TestInsightsConcentrationHighShare(t *testing.T) {
 	for i := range got {
 		if got[i].Kind == InsightConcentration {
 			found = &got[i]
+
 			break
 		}
 	}
@@ -124,6 +125,7 @@ func TestInsightsChurnWithoutComplexityExcludesTests(t *testing.T) {
 	for i := range got {
 		if got[i].Kind == InsightChurnNoComplexity {
 			found = &got[i]
+
 			break
 		}
 	}
@@ -165,6 +167,7 @@ func TestInsightsComplexityWithoutChurn(t *testing.T) {
 	for i := range got {
 		if got[i].Kind == InsightComplexityNoChurn {
 			found = &got[i]
+
 			break
 		}
 	}
@@ -222,6 +225,7 @@ func TestInsightsBusFactorFiresOnMixedAuthorship(t *testing.T) {
 	for _, in := range Insights(mixed, nil, now) {
 		if in.Kind == InsightBusFactor {
 			found = &in
+
 			break
 		}
 	}

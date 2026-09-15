@@ -240,69 +240,29 @@ func typeString(expr ast.Expr) string {
 	}
 }
 
+// languageByExt maps file extensions to display language names. A table beats
+// a switch here: adding a language is a data change, not a complexity change.
+var languageByExt = map[string]string{
+	".go": "Go", ".py": "Python",
+	".js": "JavaScript", ".mjs": "JavaScript", ".cjs": "JavaScript",
+	".jsx": "JSX", ".ts": "TypeScript", ".tsx": "TSX", ".mts": "TypeScript", ".cts": "TypeScript",
+	".rs": "Rust", ".java": "Java",
+	".c": "C", ".h": "C",
+	".cpp": "C++", ".cc": "C++", ".cxx": "C++", ".hpp": "C++",
+	".cs": "C#", ".rb": "Ruby", ".php": "PHP",
+	".sh": "Bash", ".bash": "Bash",
+	".scala": "Scala", ".sc": "Scala", ".swift": "Swift", ".kt": "Kotlin", ".kts": "Kotlin",
+	".lua": "Lua", ".templ": "Templ", ".svelte": "Svelte", ".vue": "Vue", ".astro": "Astro",
+	".ex": "Elixir", ".exs": "Elixir", ".erl": "Erlang", ".hrl": "Erlang",
+	".hs": "Haskell", ".dart": "Dart", ".zig": "Zig",
+	".clj": "Clojure", ".cljs": "Clojure", ".edn": "Clojure",
+}
+
 // detectLanguage returns the language name based on file extension.
 func detectLanguage(path string) string {
-	ext := filepath.Ext(path)
-	switch ext {
-	case ".go":
-		return "Go"
-	case ".py":
-		return "Python"
-	case ".js", ".mjs", ".cjs":
-		return "JavaScript"
-	case ".jsx":
-		return "JSX"
-	case ".ts":
-		return "TypeScript"
-	case ".tsx":
-		return "TSX"
-	case ".rs":
-		return "Rust"
-	case ".java":
-		return "Java"
-	case ".c", ".h":
-		return "C"
-	case ".cpp", ".cc", ".cxx", ".hpp":
-		return "C++"
-	case ".cs":
-		return "C#"
-	case ".rb":
-		return "Ruby"
-	case ".php":
-		return "PHP"
-	case ".sh", ".bash":
-		return "Bash"
-	case ".scala", ".sc":
-		return "Scala"
-	case ".swift":
-		return "Swift"
-	case ".kt", ".kts":
-		return "Kotlin"
-	case ".lua":
-		return "Lua"
-	case ".templ":
-		return "Templ"
-	case ".svelte":
-		return "Svelte"
-	case ".vue":
-		return "Vue"
-	case ".astro":
-		return "Astro"
-	case ".ex", ".exs":
-		return "Elixir"
-	case ".erl", ".hrl":
-		return "Erlang"
-	case ".hs":
-		return "Haskell"
-	case ".dart":
-		return "Dart"
-	case ".zig":
-		return "Zig"
-	case ".clj", ".cljs", ".edn":
-		return "Clojure"
-	case ".mts", ".cts":
-		return "TypeScript"
-	default:
-		return "Other"
+	if lang, ok := languageByExt[filepath.Ext(path)]; ok {
+		return lang
 	}
+
+	return "Other"
 }

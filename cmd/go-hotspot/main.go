@@ -93,41 +93,8 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		return apierrors.CLIUsage(err.Error())
 	}
 
-	// Positional [target]: repository directory to analyze. Anything beyond
-	// one positional argument is rejected — silently ignoring arguments would
-	// analyze the wrong repository and present wrong data as insight.
-	target := "."
-	switch extra := fs.Args(); {
-	case len(extra) > 1:
-		return apierrors.CLIUsage(fmt.Sprintf(
-			"unexpected arguments %q (usage: go-hotspot [flags] [target-directory])",
-			strings.Join(extra, " "),
-		))
-	case len(extra) == 1:
-		target = extra[0]
-	}
-
-	// Resolve --output against the caller's directory BEFORE entering the
-	// target, so a relative -output path lands where the user invoked us.
-	if *output != "" {
-		abs, resolveErr := filepath.Abs(*output)
-		if resolveErr != nil {
-			return apierrors.ReportCreate(*output, resolveErr)
-		}
-
-		*output = abs
-	}
-
-	if target != "." {
-		if err := enterTarget(target); err != nil {
-			return err //nolint:erraudit // enterTarget classifies via apierrors.CLIUsage
-		}
-	}
-
-	// Reject unknown enum values before any analysis: a silent fallback to
-	// the default would produce a subtly wrong report with no hint why.
-	if err := validateFlagChoices(*format, *sortOrder, *complexityMetric, *churnMetric, *failRisk); err != nil {
-		return err //nolint:erraudit // validateFlagChoices classifies via apierrors.CLIUsage
+	if err := setupInvocation(fs, *format, *sortOrder, *complexityMetric, *churnMetric, *failRisk, output); err != nil {
+		return err //nolint:erraudit // setupInvocation classifies via apierrors
 	}
 
 	// 1. Resolve --since-version to a date if set.
@@ -240,6 +207,50 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	}
 
 	return nil
+}
+
+// setupInvocation settles everything that must be decided before analysis
+// begins: the positional [target] directory (rejecting extras), the output
+// path (resolved against the caller's directory BEFORE entering the target),
+// and enum-flag validation. It may chdir the process, so ordering here is
+// load-bearing.
+func setupInvocation(
+	fs *flag.FlagSet,
+	format, sortOrder, complexityMetric, churnMetric, failRisk string,
+	output *string,
+) error {
+	// Positional [target]: repository directory to analyze. Anything beyond
+	// one positional argument is rejected — silently ignoring arguments would
+	// analyze the wrong repository and present wrong data as insight.
+	target := "."
+	switch extra := fs.Args(); {
+	case len(extra) > 1:
+		return apierrors.CLIUsage(fmt.Sprintf(
+			"unexpected arguments %q (usage: go-hotspot [flags] [target-directory])",
+			strings.Join(extra, " "),
+		))
+	case len(extra) == 1:
+		target = extra[0]
+	}
+
+	if *output != "" {
+		abs, resolveErr := filepath.Abs(*output)
+		if resolveErr != nil {
+			return apierrors.ReportCreate(*output, resolveErr)
+		}
+
+		*output = abs
+	}
+
+	if target != "." {
+		if err := enterTarget(target); err != nil {
+			return err //nolint:erraudit // enterTarget classifies via apierrors.CLIUsage
+		}
+	}
+
+	// Reject unknown enum values before any analysis: a silent fallback to
+	// the default would produce a subtly wrong report with no hint why.
+	return validateFlagChoices(format, sortOrder, complexityMetric, churnMetric, failRisk)
 }
 
 // enterTarget validates the positional target directory and switches the

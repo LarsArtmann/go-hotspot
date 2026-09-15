@@ -4,6 +4,7 @@
 // "so what should I do about it?". Every rule is computed within the current
 // result set (no absolute thresholds), mirrors the relative methodology of
 // RiskBand, and always pairs its observation with a recommended action.
+
 package hotspot
 
 import (
@@ -120,8 +121,7 @@ func concentrationInsight(results []Result) []Insight {
 		return nil
 	}
 
-	ranked := make([]Result, len(results))
-	copy(ranked, results)
+	ranked := append([]Result(nil), results...)
 
 	sort.Slice(ranked, func(i, j int) bool {
 		if ranked[i].Hotspot != ranked[j].Hotspot {
@@ -131,14 +131,8 @@ func concentrationInsight(results []Result) []Insight {
 		return ranked[i].Path < ranked[j].Path
 	})
 
-	topN := len(ranked) * 5 / 100
-	if topN < 3 {
-		topN = 3
-	}
-
-	if topN > len(ranked) {
-		topN = len(ranked)
-	}
+	topN := max(len(ranked)*5/100, 3)
+	topN = min(topN, len(ranked))
 
 	var total, top float64
 
@@ -260,6 +254,7 @@ func busFactorInsight(results []Result) []Insight {
 	for _, r := range results {
 		if r.Authors > 1 {
 			hasMultiAuthor = true
+
 			break
 		}
 	}
@@ -304,8 +299,7 @@ func busFactorInsight(results []Result) []Insight {
 // more than StaleHotspotAgeDays — their risk has decayed; stability should be
 // locked in with tests.
 func staleHotspotInsight(results []Result, now time.Time) []Insight {
-	ranked := make([]Result, len(results))
-	copy(ranked, results)
+	ranked := append([]Result(nil), results...)
 
 	sort.Slice(ranked, func(i, j int) bool {
 		if ranked[i].Hotspot != ranked[j].Hotspot {
@@ -315,10 +309,7 @@ func staleHotspotInsight(results []Result, now time.Time) []Insight {
 		return ranked[i].Path < ranked[j].Path
 	})
 
-	cutoff := len(ranked) / 10
-	if cutoff < 1 {
-		cutoff = 1
-	}
+	cutoff := max(len(ranked)/10, 1)
 
 	var matches []Result
 
@@ -376,7 +367,9 @@ func churnKey(r Result) float64 {
 }
 
 // churnQuartiles returns the q1/median/q3 of the churn distribution.
-func churnQuartiles(results []Result) (low, median, high float64) {
+// The (q1, median, q3) order matters — see the AGENTS.md gotcha on
+// destructuring these returns.
+func churnQuartiles(results []Result) (float64, float64, float64) {
 	values := make([]float64, 0, len(results))
 	for _, r := range results {
 		values = append(values, churnKey(r))
@@ -386,7 +379,9 @@ func churnQuartiles(results []Result) (low, median, high float64) {
 }
 
 // cyclomaticQuartiles returns the q1/median/q3 of the cyclomatic distribution.
-func cyclomaticQuartiles(results []Result) (low, median, high float64) {
+// The (q1, median, q3) order matters — see the AGENTS.md gotcha on
+// destructuring these returns.
+func cyclomaticQuartiles(results []Result) (float64, float64, float64) {
 	values := make([]float64, 0, len(results))
 	for _, r := range results {
 		values = append(values, float64(r.Cyclomatic))
@@ -395,8 +390,9 @@ func cyclomaticQuartiles(results []Result) (low, median, high float64) {
 	return quartiles(values)
 }
 
-// quartiles returns the 25th/50th/75th percentile of values (nearest-rank).
-func quartiles(values []float64) (low, median, high float64) {
+// quartiles returns the 25th/50th/75th percentile of values (nearest-rank),
+// in (q1, median, q3) order.
+func quartiles(values []float64) (float64, float64, float64) {
 	sorted := append([]float64(nil), values...)
 	sort.Float64s(sorted)
 
