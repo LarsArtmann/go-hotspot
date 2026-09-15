@@ -267,7 +267,7 @@ func renderTable(w io.Writer, results []hotspot.Result) error {
 	tw := tabwriter.NewWriter(&buf, 0, 0, 2, ' ', 0)
 	if _, err := io.WriteString(
 		tw,
-	"RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tSCORE\tRISK\n",
+		"RANK\tPATH\tLANG\tCOMMITS\tCHURN\tAUTHORS\tCYC\tSLOC\tLAST\tSCORE\tRISK\n",
 	); err != nil {
 		return err
 	}

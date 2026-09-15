@@ -19,11 +19,35 @@ $ go-hotspot
  files:     1543
  recency:   180-day half-life
 
-RANK  PATH                          LANG  COMMITS  CHURN  AUTHORS  CYC  SLOC  HOTSPOT   RISK
-1     metaengine/typed_reader.go    Go    29       1593   2        160  788   0.000056  critical
-2     metaengine/store.go           Go    58       2602   3        69   465   0.000039  critical
+RANK  PATH                        LANG  COMMITS  CHURN  AUTHORS  CYC   SLOC  SCORE  RISK
+1     metaengine/typed_reader.go   Go    29       1593   2        160   788   100.0  critical
+2     metaengine/store.go          Go    58       2602   3        69    465   39.0   medium
 ...
+
+─ insights ─
+
+[high] 41% of churn is concentrated in 3 of 1543 files
+        Concentrate refactoring and test coverage on these files first — effort
+        elsewhere moves the project's risk profile far less.
+        files: metaengine/typed_reader.go, metaengine/store.go, …
+
+[medium] metaengine/store.go and metaengine/schema.go changed together in 31 commits (64% degree)
+        These files are structurally locked: one rarely changes without the other.
+        Extract the shared concept, merge them, or put an interface between them.
+        files: metaengine/store.go, metaengine/schema.go
+
+[low] 3 highly complex file(s) rarely change
+        Stable complexity is deferred risk: do not refactor preemptively, but add
+        characterization tests now so the next forced change is safe.
+        files: metaengine/serializer.go, ...
 ```
+
+SCORE is relative: the worst-scoring file in the run is 100.0, matching the RISK
+bands (critical = 66+). CSV and JSON output carry the raw normalized score instead.
+For clean script piping use `--format csv --no-header` (machine formats have no
+insights/coupling sections); in table format, `--no-header` suppresses only the
+summary header while the insights and coupling sections remain — use
+`--no-insights` / `--no-coupling` to drop them individually.
 
 ## What makes it different
 

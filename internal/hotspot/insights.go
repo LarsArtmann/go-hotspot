@@ -163,14 +163,16 @@ func concentrationInsight(results []Result) []Insight {
 		severity = SeverityMedium
 	}
 
-	return []Insight{{
-		Kind:     InsightConcentration,
-		Severity: severity,
-		Title: fmt.Sprintf("%.0f%% of churn is concentrated in %d of %d files",
-			share*100, topN, len(ranked)),
-		Detail: "Concentrate refactoring and test coverage on these files first — effort elsewhere moves the project's risk profile far less.",
-		Files:  resultPaths(ranked[:topN]),
-	}}
+	return []Insight{
+		{
+			Kind:     InsightConcentration,
+			Severity: severity,
+			Title: fmt.Sprintf("%.0f%% of churn is concentrated in %d of %d files",
+				share*100, topN, len(ranked)),
+			Detail: "Concentrate refactoring and test coverage on these files first — effort elsewhere moves the project's risk profile far less.",
+			Files:  resultPaths(ranked[:topN]),
+		},
+	}
 }
 
 // churnNoComplexityInsight flags high-churn files with trivial branching
@@ -202,14 +204,16 @@ func churnNoComplexityInsight(results []Result) []Insight {
 		matches = matches[:5]
 	}
 
-	return []Insight{{
-		Kind:     InsightChurnNoComplexity,
-		Severity: SeverityLow,
-		Title: fmt.Sprintf("%d high-churn file(s) carry almost no structural complexity",
-			len(matches)),
-		Detail: "Churn without complexity is usually generated content or mechanical edits. Filter the noise (--paths, --ext) or automate the churn away — do not spend review effort here.",
-		Files:  resultPaths(matches),
-	}}
+	return []Insight{
+		{
+			Kind:     InsightChurnNoComplexity,
+			Severity: SeverityLow,
+			Title: fmt.Sprintf("%d high-churn file(s) carry almost no structural complexity",
+				len(matches)),
+			Detail: "Churn without complexity is usually generated content or mechanical edits. Filter the noise (--paths, --ext) or automate the churn away — do not spend review effort here.",
+			Files:  resultPaths(matches),
+		},
+	}
 }
 
 // complexityNoChurnInsight flags complex files that rarely change: latent
@@ -236,14 +240,16 @@ func complexityNoChurnInsight(results []Result) []Insight {
 		matches = matches[:5]
 	}
 
-	return []Insight{{
-		Kind:     InsightComplexityNoChurn,
-		Severity: SeverityLow,
-		Title: fmt.Sprintf("%d highly complex file(s) rarely change",
-			len(matches)),
-		Detail: "Stable complexity is deferred risk: do not refactor preemptively, but add characterization tests now so the next forced change is safe.",
-		Files:  resultPaths(matches),
-	}}
+	return []Insight{
+		{
+			Kind:     InsightComplexityNoChurn,
+			Severity: SeverityLow,
+			Title: fmt.Sprintf("%d highly complex file(s) rarely change",
+				len(matches)),
+			Detail: "Stable complexity is deferred risk: do not refactor preemptively, but add characterization tests now so the next forced change is safe.",
+			Files:  resultPaths(matches),
+		},
+	}
 }
 
 // busFactorInsight flags high-churn files owned by exactly one author. It only
@@ -282,14 +288,16 @@ func busFactorInsight(results []Result) []Insight {
 		matches = matches[:5]
 	}
 
-	return []Insight{{
-		Kind:     InsightBusFactor,
-		Severity: SeverityMedium,
-		Title: fmt.Sprintf("%d high-churn file(s) have exactly one author",
-			len(matches)),
-		Detail: "Knowledge about these files is concentrated in one person. Rotate a second maintainer or document invariants before the files grow further.",
-		Files:  resultPaths(matches),
-	}}
+	return []Insight{
+		{
+			Kind:     InsightBusFactor,
+			Severity: SeverityMedium,
+			Title: fmt.Sprintf("%d high-churn file(s) have exactly one author",
+				len(matches)),
+			Detail: "Knowledge about these files is concentrated in one person. Rotate a second maintainer or document invariants before the files grow further.",
+			Files:  resultPaths(matches),
+		},
+	}
 }
 
 // staleHotspotInsight reports top-decile hotspots that have been quiet for
@@ -324,14 +332,16 @@ func staleHotspotInsight(results []Result, now time.Time) []Insight {
 		return nil
 	}
 
-	return []Insight{{
-		Kind:     InsightStaleHotspot,
-		Severity: SeverityLow,
-		Title: fmt.Sprintf("%d top-ranked hotspot(s) have been quiet for over %d days",
-			len(matches), StaleHotspotAgeDays),
-		Detail: "Their risk decays with inactivity. If the quiet is genuine, lock it in with tests; if not, expect the churn to return.",
-		Files:  resultPaths(matches),
-	}}
+	return []Insight{
+		{
+			Kind:     InsightStaleHotspot,
+			Severity: SeverityLow,
+			Title: fmt.Sprintf("%d top-ranked hotspot(s) have been quiet for over %d days",
+				len(matches), StaleHotspotAgeDays),
+			Detail: "Their risk decays with inactivity. If the quiet is genuine, lock it in with tests; if not, expect the churn to return.",
+			Files:  resultPaths(matches),
+		},
+	}
 }
 
 // couplingInsight advises on the strongest co-change pair. Coupling pairs
@@ -343,14 +353,16 @@ func couplingInsight(couplings []CouplingPair) []Insight {
 
 	top := couplings[0]
 
-	return []Insight{{
-		Kind:     InsightCoupling,
-		Severity: SeverityMedium,
-		Title: fmt.Sprintf("%s and %s changed together in %d commits (%.0f%% degree)",
-			top.FileA, top.FileB, top.SharedCommits, top.Degree),
-		Detail: "These files are structurally locked: one rarely changes without the other. Extract the shared concept, merge them, or put an interface between them.",
-		Files:  []string{top.FileA, top.FileB},
-	}}
+	return []Insight{
+		{
+			Kind:     InsightCoupling,
+			Severity: SeverityMedium,
+			Title: fmt.Sprintf("%s and %s changed together in %d commits (%.0f%% degree)",
+				top.FileA, top.FileB, top.SharedCommits, top.Degree),
+			Detail: "These files are structurally locked: one rarely changes without the other. Extract the shared concept, merge them, or put an interface between them.",
+			Files:  []string{top.FileA, top.FileB},
+		},
+	}
 }
 
 // churnKey returns the churn magnitude used for distributional rules,

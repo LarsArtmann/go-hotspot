@@ -600,7 +600,16 @@ func TestRenderInsightsTable(t *testing.T) {
 func TestRenderInsightsMarkdown(t *testing.T) {
 	var buf bytes.Buffer
 
-	if err := Render(&buf, sampleResults(), nil, sampleSummary(), FormatMarkdown, 0, nil, sampleInsights()); err != nil {
+	if err := Render(
+		&buf,
+		sampleResults(),
+		nil,
+		sampleSummary(),
+		FormatMarkdown,
+		0,
+		nil,
+		sampleInsights(),
+	); err != nil {
 		t.Fatal(err)
 	}
 

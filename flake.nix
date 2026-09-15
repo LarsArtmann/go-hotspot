@@ -12,7 +12,7 @@
         pkgs = import nixpkgs { inherit system; };
         go-hotspot = pkgs.buildGoModule {
           pname = "go-hotspot";
-          version = "0.2.0";
+          version = "0.3.0";
           src = ./.;
           subPackages = [ "cmd/go-hotspot" ];
           vendorHash = "sha256-14YXgHlo/pbOG5G30KxpHOU1DrtYmsGVhhYCoszxgq0=";

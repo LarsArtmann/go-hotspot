@@ -51,7 +51,11 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	top := fs.Int("top", 25, "rows to show (0 = all)")
 	complexityMetric := fs.String("complexity", "cyclomatic", "complexity metric: cyclomatic|indentation|sloc")
 	churnMetric := fs.String("churn", "weighted", "churn metric: weighted|commits|lines")
-	ext := fs.String("ext", ".go", "comma-separated file extensions to include, or 'auto' for a multi-language code profile")
+	ext := fs.String(
+		"ext",
+		".go",
+		"comma-separated file extensions to include, or 'auto' for a multi-language code profile",
+	)
 	includeTests := fs.Bool("include-tests", true, "include _test.go files")
 	includeGenerated := fs.Bool("include-generated", false, "include generated files (*.gen.go, *.pb.go)")
 	paths := fs.String("paths", "", "comma-separated path prefixes to include (default: all)")
@@ -206,7 +210,18 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		insights = hotspot.Insights(results, couplings, now)
 	}
 
-	if err := renderReport(out, errOut, *output, results, couplings, summary, *format, *top, topFuncs, insights); err != nil {
+	if err := renderReport(
+		out,
+		errOut,
+		*output,
+		results,
+		couplings,
+		summary,
+		*format,
+		*top,
+		topFuncs,
+		insights,
+	); err != nil {
 		return err //nolint:erraudit // renderReport classifies via apierrors
 	}
 
@@ -357,7 +372,16 @@ func renderReport(
 		writer = file
 	}
 
-	if err := report.Render(writer, results, couplings, summary, report.ParseFormat(format), topN, funcs, insights); err != nil {
+	if err := report.Render(
+		writer,
+		results,
+		couplings,
+		summary,
+		report.ParseFormat(format),
+		topN,
+		funcs,
+		insights,
+	); err != nil {
 		return err //nolint:erraudit // report.Render already classifies via errors.ReportRender
 	}
 
@@ -480,7 +504,19 @@ func hasAnySuffix(path string, suffixes []string) bool {
 // Parse* functions (which keep accepting these same aliases as defaults).
 var (
 	validFormats    = []string{"table", "markdown", "md", "csv", "json", "dot", "graphviz", "mermaid", "d2"}
-	validSortOrders = []string{"hotspot", "stable", "churn", "commits", "commit", "complexity", "cyc", "cyclomatic", "age", "stale", "old"}
+	validSortOrders = []string{
+		"hotspot",
+		"stable",
+		"churn",
+		"commits",
+		"commit",
+		"complexity",
+		"cyc",
+		"cyclomatic",
+		"age",
+		"stale",
+		"old",
+	}
 	validComplexity = []string{"cyclomatic", "indentation", "indent", "sloc", "loc", "lines"}
 	validChurn      = []string{"weighted", "commits", "commit", "lines", "raw"}
 	validFailRisks  = []string{"low", "medium", "high", "critical"}
@@ -547,7 +583,8 @@ func resolveExts(extFlag string) []string {
 	return splitCSV(extFlag)
 }
 
-func parseComplexityMetric(s string) hotspot.ComplexityMetric {	switch strings.ToLower(s) {
+func parseComplexityMetric(s string) hotspot.ComplexityMetric {
+	switch strings.ToLower(s) {
 	case "indentation", "indent":
 		return hotspot.MetricIndentation
 	case "sloc", "loc", "lines":

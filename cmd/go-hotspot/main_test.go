@@ -346,7 +346,9 @@ func TestTargetIsFile(t *testing.T) {
 	}
 }
 
-func TestTargetDirectoryAnalyzesRequestedRepo(t *testing.T) { //nolint:paralleltest // uses t.Chdir — mutates process CWD
+func TestTargetDirectoryAnalyzesRequestedRepo(
+	t *testing.T,
+) { //nolint:paralleltest // uses t.Chdir — mutates process CWD
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
