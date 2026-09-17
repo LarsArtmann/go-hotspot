@@ -2,10 +2,10 @@ github.com/aymanbagabas/go-udiff v0.4.1 h1:OEIrQ8maEeDBXQDoGCbbTTXYJMYRCRO1fnodZ
 github.com/aymanbagabas/go-udiff v0.4.1/go.mod h1:0L9PGwj20lrtmEMeyw4WKJ/TMyDtvAoK9bf2u/mNo3w=
 github.com/charmbracelet/x/exp/golden v0.0.0-20260705004817-2cc9a8fe1146 h1:+Gg3H2AVBIiYRUG/ctd7XjvUVbZ11odkbdkOrImmtbg=
 github.com/charmbracelet/x/exp/golden v0.0.0-20260705004817-2cc9a8fe1146/go.mod h1:6fMpcW6iwN/kX+xJ52eqVWsDiBTe0UJD24JLoHFe+P0=
-github.com/larsartmann/go-branded-id v0.5.1 h1:4Cyv41AkbtQuf66TuNfWugjqHYA48I3KfxjjM/KwBKk=
-github.com/larsartmann/go-branded-id v0.5.1/go.mod h1:ElTJY6HNf3ziPytNA5mpW32bxjfsZ/C8ILn4nPQdbmI=
-github.com/larsartmann/go-error-family v0.10.0 h1:xGPT8WzPr9EJ+SHCasLtZ2mJ7drVxmfkyM6kjzHoAWo=
-github.com/larsartmann/go-error-family v0.10.0/go.mod h1:c5ZKAqG/2xJmF7ZjShNAenbxHzWqut90ARS0lPuyUaY=
+github.com/larsartmann/go-branded-id v0.6.0 h1:bqvJcozqtr8CP7/GWbWqHdYWt2YaIaWZdNvPSbqdZXU=
+github.com/larsartmann/go-branded-id v0.6.0/go.mod h1:gM5FhB6d23qZO8hIU/rHpUnm/6dwKy9UGMhgvXDqNsc=
+github.com/larsartmann/go-error-family v0.10.1 h1:lf1RNjpdK7k+tCzphkg5qRolAY76U8OGEc09ZsZ5S6A=
+github.com/larsartmann/go-error-family v0.10.1/go.mod h1:SYSVwVMTkw2GcqXI4khjMYOg7ey39o8sh7rXC9LfNcY=
 github.com/larsartmann/go-output v0.38.0 h1:Ng8TWCQndPvM3qyNqz2Y5sGdKqiAGsq5CL2xEA0IOxs=
 github.com/larsartmann/go-output v0.38.0/go.mod h1:p/0OyNTPUomYEjnWoyX7ZXrJX2cf4jOBwJmFU85vm1w=
 github.com/larsartmann/go-output/d2 v0.38.0 h1:2jftwHTiTjWQRliwSc2T/WRUDxwZeWxtXK7o5iRWplo=
