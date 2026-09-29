@@ -1,7 +1,7 @@
 version: "2"
 run:
   timeout: 2m
-  go: 1.26.7
+  go: 1.27.1
   build-tags:
     - goexperiment.arenas
     - goexperiment.goroutineleakprofile
@@ -215,6 +215,7 @@ linters:
           - recvcheck
           - contextcheck
           - exhaustive
+          - exhaustruct_v5
       - path: _test\.go
         text: unused
         linters:
