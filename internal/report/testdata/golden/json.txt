@@ -1,4 +1,5 @@
 {
+  "schema_version": 1,
   "summary": {
     "first_commit": "2025-01-01",
     "last_commit": "2026-08-09",

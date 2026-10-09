@@ -580,7 +580,12 @@ func renderFunctionsCSV(w io.Writer, funcs []hotspot.FunctionResult) error {
 }
 
 type jsonReport struct {
-	Summary struct {
+	// SchemaVersion pins the wire contract for downstream consumers (overview
+	// decodes this report as its hotspot source). Bump on ANY breaking shape
+	// change: renamed/removed fields, type changes, semantic redefinitions.
+	// Purely additive fields keep the version.
+	SchemaVersion int `json:"schema_version"` // always 1
+	Summary       struct {
 		FirstCommit  string  `json:"first_commit"`
 		LastCommit   string  `json:"last_commit"`
 		TotalCommits int     `json:"total_commits"`
@@ -651,6 +656,7 @@ func renderJSON(
 	insights []hotspot.Insight,
 ) error {
 	var rep jsonReport
+	rep.SchemaVersion = 1
 	if !summary.FirstCommit.IsZero() {
 		rep.Summary.FirstCommit = summary.FirstCommit.Format("2006-01-02")
 		rep.Summary.LastCommit = summary.LastCommit.Format("2006-01-02")

@@ -51,9 +51,10 @@ func Analyze(path string) (FileComplexity, error) {
 	}
 
 	lines := strings.Split(string(data), "\n")
-	fc.SLOC, fc.Indentation, fc.MaxDepth = countLines(lines)
 
 	if fc.Language == "Go" {
+		fc.SLOC, fc.Indentation, fc.MaxDepth = countLines(lines)
+
 		cyc, funcs, parseErr := analyzeGo(path, data)
 		if parseErr != nil {
 			return fc, errors.AnalysisParse(path, parseErr)
@@ -61,7 +62,15 @@ func Analyze(path string) (FileComplexity, error) {
 
 		fc.Cyclomatic = cyc
 		fc.Functions = funcs
+	} else if fc.Language == "Templ" {
+		// Markup nesting is presentation, not branching: indentation metrics
+		// count only Go-logic lines and cyclomatic is keyword-estimated (see
+		// templ.go — the generic indentation estimate inflated .templ CYC
+		// ~7.6x vs keyword scoring on the 2026-10-09 fleet measurement).
+		fc.SLOC, fc.Indentation, fc.MaxDepth, fc.Cyclomatic = analyzeTempl(lines)
 	} else {
+		fc.SLOC, fc.Indentation, fc.MaxDepth = countLines(lines)
+
 		// Estimate cyclomatic from indentation: deeper nesting ≈ more branches.
 		// A reasonable heuristic: indentation / 4 + 1 (minimum complexity).
 		fc.Cyclomatic = fc.Indentation/tabWidth + 1

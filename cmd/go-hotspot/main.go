@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -74,6 +75,12 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 	functions := fs.Int("functions", 0, "show top N functions by hotspot score (0 = disabled, Go only)")
 	noInsights := fs.Bool("no-insights", false, "hide the actionable insights section")
 	verbose := fs.Bool("verbose", false, "print every skipped file instead of a summary count")
+	excludeMessage := fs.String(
+		"exclude-message",
+		"",
+		"exclude commits whose subject matches this regex from all metrics "+
+			"(e.g. '^chore: auto-commit' to drop auto-commit daemon cadence)",
+	)
 
 	// Handle --version before parsing so it works even with other invalid flags.
 	if hasVersionFlag(args) {
@@ -103,12 +110,21 @@ func run(ctx context.Context, args []string, out, errOut io.Writer, now time.Tim
 		return err //nolint:erraudit // resolveSince classifies via git.ResolveTag
 	}
 
+	var excludeRe *regexp.Regexp
+	if *excludeMessage != "" {
+		excludeRe, err = regexp.Compile(*excludeMessage)
+		if err != nil {
+			return apierrors.CLIUsage(fmt.Sprintf("--exclude-message: %v", err))
+		}
+	}
+
 	// 2. Collect git history.
 	history, err := git.Collect(ctx, git.Options{
-		Since:       sinceArg,
-		Until:       *until,
-		Branch:      *branch,
-		HalfLifeDay: *halfLife,
+		Since:          sinceArg,
+		Until:          *until,
+		Branch:         *branch,
+		HalfLifeDay:    *halfLife,
+		ExcludeMessage: excludeRe,
 	}, now)
 	if err != nil {
 		return err //nolint:erraudit // git.Collect already classifies via classifyGitError

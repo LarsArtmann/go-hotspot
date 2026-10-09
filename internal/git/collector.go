@@ -11,6 +11,7 @@ import (
 	"io"
 	"math"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -48,6 +49,13 @@ type Options struct {
 	Until       string  // git date spec; empty = no upper bound
 	Branch      string  // git revision; empty = HEAD
 	HalfLifeDay float64 // recency half-life in days; 0 = no decay (equal weight)
+	// ExcludeMessage drops commits whose subject matches this regex from ALL
+	// metrics: churn, coupling, commit counts, and the analysis window.
+	// Machine-cadence commits (auto-commit daemons stamping "chore: auto-commit"
+	// or the "Daemon: true" trailer era) otherwise dominate churn: at the
+	// 2026-10-09 fleet measurement, 17% of overview's history was daemon noise.
+	// nil = no filtering.
+	ExcludeMessage *regexp.Regexp
 }
 
 // History bundles per-file churn data with window metadata.
@@ -61,9 +69,13 @@ type History struct {
 // Collect runs git log over the configured window and aggregates per-file stats.
 // The ctx parameter allows cancellation of the underlying git process.
 func Collect(ctx context.Context, opts Options, now time.Time) (*History, error) {
+	// The subject rides along as a fourth |-separated field so
+	// ExcludeMessage can drop machine-cadence commits at parse time.
+	// parseCommitMarker splits with SplitN(..., 4), so pipes inside subjects
+	// stay intact.
 	args := []string{
 		"log", "--numstat", "--no-merges", "-M",
-		"--pretty=tformat:" + commitPrefix + "%H|%aI|%an",
+		"--pretty=tformat:" + commitPrefix + "%H|%aI|%an|%s",
 	}
 	if opts.Since != "" {
 		args = append(args, "--since="+opts.Since)
@@ -93,7 +105,7 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 	}
 
 	h := &History{Files: make(map[string]*FileChurn)}
-	if err := parseNumStat(ctx, stdout, h, opts.HalfLifeDay, now); err != nil {
+	if err := parseNumStat(ctx, stdout, h, opts.HalfLifeDay, now, opts.ExcludeMessage); err != nil {
 		if waitErr := cmd.Wait(); waitErr != nil {
 			return nil, classifyGitError(waitErr, stderr.String())
 		}
@@ -109,13 +121,23 @@ func Collect(ctx context.Context, opts Options, now time.Time) (*History, error)
 }
 
 // parseNumStat reads git log --numstat output and populates History.
-func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64, now time.Time) error {
+// Commits whose subject matches exclude (when non-nil) are dropped from
+// every metric: churn, coupling, commit counts, and the analysis window.
+func parseNumStat(
+	ctx context.Context,
+	r io.Reader,
+	h *History,
+	halfLife float64,
+	now time.Time,
+	exclude *regexp.Regexp,
+) error {
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<16), 1<<20)
 
 	var (
 		curDate         time.Time
 		curAuthor       string
+		curExcluded     bool
 		changedInCommit []string
 	)
 
@@ -139,15 +161,22 @@ func parseNumStat(ctx context.Context, r io.Reader, h *History, halfLife float64
 				flush()
 			}
 
-			h.TotalCommits++
-			curAuthor, curDate = parseCommitMarker(line)
-			h.extendWindow(curDate)
+			var subject string
+
+			curAuthor, curDate, subject = parseCommitMarker(line)
+			curExcluded = exclude != nil && exclude.MatchString(subject)
+			if !curExcluded {
+				h.TotalCommits++
+				h.extendWindow(curDate)
+			}
 		case line == "":
 			if changedInCommit != nil {
 				flush()
 			}
 
 			continue
+		case curExcluded:
+			// numstat rows of an excluded commit: drop them
 		default:
 			file := applyNumStatLine(line, h.Files, curAuthor, curDate, halfLife, now)
 			if file != "" {
@@ -249,20 +278,25 @@ func (h *History) extendWindow(t time.Time) {
 }
 
 // parseCommitMarker extracts date from a "@@@hash|date|author" line.
-func parseCommitMarker(line string) (string, time.Time) {
+func parseCommitMarker(line string) (string, time.Time, string) {
 	body := strings.TrimPrefix(line, commitPrefix)
 
-	parts := strings.SplitN(body, "|", 3)
+	parts := strings.SplitN(body, "|", 4)
 	if len(parts) < 3 {
-		return "", time.Time{}
+		return "", time.Time{}, ""
+	}
+
+	subject := ""
+	if len(parts) == 4 {
+		subject = parts[3]
 	}
 
 	t, err := time.Parse(time.RFC3339, parts[1])
 	if err != nil {
-		return parts[2], time.Time{}
+		return parts[2], time.Time{}, subject
 	}
 
-	return parts[2], t
+	return parts[2], t, subject
 }
 
 // applyNumStatLine parses an "added\tdeleted\tpath" line and folds it into stats.

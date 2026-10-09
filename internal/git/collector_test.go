@@ -53,7 +53,10 @@ func TestNormalizeRename(t *testing.T) {
 }
 
 func TestParseCommitMarker(t *testing.T) {
-	author, date := parseCommitMarker("@@@abc123|2026-08-09T23:45:10+02:00|Lars Artmann")
+	author, date, subject := parseCommitMarker("@@@abc123|2026-08-09T23:45:10+02:00|Lars Artmann|feat: real work")
+	if subject != "feat: real work" {
+		t.Errorf("subject = %q, want %q", subject, "feat: real work")
+	}
 	if author != "Lars Artmann" {
 		t.Errorf("author = %q", author)
 	}
@@ -64,9 +67,21 @@ func TestParseCommitMarker(t *testing.T) {
 	}
 
 	// Malformed marker
-	a2, d2 := parseCommitMarker("@@@garbage")
-	if a2 != "" || !d2.IsZero() {
-		t.Errorf("garbage marker = (%q,%v), want empty", a2, d2)
+	a2, d2, s2 := parseCommitMarker("@@@garbage")
+	if a2 != "" || !d2.IsZero() || s2 != "" {
+		t.Errorf("garbage marker = (%q,%v,%q), want empty", a2, d2, s2)
+	}
+
+	// Pipes inside subjects survive: SplitN keeps everything after the third field
+	_, _, piped := parseCommitMarker("@@@h|2026-01-01T00:00:00Z|Alice|fix: split A|B handling")
+	if piped != "fix: split A|B handling" {
+		t.Errorf("subject with pipe = %q", piped)
+	}
+
+	// Legacy 3-field marker (no subject): subject is empty
+	_, _, legacy := parseCommitMarker("@@@h|2026-01-01T00:00:00Z|Alice")
+	if legacy != "" {
+		t.Errorf("legacy marker subject = %q, want empty", legacy)
 	}
 }
 
@@ -136,7 +151,7 @@ func TestParseNumStatCoupling(t *testing.T) {
 	h := &History{Files: make(map[string]*FileChurn)}
 
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -183,7 +198,7 @@ func TestParseNumStatAuthorTracking(t *testing.T) {
 	h := &History{Files: make(map[string]*FileChurn)}
 
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -221,7 +236,7 @@ func TestParseNumStatMaxChangesetGuard(t *testing.T) {
 	h := &History{Files: make(map[string]*FileChurn)}
 
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -253,7 +268,7 @@ func TestParseNumStatCouplingBoundaryAt30Files(t *testing.T) {
 	h := &History{Files: make(map[string]*FileChurn)}
 
 	now := time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC)
-	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now); err != nil {
+	if err := parseNumStat(context.Background(), strings.NewReader(input), h, 0, now, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -402,7 +417,7 @@ func BenchmarkParseNumStat(b *testing.B) {
 
 	for range b.N {
 		h := &History{Files: make(map[string]*FileChurn)}
-		if err := parseNumStat(context.Background(), strings.NewReader(input), h, 180, now); err != nil {
+		if err := parseNumStat(context.Background(), strings.NewReader(input), h, 180, now, nil); err != nil {
 			b.Fatal(err)
 		}
 	}

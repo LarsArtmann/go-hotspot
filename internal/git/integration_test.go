@@ -3,9 +3,11 @@ package git_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -304,5 +306,103 @@ func TestIntegrationCouplingFromRepo(t *testing.T) {
 
 	if mainUtil.Degree <= 0 {
 		t.Errorf("main.go<->util.go Degree = %.1f, want > 0", mainUtil.Degree)
+	}
+}
+
+// TestIntegrationExcludeMessage seeds a repo where an auto-commit daemon's
+// cadence (chore: auto-commit) touches a file repeatedly and human commits
+// touch another, then verifies --exclude-message drops the daemon commits
+// from every metric: churn, commit count, and the analysis window.
+func TestIntegrationExcludeMessage(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	runGit(t, "init")
+	runGit(t, "config", "user.name", "Test")
+	runGit(t, "config", "user.email", "test@example.com")
+
+	daemon := fixtureCommit{
+		date: "2026-06-01T10:00:00Z", author: "Daemon", email: "daemon@example.com",
+		files: map[string]string{"daemon.go": "package main\n"},
+	}
+	human := fixtureCommit{
+		date: "2026-07-01T10:00:00Z", author: "Alice", email: "alice@example.com",
+		files: map[string]string{"human.go": "package main\n"},
+	}
+
+	seed := func(c fixtureCommit, path, content, subject string) {
+		t.Helper()
+
+		full := filepath.Join(dir, path)
+		if err := os.MkdirAll(filepath.Dir(full), 0o750); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+
+		if err := os.WriteFile(full, []byte(content), 0o600); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+
+		runGitEnv(t, c, "add", path)
+		runGitEnv(t, c, "commit", "-m", subject)
+	}
+
+	seed(human, "human.go", "package main\n", "feat: real work")
+	for i := 0; i < 3; i++ {
+		seed(daemon, "daemon.go", fmt.Sprintf("package main // v%d\n", i), fmt.Sprintf("chore: auto-commit %d changed file(s) (heuristic)", i+1))
+	}
+
+	newer := fixtureCommit{
+		date: "2026-08-01T10:00:00Z", author: "Alice", email: "alice@example.com",
+		files: map[string]string{"human.go": "package main\n"},
+	}
+	seed(newer, "human.go", "package main\nfunc x() {}\n", "fix: follow-up")
+
+	exclude := regexp.MustCompile(`^chore: auto-commit`)
+
+	filtered, err := git.Collect(context.Background(), git.Options{
+		Since:           "2026-01-01",
+		HalfLifeDay:     180,
+		ExcludeMessage:  exclude,
+	}, fixedNow)
+	if err != nil {
+		t.Fatalf("Collect with ExcludeMessage: %v", err)
+	}
+
+	if filtered.TotalCommits != 2 {
+		t.Errorf("filtered TotalCommits = %d, want 2 (3 daemon commits dropped)", filtered.TotalCommits)
+	}
+
+	if _, ok := filtered.Files["daemon.go"]; ok {
+		t.Error("daemon.go must be absent from filtered history (all its commits were excluded)")
+	}
+
+	if fc := filtered.Files["human.go"]; fc == nil {
+		t.Fatal("human.go missing from filtered history")
+	} else if fc.Commits != 2 {
+		t.Errorf("human.go Commits = %d, want 2", fc.Commits)
+	}
+
+	if want := time.Date(2026, 7, 1, 10, 0, 0, 0, time.UTC); !filtered.FirstCommit.Equal(want) {
+		t.Errorf("FirstCommit = %v, want %v (daemon commit must not open the window)", filtered.FirstCommit, want)
+	}
+
+	unfiltered, err := git.Collect(context.Background(), git.Options{
+		Since:       "2026-01-01",
+		HalfLifeDay: 180,
+	}, fixedNow)
+	if err != nil {
+		t.Fatalf("Collect without ExcludeMessage: %v", err)
+	}
+
+	if unfiltered.TotalCommits != 5 {
+		t.Errorf("unfiltered TotalCommits = %d, want 5", unfiltered.TotalCommits)
+	}
+
+	if fc := unfiltered.Files["daemon.go"]; fc == nil || fc.Commits != 3 {
+		t.Errorf("unfiltered daemon.go = %+v, want 3 commits", unfiltered.Files["daemon.go"])
 	}
 }

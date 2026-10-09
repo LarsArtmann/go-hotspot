@@ -129,6 +129,9 @@ go-hotspot --ext auto
 
 # Custom coupling thresholds
 go-hotspot --coupling-min-shared 3 --coupling-min-degree 50
+
+# Drop auto-commit daemon cadence from churn (17% of fleet history is daemon noise)
+go-hotspot --exclude-message '^chore: auto-commit'
 ```
 
 ### Insights
@@ -143,6 +146,17 @@ sorted high → low severity, and `--no-insights` hides them.
 Scores in table/markdown output use a **0–100 relative scale** (the worst file
 is 100.0) so the number agrees with the RISK label; CSV and JSON keep the raw
 normalized score for machine consumers.
+
+### Templ files
+
+`.templ` sources (Go + HTML in one file) get dedicated analysis: markup
+nesting is presentation structure, not branching logic, so indentation-based
+estimation is not applied. Indentation and nesting depth count only Go-logic
+lines (top-level Go, `script` block bodies, markup control flow), and
+cyclomatic complexity counts Go decision points on control-flow-shaped lines.
+Without this, markup indentation dominates the ranking (measured 2026-10-09:
+`project_detail.templ` scored CYC 1477 via indentation vs 64 with markup
+excluded). `--ext auto` includes `.templ` with this handling by default.
 
 ### Flags
 
@@ -172,6 +186,7 @@ normalized score for machine consumers.
 | `--functions`           | `0`          | Show top N functions by hotspot score (Go only, 0 = disabled)                                                                                   |
 | `--min-commits`         | `0`          | Exclude files with fewer commits (0 = no minimum)                                                                                               |
 | `--author`              |              | Show only files touched by this git author                                                                                                      |
+| `--exclude-message`     |              | Exclude commits whose subject matches this regex from all metrics (e.g. `'^chore: auto-commit'`)                                                 |
 | `--no-insights`         | `false`      | Hide the actionable insights section                                                                                                            |
 | `--verbose`             | `false`      | Print every skipped file instead of a summary count                                                                                             |
 | `[target]`              | `.`          | Repository directory to analyze (extra arguments are rejected)                                                                                  |

@@ -15,6 +15,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Nothing yet.
 
+## [0.4.0] - 2026-10-09
+
+### Added
+
+- **`--exclude-message <regex>`** — excludes commits whose subject matches the regex from EVERY metric (churn, coupling, commit counts, analysis window). Built for auto-commit daemon noise: 17% of the overview repo's history is `chore: auto-commit` cadence, which dominated churn rankings until filtered. Pair with pma's `Daemon: true` trailer era (`^chore: auto-commit|^Daemon: true` covers both message shapes)
+- **Dedicated `.templ` analysis** — markup nesting is presentation, not branching: indentation/nesting metrics now count only Go-logic lines (top-level Go, `script` bodies, markup control flow) and cyclomatic complexity counts Go decision points on control-flow-shaped lines. Measured on overview's `project_detail.templ`: CYC 1477 → 64, rank #1 critical → low. `--ext auto` includes `.templ` with this handling
+- **`schema_version` in JSON output** — the `--format json` report pins its wire contract (`schema_version: 1`) so downstream consumers (overview's hotspot source) can reject unknown shapes instead of silently misdecoding; a contract test freezes the exact key sets of every JSON object
+
+### Fixed
+
+- **Subjects containing `|` no longer corrupt commit parsing** — the internal git-log marker carries the commit subject as a fourth `|`-separated field, split with `SplitN(..., 4)` so pipes inside subjects stay intact
+
 ## [0.3.0] - 2026-09-14
 
 ### Added
