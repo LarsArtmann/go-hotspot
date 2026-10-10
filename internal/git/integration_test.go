@@ -351,8 +351,13 @@ func TestIntegrationExcludeMessage(t *testing.T) {
 	}
 
 	seed(human, "human.go", "package main\n", "feat: real work")
-	for i := 0; i < 3; i++ {
-		seed(daemon, "daemon.go", fmt.Sprintf("package main // v%d\n", i), fmt.Sprintf("chore: auto-commit %d changed file(s) (heuristic)", i+1))
+	for i := range 3 {
+		seed(
+			daemon,
+			"daemon.go",
+			fmt.Sprintf("package main // v%d\n", i),
+			fmt.Sprintf("chore: auto-commit %d changed file(s) (heuristic)", i+1),
+		)
 	}
 
 	newer := fixtureCommit{
@@ -364,9 +369,9 @@ func TestIntegrationExcludeMessage(t *testing.T) {
 	exclude := regexp.MustCompile(`^chore: auto-commit`)
 
 	filtered, err := git.Collect(context.Background(), git.Options{
-		Since:           "2026-01-01",
-		HalfLifeDay:     180,
-		ExcludeMessage:  exclude,
+		Since:          "2026-01-01",
+		HalfLifeDay:    180,
+		ExcludeMessage: exclude,
 	}, fixedNow)
 	if err != nil {
 		t.Fatalf("Collect with ExcludeMessage: %v", err)

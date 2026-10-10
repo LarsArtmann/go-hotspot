@@ -30,7 +30,7 @@ func TestAnalyze_Templ_MarkupDoesNotInflateComplexity(t *testing.T) {
 
 	b.WriteString("templ deep() {\n")
 	b.WriteString("\t<div>\n")
-	for i := 0; i < 30; i++ {
+	for i := range 30 {
 		b.WriteString(strings.Repeat("\t", 2+i%3) + "<section class=\"layer\">\n")
 		b.WriteString(strings.Repeat("\t", 3+i%3) + "<p>static prose without logic</p>\n")
 	}
@@ -159,7 +159,7 @@ func TestAnalyze_Templ_RealWorldShapeMustNotDominateRankings(t *testing.T) {
 
 	b.WriteString("templ detail(p Project) {\n")
 	b.WriteString("\t<div class=\"space-y-6\">\n")
-	for i := 0; i < 80; i++ {
+	for i := range 80 {
 		b.WriteString(strings.Repeat("\t", 2+i%4) + "<div class=\"row\">\n")
 		b.WriteString(strings.Repeat("\t", 3+i%4) + "<dt>Label " + string(rune('a'+i%26)) + "</dt>\n")
 		b.WriteString(strings.Repeat("\t", 3+i%4) + "<dd>Value</dd>\n")
@@ -204,7 +204,7 @@ func genericIndentationEstimate(t *testing.T, path string) int {
 
 	total := 0
 
-	for _, line := range strings.Split(string(data), "\n") {
+	for line := range strings.SplitSeq(string(data), "\n") {
 		total += leadingIndent(line)
 	}
 

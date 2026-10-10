@@ -186,7 +186,7 @@ excluded). `--ext auto` includes `.templ` with this handling by default.
 | `--functions`           | `0`          | Show top N functions by hotspot score (Go only, 0 = disabled)                                                                                   |
 | `--min-commits`         | `0`          | Exclude files with fewer commits (0 = no minimum)                                                                                               |
 | `--author`              |              | Show only files touched by this git author                                                                                                      |
-| `--exclude-message`     |              | Exclude commits whose subject matches this regex from all metrics (e.g. `'^chore: auto-commit'`)                                                 |
+| `--exclude-message`     |              | Exclude commits whose subject matches this regex from all metrics (e.g. `'^chore: auto-commit'`)                                                |
 | `--no-insights`         | `false`      | Hide the actionable insights section                                                                                                            |
 | `--verbose`             | `false`      | Print every skipped file instead of a summary count                                                                                             |
 | `[target]`              | `.`          | Repository directory to analyze (extra arguments are rejected)                                                                                  |
