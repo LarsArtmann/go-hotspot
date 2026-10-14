@@ -5,7 +5,7 @@ go 1.27
 require (
 	github.com/larsartmann/go-error-family v0.11.0
 	github.com/larsartmann/go-output v0.38.3
-	github.com/larsartmann/go-output/d2 v0.38.3
+	github.com/larsartmann/go-output/d2 v0.38.4
 	github.com/larsartmann/go-output/graph v0.38.3
 )
 

@@ -8,8 +8,8 @@ github.com/larsartmann/go-error-family v0.11.0 h1:xqXLKrTMznStmHUapxd/6Fj5/878sb
 github.com/larsartmann/go-error-family v0.11.0/go.mod h1:CAzjAVWjAFDUXEaaRqIgjW28i/NrQ07OsE9Dffhx29c=
 github.com/larsartmann/go-output v0.38.3 h1:vmCKLAjqpnkVPasZdblf7Bm1KyHJ8Q+piHSVadOTQW0=
 github.com/larsartmann/go-output v0.38.3/go.mod h1:Wy/b1Z0WO8zw2SKZyYCaQLRuOGaKLPCo4j58nlTwU84=
-github.com/larsartmann/go-output/d2 v0.38.3 h1:/RNOtmVbokeoyuHJ04T2bK+UcBdNguGBbF9YcjEsYtk=
-github.com/larsartmann/go-output/d2 v0.38.3/go.mod h1:WJHCuKLU3pJL4E7/w0Puj/GxtzGaUBglagBnTYXIj8E=
+github.com/larsartmann/go-output/d2 v0.38.4 h1:j1VRYAufZ2hIZhR/dRtDfaEBiM0Nte4z3LN2NHQwenE=
+github.com/larsartmann/go-output/d2 v0.38.4/go.mod h1:UwxdIwbffqavFv6vkjSX5RYYUjYhzNoI5rtF8QfNXLs=
 github.com/larsartmann/go-output/escape v0.38.3 h1:dk3WJ3NhQ07gO8kFGcuyDXSRtQm9mTLI005frUjsX5s=
 github.com/larsartmann/go-output/escape v0.38.3/go.mod h1:0iTFd6fhBaMPWf0vtY4fIqTC6K/zpkK8yvVA8gYDck0=
 github.com/larsartmann/go-output/graph v0.38.3 h1:BH0PNMvpa5P2ZY77EYDbDOYju2jliQaL9ZGlASNCkYA=
